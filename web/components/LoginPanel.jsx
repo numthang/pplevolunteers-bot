@@ -63,9 +63,12 @@ const PasskeyIcon = (
   </svg>
 )
 
-export default function LoginPanel() {
+// `defaultCallbackUrl` — สำหรับหน้าที่ไม่ได้มาจาก /login?callbackUrl=… (เช่นลิงก์เซ็นเอกสาร
+// ที่คนนอกกดเข้ามาตรงๆ) ต้องพากลับมาหน้าเดิม ไม่ใช่โยนไป /dashboard ซึ่งเขาไม่มีสิทธิ์เข้า
+// query string ยังชนะเสมอ — คนที่มาจาก /login มีปลายทางระบุมาแล้ว
+export default function LoginPanel({ defaultCallbackUrl = '/dashboard' }) {
   const searchParams  = useSearchParams()
-  const callbackUrl   = searchParams.get('callbackUrl') || '/dashboard'
+  const callbackUrl   = searchParams.get('callbackUrl') || defaultCallbackUrl
   const errorKey      = searchParams.get('error') || ''
   const [busy, setBusy]       = useState(false)
   const [pkError, setPkError] = useState(null)

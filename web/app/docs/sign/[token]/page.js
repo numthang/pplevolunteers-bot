@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef, use } from 'react'
-import { useSession, signIn } from 'next-auth/react'
+import { useState, useEffect, useRef, use, Suspense } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CheckCircle, AlertTriangle, Pen, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
 import IdCardCropper from '@/components/docs/IdCardCropper'
+import LoginPanel from '@/components/LoginPanel'
+import OpenInBrowserNotice from '@/components/OpenInBrowserNotice'
 
 const ITEM_LABEL_KEYS = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo']
 
@@ -495,23 +497,27 @@ export default function SignPage({ params }) {
     )
   }
 
+  // จอนี้คือจุดที่คนนอกตันบ่อยที่สุด — เขาเปิดลิงก์มาจากแชต ไม่ได้มาจากหน้าแรกของระบบ
+  // ⚠️ ห้ามกลับไปเป็นปุ่ม Discord ปุ่มเดียวเหมือนเดิม: ผู้รับเงินจำนวนมากไม่มี Discord
+  // (คนนอกที่รับจ้าง/ร้านค้า) แล้วจอนี้ไม่มีทางอื่นให้กดเลย = ตันสนิท ต้องโทรสอนทีละคน
+  // LoginPanel มีครบทุกทางและมีที่เดียวในระบบ — ห้ามก๊อปมาทำชุดใหม่ตรงนี้
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2 p-4">
-        <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8 text-center">
+        <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8">
           <Pen size={48} className="mx-auto text-orange mb-4" />
-          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-3">
+          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-3 text-center">
             {signerRole === 'payer' ? t('sign.signPayerTitle') : t('sign.signReceiptTitle')}
           </h1>
-          <p className="text-warm-500 dark:text-disc-muted text-base mb-6">
+          <p className="text-warm-500 dark:text-disc-muted text-base mb-6 text-center">
             {t('sign.loginPrompt')}
           </p>
-          <button
-            onClick={() => signIn('discord', { callbackUrl: `/docs/sign/${token}` })}
-            className="w-full bg-[#5865F2] text-white py-3 rounded-lg text-base font-semibold hover:bg-[#4752C4] transition"
-          >
-            {t('sign.loginButton')}
-          </button>
+          {/* ขึ้นก่อนปุ่มล็อกอิน — ถ้าอยู่ในมินิเบราว์เซอร์ การกดปุ่มพวกนั้นคือทางตัน
+              (Google บล็อก embedded webview ตรงๆ) ต้องพาออกไปเบราว์เซอร์จริงก่อนถึงจะมีประโยชน์ */}
+          <OpenInBrowserNotice className="mb-5" />
+          <Suspense fallback={null}>
+            <LoginPanel defaultCallbackUrl={`/docs/sign/${token}`} />
+          </Suspense>
         </div>
       </div>
     )
