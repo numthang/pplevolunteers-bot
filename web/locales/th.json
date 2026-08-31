@@ -546,8 +546,6 @@
       "attachmentsLabel": "สิ่งที่แนบมา",
       "attachmentsPlaceholder": "- เอกสาร...",
       "bodyLabel": "เนื้อหาหนังสือ",
-      "signerSectionTitle": "ผู้ลงนาม",
-      "signerSectionHint": "ค่าเริ่มต้นคือชื่อของคุณ — แก้ได้ถ้าร่างแทนคนอื่น",
       "signerNameLabel": "ชื่อผู้ลงนาม",
       "signerPositionLabel": "ตำแหน่ง",
       "signerPositionPlaceholder": "เช่น คณะทำงานพรรคประชาชนราชบุรี",

@@ -235,12 +235,7 @@ export default function CaseLetterModal({ refId, onClose }) {
                 />
               </div>
 
-              <div className="pt-2 border-t border-gray-200 dark:border-disc-border space-y-4">
-                <div>
-                  <p className={labelCls}>{t('letter.signerSectionTitle')}</p>
-                  <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letter.signerSectionHint')}</p>
-                </div>
-
+              <div className="pt-4 border-t border-gray-200 dark:border-disc-border space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelCls}>{t('letter.signerNameLabel')}</label>

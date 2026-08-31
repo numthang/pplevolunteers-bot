@@ -546,8 +546,6 @@
       "attachmentsLabel": "Attachments",
       "attachmentsPlaceholder": "- Document...",
       "bodyLabel": "Letter body",
-      "signerSectionTitle": "Signer",
-      "signerSectionHint": "Defaults to your name — change it if you are drafting on someone else's behalf",
       "signerNameLabel": "Signer name",
       "signerPositionLabel": "Position",
       "signerPositionPlaceholder": "e.g. Ratchaburi working group",
