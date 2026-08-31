@@ -4,6 +4,7 @@ globs: **/*
 ---
 
 - To locate a symbol or file, run `openwolf find <name>` first (ranked shortlist, under 1k tokens). For one file's description and symbol ranges: `openwolf find --file <path>`. Never read .wolf/anatomy.md whole; it is an index.
+- **ห้าม Read เต็มไฟล์เด็ดขาด — grep/offset เท่านั้น** (เพิ่ม 2026-08-31): `cerebrum.md` (~88K tok), `memory.md` (~40K), `buglog.json` (~78K), `anatomy.md` (~34K), `anatomy-index.json`, `token-ledger.json` · อ่านเต็มไฟล์เดียว = กิน context ทั้ง session ทิ้ง · ไฟล์เดียวใน .wolf/ ที่อ่านเต็มได้คือ `STATUS.md` กับ `OPENWOLF.md`
 - Check .wolf/cerebrum.md Do-Not-Repeat list before generating code (grep "## Do-Not-Repeat"); after a user correction, update cerebrum.md immediately.
 - Do NOT manually update .wolf/anatomy.md or .wolf/memory.md; the OpenWolf hooks maintain them.
 - BEFORE fixing any bug: run `openwolf bug search "<error>"` or grep .wolf/buglog.json. AFTER fixing one: log it there (error_message, root_cause, fix, tags).
