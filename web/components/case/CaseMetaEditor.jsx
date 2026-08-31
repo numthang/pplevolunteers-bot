@@ -49,22 +49,16 @@ export default function CaseMetaEditor({
         <dd className="text-gray-900 dark:text-disc-text">{sourceLabel}</dd>
         <dt className="text-gray-400 dark:text-disc-muted">{t('manage.receivedAtLabel')}</dt>
         <dd className="text-gray-900 dark:text-disc-text">{receivedAt}</dd>
-      </dl>
 
-      {/* ผู้รับผิดชอบ — ย้ายมาอยู่ในการ์ดนี้ 2026-08-31 (เดิมเป็นการ์ดเดี่ยว)
-          ปุ่มรับเรื่อง/ถอนตัวยังอยู่การ์ด "จัดการเคส" ที่นี่โชว์อย่างเดียว */}
-      <div className="pt-1">
-        <p className="text-sm font-semibold mb-1 text-gray-700 dark:text-disc-text">{t('manage.assigneesHeading')}</p>
-        {assignees.length === 0 ? (
-          <p className="text-base text-gray-400 dark:text-disc-muted">{t('manage.noAssignees')}</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {assignees.map(a => (
-              <span key={a.discord_id} className="px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text">{a.name}</span>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* ผู้รับผิดชอบ — ย้ายมาอยู่ในการ์ดนี้ 2026-08-31 (เดิมเป็นการ์ดเดี่ยว)
+            ปุ่มรับเรื่อง/ถอนตัวยังอยู่การ์ด "จัดการเคส" ที่นี่โชว์อย่างเดียว
+            เป็นแถวใน dl เดียวกับข้อเท็จจริงอื่น ไม่ใช่ label ก้อนใหญ่แล้วค่าตกบรรทัด
+            (user ทักซ้ำจุดเดิมกับจังหวัด — ชื่อต้องอยู่บรรทัดเดียวกับหัวข้อ) */}
+        <dt className="text-gray-400 dark:text-disc-muted">{t('manage.assigneesHeading')}</dt>
+        <dd className={assignees.length === 0 ? 'text-gray-400 dark:text-disc-muted' : 'text-gray-900 dark:text-disc-text'}>
+          {assignees.length === 0 ? t('manage.noAssignees') : assignees.map(a => a.name).join(', ')}
+        </dd>
+      </dl>
 
       {threadUrl && (
         <p className="text-sm break-words">

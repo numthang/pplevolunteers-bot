@@ -160,12 +160,12 @@ export default function CaseLetterModal({ refId, onClose }) {
       <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-disc-border shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-disc-border shrink-0">
           <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">{t('letter.title')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-disc-text text-2xl leading-none">&times;</button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-6 py-5">
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
 
           {(step === 'init' || step === 'loading') && (
             <div className="py-16 text-center text-gray-400 dark:text-disc-muted">
@@ -268,35 +268,37 @@ export default function CaseLetterModal({ refId, onClose }) {
 
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-disc-border shrink-0 flex gap-3 justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-base text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
+        {/* Footer — มือถือ: 2 แถว (ปุ่มรองบน · ปุ่มหลักล่าง เต็มความกว้าง ให้นิ้วโป้งถึง)
+            เดิมยัด 4 ปุ่มแถวเดียว justify-between → บนจอ ~350px ข้อความหักกลางปุ่ม ("บันทึก\nร่าง")
+            whitespace-nowrap กันข้อความหักในปุ่ม · flex-1 ให้ปุ่มหลักแบ่งความกว้างกันเองบนมือถือ */}
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-disc-border shrink-0 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-between sm:items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={onClose} className="px-3 sm:px-4 py-2 text-base whitespace-nowrap text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
               {t('common.close')}
             </button>
             {step === 'edit' && drafts.length > 0 && (
-              <button onClick={() => setStep('pick')} className="px-4 py-2 text-base text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
+              <button onClick={() => setStep('pick')} className="px-3 sm:px-4 py-2 text-base whitespace-nowrap text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
                 {t('letter.backToListButton')}
               </button>
             )}
+            {savedMsg && <span className="text-sm whitespace-nowrap text-green-600 dark:text-green-400">{savedMsg}</span>}
           </div>
-          <div className="flex items-center gap-3">
-            {savedMsg && <span className="text-sm text-green-600 dark:text-green-400">{savedMsg}</span>}
+          <div className="flex items-center gap-2 sm:gap-3">
             {step === 'edit' && (
-              <button onClick={saveDraft} disabled={saving} className="px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange disabled:opacity-50 transition">
+              <button onClick={saveDraft} disabled={saving} className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base whitespace-nowrap hover:border-brand-orange hover:text-brand-orange disabled:opacity-50 transition">
                 {saving ? t('common.saving') : t('letter.saveDraftButton')}
               </button>
             )}
             {step === 'edit' && (
-              <button onClick={generate} disabled={generating} className="px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold hover:bg-brand-orange-light disabled:opacity-50 transition">
+              <button onClick={generate} disabled={generating} className="flex-1 sm:flex-none px-4 sm:px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold whitespace-nowrap hover:bg-brand-orange-light disabled:opacity-50 transition">
                 {generating ? t('letter.generatingButton') : t('letter.generatePdfButton')}
               </button>
             )}
             {step === 'preview' && (<>
-              <button onClick={printPdf} className="px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange transition">
+              <button onClick={printPdf} className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base whitespace-nowrap hover:border-brand-orange hover:text-brand-orange transition">
                 {t('letter.printButton')}
               </button>
-              <button onClick={downloadPdf} className="px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold hover:bg-brand-orange-light transition">
+              <button onClick={downloadPdf} className="flex-1 sm:flex-none px-4 sm:px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold whitespace-nowrap hover:bg-brand-orange-light transition">
                 {t('letter.downloadButton')}
               </button>
             </>)}
