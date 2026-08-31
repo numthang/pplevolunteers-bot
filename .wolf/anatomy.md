@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T09:26:10.114Z
-> Files: 1075 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T16:45:24.645Z
+> Files: 1079 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~45394 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~45982 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5796 tok)
 
 ## md/archive/
@@ -394,7 +394,7 @@
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~679 tok)
 - `backup-pgsql.sh` — pg_dump ของ pple_volunteers -> /www/backup/database/pgsql/crontab_backup (~233 tok)
 - `build_pdf.py` — main (~299 tok)
-- `buildComplaintLetterTemplate.mjs` — สร้าง web/templates/complaint/template.docx ใหม่จากของเดิม + แก้ layout (~1984 tok)
+- `buildComplaintLetterTemplate.mjs` — สร้าง web/templates/complaint/template.docx จาก template.base.docx (~2378 tok)
 - `checkMetaScopes.js` — scripts/checkMetaScopes.js — เช็คว่า token โซเชียลที่เก็บไว้ยังใช้ได้ และมี scope อะไรบ้าง (~1292 tok)
 - `crop_document.py` — order_points, four_point_transform, is_roughly_rectangular, find_document_contour + 1 more (~1414 tok)
 - `export-devpack.sh` — export-devpack.sh — สร้างชุดไฟล์สำหรับ dev (dump ที่ anonymize แล้ว + .env.example) (~1172 tok)
@@ -497,7 +497,7 @@
 - `identity-split-user-identities.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1080 tok)
 - `identity-users-seq.sql` — ═══════════════════════════════════════════════════════════════════════════ (~257 tok)
 - `kanbanLabelsToFields.mjs` — ชนิด field ที่รับป้ายได้ — อย่างอื่น (text/number/date/checkbox/url) ยัดป้ายลงไปไม่ได้ (~2627 tok)
-- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~22365 tok)
+- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~25042 tok)
 - `moveWatermarksToOrg.js` — scripts/migration/moveWatermarksToOrg.js (~2002 tok)
 - `org-access-redesign.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1417 tok)
 - `phone-identity.sql` — phone-identity.sql — Phone เป็น login identity ที่ verify ได้ (Phase 4 slice 1) (~279 tok)
@@ -803,7 +803,7 @@
 
 ## web/app/api/case/[ref]/letter/drafts/
 
-- `route.js` — GET /api/case/[ref]/letter/drafts — รายการร่างหนังสือที่บันทึกไว้ (~117 tok)
+- `route.js` — GET /api/case/[ref]/letter/drafts — รายการร่างหนังสือ + ค่าเริ่มต้นของ "ผู้ลงนาม" (~391 tok)
 
 ## web/app/api/case/[ref]/letter/generate/
 
@@ -832,6 +832,10 @@
 ## web/app/api/case/[ref]/timeline/refresh/
 
 - `route.js` — กันเธรดยาวมาก (sync ครั้งแรก) ยัดเข้า prompt ก้อนเดียวจนเกิน context/ค่า AI พุ่ง (~2188 tok)
+
+## web/app/api/case/letter-config/
+
+- `route.js` — GET/PUT /api/case/letter-config — หัวจดหมายร้องเรียนต่อจังหวัด (~825 tok)
 
 ## web/app/api/cooking/chat/
 
@@ -1613,7 +1617,7 @@
 ## web/app/case/
 
 - `layout.js` — Next.js layout (~313 tok)
-- `page.js` — Next.js page component (~1498 tok)
+- `page.js` — Next.js page component (~1526 tok)
 
 ## web/app/case/[ref]/
 
@@ -1805,6 +1809,10 @@
 
 - `page.js` — Next.js page component (~142 tok)
 
+## web/app/org/settings/letter/
+
+- `page.js` — Next.js page component (~172 tok)
+
 ## web/app/org/settings/members/
 
 - `page.js` — Next.js page component (~237 tok)
@@ -1917,10 +1925,11 @@
 - `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
 - `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~972 tok)
 - `CaseEditButton.jsx` — inputCls (~1966 tok)
+- `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
-- `CaseLetterModal.jsx` — inputCls (~3298 tok)
+- `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~4159 tok)
 - `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ (~1986 tok)
-- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — แก้ได้ช่องเดียวคือ **ประเภท** (~1079 tok)
+- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — แก้ได้ช่องเดียวคือ **ประเภท** (~1072 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
 - `CaseSaveBadge.jsx` — ป้ายสถานะการบันทึกของหน้าเคส — บังคับมีทุกการ์ดที่ autosave (กฎ CLAUDE.md §กฎการบันทึก) (~244 tok)
@@ -1961,7 +1970,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~21085 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~24619 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
@@ -1979,11 +1988,12 @@
 - `OrgFeatures.jsx` — OrgFeatures (~766 tok)
 - `OrgGeneral.jsx` — isImgSrc — renders form (~1584 tok)
 - `OrgHome.jsx` — dashboard body ของ /org (render ใน OrgShell — switcher/ออกจากระบบ อยู่ที่ shell แล้ว) (~1386 tok)
+- `OrgLetterConfig.jsx` — หัวจดหมายร้องเรียนต่อจังหวัด (case_letter_config) (~2048 tok)
 - `OrgMembers.jsx` — OrgMembers — renders form (~4001 tok)
 - `OrgPrompts.jsx` — OrgPrompts (~1758 tok)
 - `OrgScopeTree.jsx` — ผังพื้นที่ของ org — สร้าง/ย้าย/เปลี่ยนชื่อ/ลบ node (~2593 tok)
 - `OrgSettings.jsx` — OrgSettings — renders form (~2200 tok)
-- `OrgSettingsNav.jsx` — TAB_HREFS (~785 tok)
+- `OrgSettingsNav.jsx` — TAB_HREFS (~912 tok)
 - `OrgShell.jsx` — OrgShell (~1592 tok)
 - `OrgSocialAccounts.jsx` — PLATFORM_LABEL (~7149 tok)
 - `OrgSocialGroups.jsx` — PLATFORM_LABEL (~3107 tok)
@@ -2027,8 +2037,8 @@
 - `authNonces.js` — nonce/challenge store keyed by user_id (แทน dc_user_config ที่ PK=discord_id) — รองรับ email-only (~308 tok)
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `botStatus.jsbotStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
-- `caseLetterConfig.js` — Exports getLetterConfig, upsertLetterConfig (~314 tok)
-- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~4320 tok)
+- `caseLetterConfig.js` — หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter (~507 tok)
+- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~6560 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
@@ -2140,7 +2150,7 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
-- `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~748 tok)
+- `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~802 tok)
 - `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)

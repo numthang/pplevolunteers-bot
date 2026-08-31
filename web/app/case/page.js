@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getUserScope } from '@/lib/caseAccess.js'
-import { listCases, countByStatus, ACTIVE, DONE } from '@/db/cases.js'
+import { listCases, countByFilter, ACTIVE, DONE } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
+import CaseFilterSelect from '@/components/case/CaseFilterSelect.jsx'
 
 export async function generateMetadata() {
   const t = await getTranslations('case')
@@ -46,20 +47,15 @@ export default async function CaseManageList({ searchParams }) {
     mineUserId: session?.user?.userId || null,
     limit: 300,
   })
-  const counts = await countByStatus(orgId, scope)
+  const counts = await countByFilter(orgId, session?.user?.userId || null, scope)
 
   const provinces = [...new Set(all.map(c => c.province).filter(Boolean))].sort()
   const cases = selectedProvince ? all.filter(c => c.province === selectedProvince) : all
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text mb-1">{t('manage.listHeading')}</h1>
-          <p className="text-base text-gray-500 dark:text-disc-muted">
-            {t('manage.listSummary', { total: all.length, open: counts.open || 0, inProgress: counts.in_progress || 0 })}
-          </p>
-        </div>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">{t('manage.listHeading')}</h1>
         <Link
           href="/complaint/new"
           className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
@@ -68,29 +64,20 @@ export default async function CaseManageList({ searchParams }) {
         </Link>
       </div>
 
-      {/* ชิปตัวกรอง — ต้อง**มองเห็นได้**ว่ากรองอะไรอยู่ เพราะคนส่วนใหญ่มาจากการกดเลขบนหน้าแรก
+      {/* ตัวกรอง — ต้อง**มองเห็นได้**ว่ากรองอะไรอยู่ เพราะคนส่วนใหญ่มาจากการกดเลขบนหน้าแรก
           ถ้าไม่โชว์ จะเข้าใจว่าองค์กรมีเคสอยู่แค่นี้จริงๆ
-          ⚠️ href ทุกอันต้องตรงกับลิงก์บนการ์ดหน้าแรก (app/page.js) เป๊ะ */}
-      <div className="mb-5 flex flex-wrap gap-2">
-        {[
-          { href: '/case', label: t('manage.filterAll'), on: !assigned && !selectedStatus },
-          { href: `/case?status=${ACTIVE}&assigned=none`, label: t('manage.filterUnassigned'), on: assigned === 'none' },
-          { href: `/case?status=${ACTIVE}&assigned=me`, label: t('manage.filterMine'), on: assigned === 'me' },
-          { href: `/case?status=${ACTIVE}&assigned=any`, label: t('manage.filterAssigned'), on: assigned === 'any' },
-          { href: `/case?status=${DONE}`, label: t('manage.filterDone'), on: selectedStatus === DONE },
-        ].map(({ href, label, on }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`px-3 py-1.5 text-base rounded-lg border transition ${
-              on
-                ? 'bg-orange text-white border-orange'
-                : 'bg-card-bg text-gray-600 dark:text-disc-text border-gray-200 dark:border-disc-border hover:border-orange'
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
+          ⚠️ href ทุกอันต้องตรงกับลิงก์บนการ์ดหน้าแรก (app/page.js) เป๊ะ
+          ⚠️ เลขในวงเล็บมาจาก countByFilter — แก้เงื่อนไขที่นี่ต้องแก้ที่นั่นให้ตรงกันเสมอ */}
+      <div className="mb-5">
+        <CaseFilterSelect
+          options={[
+            { href: '/case', label: `${t('manage.filterAll')} (${counts.total})`, on: !assigned && !selectedStatus },
+            { href: `/case?status=${ACTIVE}&assigned=none`, label: `${t('manage.filterUnassigned')} (${counts.unassigned})`, on: assigned === 'none' },
+            { href: `/case?status=${ACTIVE}&assigned=me`, label: `${t('manage.filterMine')} (${counts.mine})`, on: assigned === 'me' },
+            { href: `/case?status=${ACTIVE}&assigned=any`, label: `${t('manage.filterAssigned')} (${counts.assigned})`, on: assigned === 'any' },
+            { href: `/case?status=${DONE}`, label: `${t('manage.filterDone')} (${counts.done})`, on: selectedStatus === DONE },
+          ]}
+        />
       </div>
 
       {provinces.length > 1 && (

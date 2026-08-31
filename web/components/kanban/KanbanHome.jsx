@@ -25,7 +25,7 @@ import {
   Plus, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
-  AlertTriangle, X,
+  AlertTriangle, X, Check,
 } from 'lucide-react'
 import { STATUS_TYPES, isDraggableCard, formatRef, looksLikeRef } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
@@ -90,23 +90,48 @@ function dueState(dueAt) {
 const fmtDueShort = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
 
 /** ปุ่มสลับแบบ segmented — ใช้ทั้งแถว "แสดง" และ "จัดกลุ่ม" ให้หน้าตาเป็นชุดเดียวกัน */
-function Segmented({ options, value, onChange }) {
+/**
+ * Segmented — จอกว้าง = แถบปุ่มติดกัน · **จอมือถือ = `<select>`** (user เคาะ 2026-08-31)
+ *
+ * ⛔ ห้ามกลับไปเป็นแถบปุ่มล้วนทุกจอ: 5 ตัวเลือกไทย + ป้าย ≈ 460px แต่จอ 375 เหลือที่จริง 336px
+ *    → Chrome ถ่าง layout viewport เป็น 409 แล้วย่อทั้งหน้าลง = อาการ "แหกเกินหน้าจอ" ที่ user ทัก
+ *      (ปุ่ม "กรุ" โดนดันจนกดไม่ถึง) · ตรวจซ้ำได้: `node scripts/dev/mobileAudit.mjs --routes /kanban`
+ * ⭐ render ทั้ง 2 ทรงแล้วซ่อนด้วย class — **ห้ามวัดความกว้างด้วย JS** เพราะ SSR ไม่รู้ขนาดจอ = hydration พัง
+ * `counts` ใส่เฉพาะที่นับแล้วมีความหมาย (ดู scopeCounts) — ตัวเลือกที่ไม่มีเลขก็แค่ไม่มีวงเล็บ ไม่ใช่ (0)
+ */
+function Segmented({ options, value, onChange, label, counts, t }) {
+  const withCount = (o) =>
+    counts?.[o.value] == null ? o.label : t('controls.optionWithCount', { label: o.label, count: counts[o.value] })
+
   return (
-    <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={`px-4 py-2 text-base font-medium transition ${
-            value === o.value
-              ? 'bg-teal text-white'
-              : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+    <>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className="sm:hidden flex-1 min-w-0 h-9 px-2.5 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{withCount(o)}</option>
+        ))}
+      </select>
+
+      <div className="hidden sm:inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`px-4 py-2 text-base font-medium transition ${
+              value === o.value
+                ? 'bg-teal text-white'
+                : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -374,6 +399,12 @@ export default function KanbanHome() {
   const [sortQuery, setSortQuery] = useState('')
   const sortBoxRef = useRef(null)
 
+  // เมนูเฟือง (ตั้งค่า) — เมนูย่อยแบบ Notion ต่อชั้นได้ (settingsSubmenu = หัวข้อย่อยที่กางแผงตัวเลือกอยู่)
+  // ตอนนี้มีแค่ "จัดกลุ่ม" ย้ายมาจากแถวถาวรเข้ามาไว้ในนี้ (user ขอ 2026-08-31)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsSubmenu, setSettingsSubmenu] = useState(null)
+  const settingsBoxRef = useRef(null)
+
   // dropdown ตัวกรองป้าย — ปิดเมื่อคลิกนอกแถวปุ่ม/กด ESC (ตัวกรองอื่นในโปรเจกต์ก็ใช้ mousedown ไม่ใช่ click
   // เพราะต้องปิดก่อน onClick ของปุ่มอื่นด้านนอกจะยิง) · ครอบทั้งแถวไม่ใช่ต่อปุ่ม เพราะคลิกปุ่มกลุ่มอื่นตอนอันหนึ่ง
   // เปิดอยู่ยังนับว่า "อยู่ในแถว" — onClick ของปุ่มนั้นสลับ openGroupIdx เอง ไม่ต้องพึ่ง outside-click ปิดก่อน
@@ -405,6 +436,24 @@ export default function KanbanHome() {
       document.removeEventListener('keydown', onKey)
     }
   }, [sortOpen])
+
+  // เมนูเฟือง — กติกาปิดเดียวกับเมนูเรียงลำดับ · ปิดเมนูย่อยด้วยเสมอไม่งั้นเปิดเฟืองรอบหน้าจะกางค้าง
+  useEffect(() => {
+    if (!settingsOpen) return
+    function onClickOutside(e) {
+      if (settingsBoxRef.current && !settingsBoxRef.current.contains(e.target)) {
+        setSettingsOpen(false)
+        setSettingsSubmenu(null)
+      }
+    }
+    function onKey(e) { if (e.key === 'Escape') { setSettingsOpen(false); setSettingsSubmenu(null) } }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [settingsOpen])
 
   // ฟอร์ม "เพิ่มการบ้าน" — inline panel · ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   // กระดาน (ก้อน 3 · 2026-08-24) — activeBoardId = null คือ "ทุกกระดาน" (ค่าตั้งต้น)
@@ -587,6 +636,25 @@ export default function KanbanHome() {
     },
     [cards, scope, viewerUserId]
   )
+  /**
+   * จำนวนต่อมุมมองที่โชว์ในวงเล็บของ dropdown "แสดง" บนมือถือ (user ขอ 2026-08-31)
+   * นับในเครื่องจากการ์ดที่โหลดมาแล้ว ไม่ยิง API เพิ่ม — 4 มุมมองแรกเป็นตัวกรองฝั่ง client อยู่แล้ว (ดู scoped)
+   *
+   * ⚠️ **"กรุ" เป็นคนละ fetch** (`?view=archived`) → กฎคือ *นับเฉพาะชุดที่โหลดมาจริงตอนนี้*
+   *    อยู่นอกกรุ = มีเลข 4 ตัวแรก "กรุ" ไม่มีเลข · อยู่ในกรุ = มีเลขเฉพาะ "กรุ"
+   *    (เผลอนับ 4 ตัวแรกจาก `cards` ตอนอยู่ในกรุเมื่อไหร่ ตัวเลขโกหกทันที เพราะ `cards` ตอนนั้นคือการ์ดในกรุ)
+   * ⚠️ ระหว่างโหลดคืน {} — ไม่งั้นวงเล็บขึ้น (0) ทุกช่องแวบนึงแล้วค่อยเด้งเป็นเลขจริง
+   */
+  const scopeCounts = useMemo(() => {
+    if (loading) return {}
+    if (inArchive) return { archived: cards.length }
+    return {
+      mine: cards.filter((c) => isMyCard(c, viewerUserId)).length,
+      unassigned: cards.filter((c) => !c.owner_user_id).length,
+      assigned: cards.filter((c) => !!c.owner_user_id).length,
+      all: cards.length,
+    }
+  }, [cards, loading, inArchive, viewerUserId])
   const filterGroups = useMemo(() => collectFilterGroups(scoped), [scoped])
   // ผู้ช่วยที่ "มีอยู่จริง" บนการ์ดที่โหลดมา + จำนวนใบที่ติด — เหตุผลเดียวกับ collectFilterGroups
   // (ไม่เอาทั้ง org มาวาง จะได้ตัวเลือกกดแล้วว่างเปล่าเต็มไปหมด)
@@ -1022,7 +1090,7 @@ export default function KanbanHome() {
           </button>
 
           {boardMenuOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-72 max-h-80 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1.5">
+            <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-72 max-h-80 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1.5">
               <button
                 onClick={() => { setActiveBoardId(null); closeBoardMenu() }}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md text-left ${
@@ -1095,9 +1163,13 @@ export default function KanbanHome() {
         </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
+        {/* มือถือ: กินเต็มบรรทัดแล้วปล่อยให้ <select> ยืดเอง · จอกว้าง: กลับไปอยู่ในแถวเดียวกับตัวอื่น */}
+        <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+          <span className="shrink-0 text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
           <Segmented
+            t={t}
+            label={t('controls.showLabel')}
+            counts={scopeCounts}
             value={scope}
             onChange={setScope}
             options={[
@@ -1110,20 +1182,8 @@ export default function KanbanHome() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-warm-500 dark:text-disc-muted">{t('controls.groupLabel')}</span>
-          <Segmented
-            value={groupBy}
-            onChange={setGroupBy}
-            options={[
-              { value: 'status', label: t('controls.groupStatus') },
-              { value: 'due', label: t('controls.groupDue') },
-            ]}
-          />
-        </div>
-
-        {/* ค้นหา / กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — ยังไม่ทำ ใส่ไว้ก่อน) — ชิดขวาแถวเดียวกัน */}
-        <div className="flex items-center gap-1.5 ml-auto">
+        {/* ค้นหา / กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — มี "จัดกลุ่ม" อยู่ข้างใน) — ชิดขวาแถวเดียวกัน */}
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0 ml-auto">
           {/* ⭐ ช่องค้นหาอยู่ **นอก** กรวยกรอง — เป็นสิ่งที่คนหยิบใช้บ่อยสุด ต้องพิมพ์ได้เลย
               ไม่ต้องกดเปิดอะไรก่อน (ตัวเลือกในกรวยเป็นของที่เลือกนานๆ ครั้ง คนละจังหวะการใช้)
               ⚠️ กรองในเครื่องจากการ์ดที่โหลดมาแล้ว — ไม่ยิง API ใหม่ พิมพ์แล้วผลขยับทันที
@@ -1153,7 +1213,7 @@ export default function KanbanHome() {
             onClick={() => setFiltersOpen((v) => !v)}
             title={t('filter.toggleLabel')}
             aria-label={t('filter.toggleLabel')}
-            className={`flex items-center justify-center h-9 w-9 rounded-lg border transition ${
+            className={`flex items-center justify-center h-9 w-9 shrink-0 rounded-lg border transition ${
               filtersOpen || labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0
                 ? 'border-teal bg-teal/10 text-teal'
                 : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
@@ -1178,7 +1238,7 @@ export default function KanbanHome() {
             </button>
 
             {sortOpen && (
-              <div className="absolute right-0 top-full z-20 mt-1 w-64 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2">
+              <div className="absolute max-w-[calc(100vw_-_1.5rem)] right-0 top-full z-20 mt-1 w-64 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2">
                 <div className="flex items-center gap-1.5 h-9 px-2 mb-1.5 rounded-lg border border-warm-200 dark:border-disc-border">
                   <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
                   <input
@@ -1227,15 +1287,69 @@ export default function KanbanHome() {
             )}
           </div>
 
-          {/* เฟือง = ที่ตั้งค่าเผื่ออนาคต ยังไม่มีฟังก์ชัน — ใส่ไว้ก่อนตามที่ user ขอ */}
-          <button
-            disabled
-            title={t('settings.toggleLabel')}
-            aria-label={t('settings.toggleLabel')}
-            className="flex items-center justify-center h-9 w-9 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-300 dark:text-disc-muted/50 cursor-not-allowed"
-          >
-            <Settings size={16} />
-          </button>
+          {/* เฟือง = เมนูตั้งค่า — เมนูย่อยแบบ Notion (คลิกหัวข้อ → กางแผงตัวเลือกด้านข้าง)
+              ตอนนี้มีแค่ "จัดกลุ่ม" แต่โครงรองรับเพิ่มหัวข้อย่อยอื่นต่อท้ายได้เลย (user ขอ 2026-08-31) */}
+          <div ref={settingsBoxRef} className="relative">
+            <button
+              onClick={() => setSettingsOpen((v) => !v)}
+              title={t('settings.toggleLabel')}
+              aria-label={t('settings.toggleLabel')}
+              className={`flex items-center justify-center h-9 w-9 shrink-0 rounded-lg border transition ${
+                settingsOpen
+                  ? 'border-teal bg-teal/10 text-teal'
+                  : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+              }`}
+            >
+              <Settings size={16} />
+            </button>
+
+            {settingsOpen && (
+              <div className="absolute right-0 top-full z-20 mt-1 w-52 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1">
+                <div className="relative">
+                  <button
+                    onClick={() => setSettingsSubmenu((v) => (v === 'groupBy' ? null : 'groupBy'))}
+                    className={`flex items-center justify-between gap-2 w-full px-2 py-1.5 text-sm rounded-md text-left ${
+                      settingsSubmenu === 'groupBy'
+                        ? 'bg-warm-50 dark:bg-disc-hover text-warm-900 dark:text-disc-text'
+                        : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                    }`}
+                  >
+                    <span>{t('controls.groupLabel')}</span>
+                    <ChevronRight
+                      size={14}
+                      className={`shrink-0 text-warm-400 dark:text-disc-muted transition-transform ${
+                        settingsSubmenu === 'groupBy' ? 'rotate-90 sm:rotate-0' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* จอเล็ก: กางลงมาในแนวเดิม (ไม่ล้นซ้ายจอ) · sm ขึ้นไป: กางเป็นแผงข้างแบบ Notion
+                      ก่อนหน้านี้ล็อก absolute right-full ทุกจอ — บนมือถือแผงกว้าง 192px ดันล้นซ้ายจอ (user เจอ 2026-08-31) */}
+                  {settingsSubmenu === 'groupBy' && (
+                    <div className="mt-1 w-full sm:mt-0 sm:absolute sm:right-full sm:top-0 sm:mr-1 sm:w-48 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1">
+                      {[
+                        { value: 'status', label: t('controls.groupStatus') },
+                        { value: 'due', label: t('controls.groupDue') },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setGroupBy(opt.value); setSettingsOpen(false); setSettingsSubmenu(null) }}
+                          className={`flex items-center justify-between gap-2 w-full px-2 py-1.5 text-sm rounded-md text-left ${
+                            groupBy === opt.value
+                              ? 'bg-teal/10 text-teal font-medium'
+                              : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                          }`}
+                        >
+                          {opt.label}
+                          {groupBy === opt.value && <Check size={14} className="shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {filtersOpen && (
@@ -1262,7 +1376,7 @@ export default function KanbanHome() {
                   </button>
 
                   {openGroupIdx === idx && (
-                    <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                    <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
                       {labels.map((l) => {
                         const on = selectedIds.has(String(l.id))
                         const tint = chipProps(l)
@@ -1307,7 +1421,7 @@ export default function KanbanHome() {
                 </button>
 
                 {openGroupIdx === 'helper' && (
-                  <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                  <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
                     {helperOptions.map((h) => {
                       const on = selectedHelperIds.has(h.id)
                       return (
@@ -1351,7 +1465,7 @@ export default function KanbanHome() {
               </button>
 
               {openGroupIdx === 'kind' && (
-                <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
                   {kindOptions.map((k) => {
                     const on = selectedKindIds.has(k.id)
                     return (
@@ -1393,7 +1507,7 @@ export default function KanbanHome() {
               </button>
 
               {openGroupIdx === 'status' && (
-                <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
                   {statusOptions.map((s) => {
                     const on = selectedStatusIds.has(s.id)
                     return (

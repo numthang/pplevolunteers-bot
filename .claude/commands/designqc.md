@@ -1,26 +1,33 @@
 ---
-description: Screenshot-based design review of the running app via openwolf designqc
-argument-hint: [--url <url>] [--routes <routes>]
+description: ตรวจงานออกแบบ/หน้าจอของแอพจากภาพจริง (มือถือใช้ scripts/dev/mobileAudit.mjs)
+argument-hint: [--routes /a,/b] [--width 375] [--base http://localhost:3000]
 ---
 
 Arguments: $ARGUMENTS
 
-Evaluate and improve the design/UI of this app:
+> ⚠️ **`openwolf designqc` ตายแล้ว** — openwolf 2.5.0 ไม่มี subcommand นี้ (สั่งไปจะคืน help เฉยๆ
+> แบบ exit 0 = พังเงียบ ดูเหมือนสำเร็จ) คำสั่งนี้เลยเปลี่ยนมาใช้สคริปต์ในรีโปแทน (2026-08-31)
 
-1. Run `openwolf designqc` via Bash to capture screenshots (pass through any arguments given above).
-   - The command auto-detects a running dev server, or starts one from package.json if needed.
-   - Use `--url <url>` only if auto-detection fails.
-   - Compressed JPEG screenshots land in `.wolf/designqc-captures/`; full pages are captured as sectioned viewport-height images (top, section2, ..., bottom).
-2. Read the captured screenshots from `.wolf/designqc-captures/` with the Read tool.
-3. Evaluate against modern standards (Shadcn UI, Tailwind, clean React patterns):
-   - Spacing and whitespace consistency
-   - Typography hierarchy and readability
-   - Color contrast and accessibility (WCAG)
-   - Visual hierarchy and focal points
-   - Component consistency
-   - Whether the design looks generic ("white-coded", no personality)
-4. Provide specific, actionable feedback with fix suggestions.
-5. If the user approves, implement the fixes directly in their code.
-6. Re-run `openwolf designqc` to verify the improvement.
+## 1. ตรวจ layout มือถือ (อัตโนมัติ — ทำก่อนเสมอ)
 
-Token awareness: each screenshot costs about 2,500 tokens. For large apps, use `--routes / /specific-page` to limit captures.
+```bash
+node scripts/dev/mobileAudit.mjs --routes /kanban          # หรือ --all กวาดทุกโซน
+node scripts/dev/mobileAudit.mjs --routes /kanban --shot   # เก็บภาพลง .wolf/mobile-audit/ ด้วย
+```
+
+รายงาน 4 อาการ เทียบกับ **ความกว้างจอที่สั่ง** (ไม่ใช่ `innerWidth` — ดูเหตุผลในหัวไฟล์สคริปต์):
+`A` หน้ากว้างเกินจอ · `D` จอถูกถ่างจนหน้าถูกย่อ · `B` element ล้นขอบ (ชี้ตัวการนอกสุด) · `C` ของโดน `overflow-hidden` ตัดหาย
+
+- exit code 1 = เจอปัญหา · ต้องแก้ให้เหลือ 0 ก่อนบอกว่างานเสร็จ
+- หน้าที่มี dropdown/modal ให้เพิ่ม `steps` ใน `scripts/dev/mobileAudit.routes.mjs` ไม่งั้นตรวจไม่ถึง
+- **ไม่แทนการกดจริง** — ยังต้องเปิดดูเองตาม `md/WEB.md §จอมือถือ`
+
+## 2. ตรวจงานออกแบบด้วยสายตา (เมื่อผ่านข้อ 1 แล้ว)
+
+1. `--shot` แล้วอ่านภาพใน `.wolf/mobile-audit/` ด้วย Read tool (ภาพละ ~2,500 token — เลือกเฉพาะหน้าที่ต้องดู)
+2. ตรวจกับกฎของโปรเจกต์ที่เขียนไว้แล้ว **ไม่ใช่มาตรฐานลอยๆ**:
+   - `md/WEB.md §Type scale` (5 ขนาด · ห้าม `text-xs` · การ์ด `rounded-lg` · ปุ่ม `px-4 py-2 text-base`)
+   - `md/WEB.md §Dark Mode Classes` (`dark:text-disc-text`, `dark:border-disc-border`, `bg-card-bg`)
+   - `md/WEB.md §จอมือถือ` · `§ความกว้างของหน้า` (`data-wide`)
+   - ลอกทรงจาก `web/components/calling/` เสมอ ห้ามคิดสเกลใหม่เอง
+3. เสนอจุดที่ต้องแก้พร้อมเหตุผล → user เคาะ → แก้ → รันข้อ 1 ซ้ำให้ผ่าน

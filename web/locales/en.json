@@ -2060,7 +2060,8 @@
       "scopeArchived": "Archive",
       "archiveNote": "The archive holds tasks nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group",
       "scopeUnassigned": "No owner",
-      "scopeAssigned": "Assigned"
+      "scopeAssigned": "Assigned",
+      "optionWithCount": "{label} ({count})"
     },
     "due": {
       "overdue": "Overdue",

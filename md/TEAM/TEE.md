@@ -1,7 +1,8 @@
 My Tasks and bug issue
 - เอา งานกองทุนเข้า kanban ของปีนี้
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
-- http://localhost:3000/case/70-69-A6A1 ไม่ต้องมีให้กดแก้ไข ให้แก้ไขได้ที่หน้านี้ และ autosave เลย ลองจัดหน้าใหม่ให้ consistancy กับระบบ posts ไหม ตัวอย่าง http://localhost:3000/posts/97
+- http://localhost:3000/posts/ ไม่มี app menu บน hamburger
+- ข้อความจาก bot เวลาสร้างกระทู้ ขึ้นว่า "cases 📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส 00-69-5EA0 · จังหวัด ไม่ระบุ" (จังหวัดไม่ใช่เราเอามาจาก case_config เหรอ หรือ case_default_province สรุปอันนี้เราจะทำเอายังไง ย้ายมา case_config ใช่ไหม ถ้าใช่ก็ทำเลย)
 
 # PLATFOR{m}.ORG
 - platfor.org
@@ -11,7 +12,6 @@ My Tasks and bug issue
 - dashboard ยศที่แสดงบน card แรกสุด มีประโยชน์อะไร เอาออกไปก่อน 
 
 เรียงลำดับ card การบ้าน งานสื่อ ร้องเรียน เอกสาร โทรอาสา การเงิน
-
 
 # Kanban
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้

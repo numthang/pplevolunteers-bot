@@ -44,7 +44,9 @@ export default function FieldRow({ icon: Icon, label, handle, children, footer, 
           : label}
       </div>
 
-      <div className="min-w-0 flex items-center gap-2">{children}</div>
+      {/* flex-wrap: แถวที่ส่งลูกมาหลายตัว (เด่นสุด = ฟอร์มเพิ่ม field ใน CardFieldsBox — select + 2 ปุ่ม)
+          ไม่มีทางหนีเลยบนจอ 375 ที่ช่องค่าเหลือ ~288px · จอกว้างไม่เปลี่ยนอะไร เพราะไม่เคยพอที่จะ wrap */}
+      <div className="min-w-0 flex flex-wrap items-center gap-2">{children}</div>
 
       {/* แถวเสริมที่ต้องกินเต็มความกว้าง (เช่น แถวแก้ชื่อ field, เหตุผลที่ติดปัญหา) */}
       {footer && <div className="sm:col-span-2">{footer}</div>}

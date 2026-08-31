@@ -86,9 +86,14 @@ const DOCS_LINKS = [
 // เมนูซ้ำใน Nav ถูกถอดออก · ทางเข้าอยู่ที่เมนู org ข้าง "ตั้งค่าองค์กร"
 // (ตะกร้าสื่อยุบเข้า /posts ตั้งแต่ 2026-07-30 · Platforms ย้ายไป /org/settings/social)
 
-// /case = จัดการเคส (เหมือน docs/calling/posts) · หน้าแจ้งเรื่องร้องเรียนสาธารณะแยกออกไปอยู่ /complaint แล้ว (2026-08-30)
+// โมดูลเคสกินสอง route: /complaint (สาธารณะ ไม่ต้อง login) + /case (จัดการ ต้อง login)
+// แต่ sub-nav ใช้ชุดเดียวกันทั้งโมดูล — คนแจ้งเรื่องเห็น 2 อันแรก, คนจัดการเคสเห็นครบ 3
+// ⚠️ ถ้าเพิ่ม route ใหม่ในโมดูลนี้ ต้องเพิ่ม prefix ที่ isCaseModule ด้วย ไม่งั้น currentApp
+// ตกไปเป็น 'home' → topLinks = [] → nav ว่างทั้งหน้า (เกิดจริงตอนแยก route 2026-08-30)
 const CASE_LINKS = [
-  { href: '/case', label: 'Cases', icon: 'logs', exact: true },
+  { href: '/complaint',     label: 'ศูนย์รับเรื่อง', icon: 'overview', exact: true, public: true },
+  { href: '/complaint/new', label: 'แจ้งเรื่อง',     icon: 'pen',      public: true },
+  { href: '/case',          label: 'Cases',          icon: 'logs',     exact: true, feature: 'cases', casesAccess: true },
 ]
 
 const POSTS_LINKS = [
@@ -146,7 +151,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const isFinanceApp   = pathname.startsWith('/finance')
   // /bot ไม่ใช่แอปแล้ว (2026-08-09) — เป็น settings ที่มี sidebar ของตัวเอง Nav จึงไม่ต้องรู้จัก
   const isDocsApp      = pathname.startsWith('/docs')
-  const isCaseApp      = pathname.startsWith('/case')
+  // โมดูลเคส = /case (จัดการ) + /complaint (สาธารณะ) — nav ชุดเดียวกัน
+  const isCaseModule   = pathname.startsWith('/case') || pathname.startsWith('/complaint')
   const isPostsApp     = pathname.startsWith('/posts')
   const isTeamApp      = pathname.startsWith('/team')
   const isLinkActive = (href, exact = false) => {
@@ -156,11 +162,11 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const appByKey = (key) => APPS.find(a => a.key === key)
   const currentApp = isDocsApp ? appByKey('docs')
     : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance')
-    : isCaseApp ? appByKey('cases') : isPostsApp ? appByKey('posts')
+    : isCaseModule ? appByKey('cases') : isPostsApp ? appByKey('posts')
     : isTeamApp ? appByKey('team') : appByKey('home')
   const links = isDocsApp ? DOCS_LINKS
     : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS
-    : isCaseApp ? CASE_LINKS : isPostsApp ? POSTS_LINKS : DASHBOARD_LINKS
+    : isCaseModule ? CASE_LINKS : isPostsApp ? POSTS_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -434,7 +440,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
                   <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
                     {/* Nav links for current app — ซ่อนเมื่ออยู่ home (ซ้ำกับ app switcher) */}
-                    {(isFinanceApp || isCallingApp || isDocsApp || isCaseApp) && menuLinks.map(l => {
+                    {(isFinanceApp || isCallingApp || isDocsApp || isCaseModule) && menuLinks.map(l => {
                       if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
                         return (
                           <div key={l.href}>

@@ -759,6 +759,27 @@ flag HttpOnly (next-auth session/csrf ทุกตัวเป็นแบบน
 ⛔ token ที่ poll มาได้ใช้ **เทียบ** อย่างเดียว ห้ามเอาไปใส่ `lockTokenRef` — ใส่เมื่อไหร่ optimistic lock ตายทันที
    (autosave จะผ่านด่านทุกครั้งโดยไม่เคยเห็นเนื้อหาใหม่ = last-write-wins กลับมา)
 
+
+### ตรวจ layout มือถือเองได้แล้ว — `scripts/dev/mobileAudit.mjs` (2026-08-31)
+
+user ทัก: "ผมต้องมาเจอเองแล้วต้องบอกให้คุณไล่แก้หมดเลย เหนื่อยอ่ะ" → งานหา "จุดไหนล้น" ย้ายมาเป็นของเครื่อง
+
+- `node scripts/dev/mobileAudit.mjs --routes /kanban` (หรือ `--all`) · zero dependency
+  ขับ `google-chrome --headless=new` ผ่าน CDP ด้วย `globalThis.WebSocket` ของ Node 24
+  login ด้วยการ insert `org_login_tokens` แล้วให้เบราว์เซอร์เดิน `/org/verify?token=` เอง
+  (⛔ ห้ามยิง `POST /api/org/auth/magic` = ส่งเมลจริง)
+- **⛔ กับดักใหญ่ที่ทำให้ตัวตรวจโกหก:** Chrome โหมดมือถือ **ถ่าง layout viewport เองเมื่อเนื้อหาล้น**
+  (สั่ง 375 → `innerWidth` ออกมา 409) แล้ว**ย่อทั้งหน้า**แทนที่จะตัด → ถ้าวัดเทียบ `innerWidth`
+  จะได้ "ไม่มีอะไรล้น" ทั้งที่หน้าแหกจริง · **ต้องเทียบกับความกว้างจอที่สั่ง (target) เสมอ** (bug-464)
+  นี่ยังแปลว่า "เปิด DevTools แล้วดูเผินๆ ว่าไม่ล้น" เชื่อไม่ได้ด้วย
+- อาการที่ตรวจ: `A` หน้ากว้างเกิน target · `D` จอถูกถ่าง · `B` element ล้นขอบ (เอาตัวนอกสุด = ตัวการ)
+  · `C` โดน `overflow-x:hidden` ตัดหาย (ต้องข้าม `input/textarea/select` + `text-overflow:ellipsis` ไม่งั้น false positive)
+- `steps` ใน `mobileAudit.routes.mjs` = selector ที่ต้องคลิกก่อน probe — **ไม่มี steps = ตรวจ dropdown/modal ไม่ถึง**
+  ("หา selector ไม่เจอ" โผล่เป็นครั้งคราวจากจังหวะ render ไม่ใช่ selector ผิดเสมอไป — รันซ้ำก่อนสรุป)
+- ผลสแกนจริง 16 โซน: `/calling` `/posts` `/docs` ใช้ `-mx-3` แต่ `main` เป็น `px-1` → ล้น 9px ทั้ง 3 โซน
+  (`app/kanban/layout.js` ใช้ `-mx-1 sm:-mx-4` ถูกอยู่แล้ว = ต้นแบบ) · `/integrations` ตาราง API ล้น 79px
+- กฎ layout มือถือทั้งชุดเขียนไว้ที่ `md/WEB.md §จอมือถือ` แล้ว (งบความกว้างจริงที่ 375 = **336px**)
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->

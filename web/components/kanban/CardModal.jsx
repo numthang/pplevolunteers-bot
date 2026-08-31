@@ -368,7 +368,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}
     >
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg w-full max-w-2xl my-auto">
-        <div className="flex items-start justify-between gap-2 p-6 border-b border-warm-200 dark:border-disc-border">
+        <div className="flex items-start justify-between gap-2 p-4 sm:p-6 border-b border-warm-200 dark:border-disc-border">
           {/* ⛔ เดิมมี h2 "รายละเอียดการบ้าน" ใต้เลข — ถอดออก 2026-08-28 (user: ไม่บอกอะไรที่คนยังไม่รู้)
               เลข K-xx ขึ้นมาเป็นหัวเรื่องแทน เพราะเป็นสิ่งเดียวในหัวกล่องที่ระบุว่า "ใบไหน"
               (ชื่อการบ้านแก้ได้ในตัวกล่องอยู่แล้ว จึงไม่เอามาซ้ำที่หัว) */}
@@ -404,7 +404,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
           </div>
         </div>
 
-        <div className="p-6 flex flex-col gap-4">
+        {/* p-4 บนมือถือ: จอ 375 เหลือที่จริง 336px หัก p-6 สองข้างแล้วเนื้อหาเหลือ 288px — คืนมา 16px
+            ทรงเดียวกับที่ใช้ที่ case (commit 8408571 `px-4 sm:px-6`) */}
+        <div className="p-4 sm:p-6 flex flex-col gap-4">
           {loading && <p className="text-base text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
           {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
 
@@ -505,7 +507,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                       setDueAt(baseline.current?.dueAt ?? '')
                       e.currentTarget.blur()
                     }}
-                    className="h-11 px-2 -mx-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal disabled:opacity-60 transition"
+                    className="w-full min-w-0 h-11 px-2 -mx-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal disabled:opacity-60 transition"
                   />
                 </FieldRow>
 

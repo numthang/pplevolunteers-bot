@@ -4281,6 +4281,348 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-31T09:21:38.595Z"
+    },
+    {
+      "id": "bug-229",
+      "timestamp": "2026-08-31T14:43:21.356Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/buildComplaintLetterTemplate.mjs",
+      "root_cause": "Had 'โทร {signer_phone}'",
+      "fix": "Changed to \"โทร 065-…\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:43:21.356Z"
+    },
+    {
+      "id": "bug-230",
+      "timestamp": "2026-08-31T14:43:44.307Z",
+      "error_message": "Null/undefined access in generateComplaintLetter.js",
+      "file": "web/lib/generateComplaintLetter.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:43:44.307Z"
+    },
+    {
+      "id": "bug-231",
+      "timestamp": "2026-08-31T14:45:16.378Z",
+      "error_message": "Null/undefined access in CaseLetterModal.jsx",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:45:16.378Z"
+    },
+    {
+      "id": "bug-232",
+      "timestamp": "2026-08-31T14:45:40.575Z",
+      "error_message": "Significant refactor of CaseLetterModal.jsx",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 40→50 lines (8 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:45:40.575Z"
+    },
+    {
+      "id": "bug-233",
+      "timestamp": "2026-08-31T14:49:27.854Z",
+      "error_message": "Missing await",
+      "file": "web/db/caseLetterConfig.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:49:27.854Z"
+    },
+    {
+      "id": "bug-234",
+      "timestamp": "2026-08-31T14:49:52.306Z",
+      "error_message": "Significant refactor of caseLetterConfig.js",
+      "file": "web/db/caseLetterConfig.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→16 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:49:52.306Z"
+    },
+    {
+      "id": "bug-235",
+      "timestamp": "2026-08-31T14:51:26.470Z",
+      "error_message": "CSS fix: href",
+      "file": "web/components/org/OrgSettingsNav.jsx",
+      "root_cause": "href: '/org/settings/brand', key: 'brand' → '/org/settings/letter', key: 'letter'",
+      "fix": "Changed href: '/org/settings/brand', key: 'brand' → '/org/settings/letter', key: 'letter'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T14:51:26.470Z"
+    },
+    {
+      "id": "bug-236",
+      "timestamp": "2026-08-31T15:31:08.940Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "dark: text-disc-muted\">{t('letter.signerSectionHint') → border-disc-border space-y-4\">",
+      "fix": "Changed dark: text-disc-muted\">{t('letter.signerSectionHint') → border-disc-border space-y-4\">",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T15:31:08.940Z"
+    },
+    {
+      "id": "bug-237",
+      "timestamp": "2026-08-31T15:39:01.566Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "dark: border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange transition\"> → text-green-400\">{savedMsg",
+      "fix": "Changed dark: border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange transition\"> → text-green-400\">{savedMsg",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-08-31T15:43:00.352Z"
+    },
+    {
+      "id": "bug-238",
+      "timestamp": "2026-08-31T15:39:37.677Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "dark: bg-disc-hover text-gray-700 dark:text-disc-text\">{a.name → text-disc-muted' : 'text-gray-900 dark:text-disc-text'",
+      "fix": "Changed dark: bg-disc-hover text-gray-700 dark:text-disc-text\">{a.name → text-disc-muted' : 'text-gray-900 dark:text-disc-text'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-08-31T15:43:37.698Z"
+    },
+    {
+      "id": "bug-239",
+      "timestamp": "2026-08-31T15:54:12.476Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/case/page.js",
+      "root_cause": "Had \"mb-6 flex items-start justify-between gap-4\"",
+      "fix": "Changed to \"mb-6 flex flex-wrap items-start justify-between g",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-08-31T15:54:57.606Z"
+    },
+    {
+      "id": "bug-240",
+      "timestamp": "2026-08-31T00:00:00.000Z",
+      "error_message": "มือถือ: แถวชิปตัวกรองในหน้า /case ทะลุกรอบจอ",
+      "file": "web/app/case/page.js",
+      "root_cause": "ใช้ negative-margin bleed -mx-4 px-4 เพื่อให้แถวชิปเลื่อนแนวนอนชิดขอบจอ แต่ container จริง (<main> ใน web/app/layout.js) ใช้ px-1 บนมือถือ (sm:px-4 บนจอกว้าง) ไม่ใช่ px-4 — ค่าไม่ตรงกันทำให้ negative margin ดึงเกินขอบจริง",
+      "fix": "เอา bleed ออก ใช้แค่ flex flex-nowrap sm:flex-wrap gap-2 overflow-x-auto sm:overflow-visible โดยไม่ใส่ negative margin/padding เพิ่ม ให้ scroll container อยู่ในขอบ padding เดิมของ <main>",
+      "tags": [
+        "mobile",
+        "overflow",
+        "negative-margin",
+        "case",
+        "flex-nowrap"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T00:00:00.000Z"
+    },
+    {
+      "id": "bug-241",
+      "timestamp": "2026-08-31T16:00:50.241Z",
+      "error_message": "Missing guard clause",
+      "file": "web/db/cases.js",
+      "root_cause": "No early return/throw for edge case: Array.isArray(provinces",
+      "fix": "Added guard clause: if (Array.isArray(provinces)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:00:50.241Z"
+    },
+    {
+      "id": "bug-242",
+      "timestamp": "2026-08-31T16:01:00.729Z",
+      "error_message": "Wrong reference: countCaseStats should be countByFilter",
+      "file": "web/app/case/page.js",
+      "root_cause": "Used \"countCaseStats\" instead of \"countByFilter\"",
+      "fix": "Changed countCaseStats → countByFilter",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:01:00.729Z"
+    },
+    {
+      "id": "bug-243",
+      "timestamp": "2026-08-31T16:01:10.914Z",
+      "error_message": "Null/undefined access in page.js",
+      "file": "web/app/case/page.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:01:10.914Z"
+    },
+    {
+      "id": "bug-20260831T230905-complaint-nav",
+      "timestamp": "2026-08-31T23:09:05",
+      "error_message": "/complaint/new ไม่มี sub-nav บน top bar (nav ว่าง เหลือแค่โลโก้+เข้าสู่ระบบ)",
+      "file": "web/components/Nav.jsx",
+      "root_cause": "หลังแยก route 5e97009 (/case จัดการ, /complaint สาธารณะ) หน้า new ย้ายจาก /case/new → /complaint/new · Nav รู้จักแค่ isCaseApp = pathname.startsWith('/case') ทำให้ /complaint ตกไปเป็น currentApp 'home' → isHomeApp true → topLinks = [] ไม่มีลิงก์เลย",
+      "fix": "รวม sub-nav เป็นชุดเดียวทั้งโมดูล: CASE_LINKS = ศูนย์รับเรื่อง(/complaint,public) + แจ้งเรื่อง(/complaint/new,public) + Cases(/case,casesAccess) และเปลี่ยน isCaseApp → isCaseModule ที่ครอบทั้ง /case และ /complaint (อย่าแยกเป็น 2 ชุด — โมดูลเดียวกัน)",
+      "tags": [
+        "nav",
+        "routing",
+        "regression",
+        "case",
+        "complaint"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T23:09:05"
+    },
+    {
+      "id": "bug-245",
+      "timestamp": "2026-08-31T16:24:24.152Z",
+      "error_message": "Missing guard clause",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "No early return/throw for edge case: !settingsOpen",
+      "fix": "Added guard clause: if (!settingsOpen)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:24:24.152Z"
+    },
+    {
+      "id": "bug-246",
+      "timestamp": "2026-08-31T16:24:41.656Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "dark: border-disc-border bg-card-bg text-warm-300 dark:text-disc-muted/50 cursor-not-allowed\" → text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'",
+      "fix": "Changed dark: border-disc-border bg-card-bg text-warm-300 dark:text-disc-muted/50 cursor-not-allowed\" → text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:24:41.656Z"
+    },
+    {
+      "id": "bug-247",
+      "timestamp": "2026-08-31T16:27:13.380Z",
+      "error_message": "Significant refactor of KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 40→56 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:27:13.380Z"
+    },
+    {
+      "id": "bug-248",
+      "timestamp": "2026-08-31T16:45:24.721Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "dark: border-disc-border rounded-lg shadow-lg p-1\"> → text-disc-muted transition-transform ${",
+      "fix": "Changed dark: border-disc-border rounded-lg shadow-lg p-1\"> → text-disc-muted transition-transform ${",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:45:24.721Z"
+    },
+    {
+      "id": "bug-464",
+      "timestamp": "2026-08-31T16:48:49.098548Z",
+      "error_message": "mobileAudit รายงาน \"ไม่พบปัญหา\" ทั้งที่ /kanban แหกจริงบนมือถือ (false negative)",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "Chrome โหมดมือถือ (Emulation.setDeviceMetricsOverride mobile:true) ถ่าง layout viewport เองเมื่อเนื้อหาล้น — สั่ง 375 แต่ window.innerWidth ออกมา 409 แล้วย่อทั้งหน้าลงให้พอดีแทนที่จะตัด · probe รอบแรกวัดทุกอย่างเทียบ innerWidth → หลังถ่างแล้วทุกตัว 'ไม่ล้น' ทั้งที่สิ่งที่ user เห็นคือหน้าถูกย่อ/ปุ่มริมขวากดไม่ถึง",
+      "fix": "วัดเทียบ **ความกว้างจอที่สั่ง (target)** ทุกจุด ไม่ใช่ innerWidth + เพิ่มอาการ D (innerWidth > target = จอถูกถ่าง) · แก้แล้วจับ div ของแถบ 'แสดง' เกิน 34px ได้ทันที ตรงกับภาพที่ user ส่งมา · และต้องข้าม input/textarea/select ในอาการ C เพราะช่องกรอกเลื่อนเนื้อหาในตัวเองเป็นปกติ (เคย false positive ว่า input เกิน 529px)",
+      "tags": [
+        "mobile",
+        "layout",
+        "cdp",
+        "chrome",
+        "false-negative",
+        "tooling",
+        "viewport"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T16:48:49.098548Z"
     }
   ]
 }

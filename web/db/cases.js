@@ -355,6 +355,34 @@ export async function countCaseStats(orgId, userId, provinces = null) {
 }
 
 /**
+ * ตัวเลขในวงเล็บของ dropdown ตัวกรองที่ /case (user เคาะ 2026-08-31)
+ * ⚠️ ทุกเลขต้องตรงกับ listCases ที่ตัวเลือกนั้นยิงเป๊ะ — เลือกแล้วต้องเจอจำนวนเท่าที่เขียนไว้
+ *    total=ไม่กรองอะไร · unassigned/mine/assigned=ACTIVE+เจ้าภาพ · done=DONE_STATUSES ทั้งหมด (ไม่ตัด 30 วันแบบ countCaseStats)
+ */
+export async function countByFilter(orgId, userId, provinces = null) {
+  const ASSIGNED = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
+  const MINE = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2)`
+  const ACTIVE_SQL = `c.status = ANY(${setSql(ACTIVE_STATUSES)})`
+
+  const params = [orgId, userId || null]
+  let q = `SELECT COUNT(*)::int                                                       AS total,
+                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND NOT ${ASSIGNED})::int      AS unassigned,
+                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${MINE})::int              AS mine,
+                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${ASSIGNED})::int          AS assigned,
+                  COUNT(*) FILTER (WHERE c.status = ANY(${setSql(DONE_STATUSES)}))::int AS done
+             FROM cases c
+            WHERE c.org_id = $1 AND c.archived_at IS NULL`
+  if (Array.isArray(provinces)) {
+    if (provinces.length === 0) return { total: 0, unassigned: 0, mine: 0, assigned: 0, done: 0 }
+    params.push(provinces)
+    q += ` AND c.province = ANY($${params.length})`
+  }
+  const { rows } = await pool.query(q, params)
+  const r = rows[0] || {}
+  return { total: r.total || 0, unassigned: r.unassigned || 0, mine: r.mine || 0, assigned: r.assigned || 0, done: r.done || 0 }
+}
+
+/**
  * ⛔ **ห้ามเรียกตรงๆ จาก route** — ใช้ `lib/caseAssign.js` แทน
  *    เจ้าภาพเคยดริฟต์เพราะเขียนตารางนี้อย่างเดียวแล้วไม่แตะการ์ด kanban
  *    (`kanban_cards.owner_user_id` เป็น **สำเนา** ไม่ได้อ่านสดเหมือนสถานะ)

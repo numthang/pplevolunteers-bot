@@ -337,7 +337,9 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
                 disabled={busyId === item.id}
                 aria-label={t('modal.removeItem')}
                 title={t('modal.removeItem')}
-                className="p-1 rounded text-warm-400 dark:text-disc-muted opacity-0 group-hover:opacity-100 hover:text-red-500 disabled:opacity-50 shrink-0"
+                /* จอสัมผัสไม่มี hover — ถ้าซ่อนด้วย group-hover เฉยๆ ปุ่มลบจะกดไม่ได้เลยบนมือถือ
+                   → มือถือโชว์ตลอด · จอกว้างค่อยซ่อนรอ hover เหมือนเดิม */
+                className="p-1 rounded text-warm-400 dark:text-disc-muted opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-red-500 disabled:opacity-50 shrink-0"
               >
                 <Trash2 size={14} />
               </button>

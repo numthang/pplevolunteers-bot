@@ -2060,7 +2060,8 @@
       "scopeArchived": "กรุ",
       "archiveNote": "กรุคือที่เก็บการบ้านที่ไม่เอาแล้ว — ไม่มีการลบถาวร กดเอาออกจากกรุแล้วกลับไปอยู่กองเดิม",
       "scopeUnassigned": "ไม่มีเจ้าภาพ",
-      "scopeAssigned": "มีคนรับแล้ว"
+      "scopeAssigned": "มีคนรับแล้ว",
+      "optionWithCount": "{label} ({count})"
     },
     "due": {
       "overdue": "เลยกำหนด",
