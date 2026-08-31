@@ -28,21 +28,22 @@ export default function CaseMetaEditor({
         <CaseSaveBadge saveState={saveState} error={error} />
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-disc-text">{t('edit.categoryLabel')}</label>
-        {canEdit ? (
-          <select value={values.category} onChange={e => set('category', e.target.value)} className={selectCls}>
-            <option value="">{t('edit.categoryNone')}</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        ) : (
-          <p className="text-base text-gray-900 dark:text-disc-text">{initial.category || '—'}</p>
-        )}
-      </div>
+      {/* ทุกอย่างในการ์ดนี้เป็นแถว "หัวข้อซ้าย · ค่าขวา" ชุดเดียวกัน — รวมประเภทที่แก้ได้ด้วย
+          (user 2026-08-31: ค่าตกบรรทัดใต้ label แล้วอ่านเป็นคนละเรื่องกับข้างล่าง — ทักซ้ำ 3 จุด)
+          items-center ให้หัวข้อเสมอกึ่งกลาง <select> ที่สูงกว่าบรรทัดข้อความ */}
+      <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-base pt-1">
+        <dt className="text-gray-400 dark:text-disc-muted">{t('edit.categoryLabel')}</dt>
+        <dd>
+          {canEdit ? (
+            <select value={values.category} onChange={e => set('category', e.target.value)} className={selectCls}>
+              <option value="">{t('edit.categoryNone')}</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          ) : (
+            <span className="text-gray-900 dark:text-disc-text">{initial.category || '—'}</span>
+          )}
+        </dd>
 
-      {/* จังหวัดอยู่แถวเดียวกับข้อเท็จจริงอื่น — แก้ไม่ได้อยู่แล้ว ไม่ต้องมี label ก้อนใหญ่ + คำอธิบาย
-          (user 2026-08-31: ค่าตกบรรทัดใต้ label แล้วอ่านเป็นคนละเรื่องกับข้างล่าง) */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-base pt-1">
         <dt className="text-gray-400 dark:text-disc-muted">{t('edit.provinceLabel')}</dt>
         <dd className="text-gray-900 dark:text-disc-text">{province}</dd>
         <dt className="text-gray-400 dark:text-disc-muted">{t('manage.channelLabel')}</dt>

@@ -552,7 +552,7 @@
       "signerPhonePlaceholder": "08x-xxx-xxxx",
       "pageAlt": "Page {page}",
       "backToEditButton": "← Edit again",
-      "backToListButton": "← Back to list",
+      "backToListButton": "Back",
       "saveDraftButton": "Save draft",
       "generatingButton": "Generating PDF...",
       "generatePdfButton": "Generate PDF",

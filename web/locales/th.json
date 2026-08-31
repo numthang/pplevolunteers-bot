@@ -552,7 +552,7 @@
       "signerPhonePlaceholder": "08x-xxx-xxxx",
       "pageAlt": "หน้า {page}",
       "backToEditButton": "← แก้ไขอีกครั้ง",
-      "backToListButton": "← รายการ",
+      "backToListButton": "ย้อนกลับ",
       "saveDraftButton": "บันทึกร่าง",
       "generatingButton": "กำลังสร้าง PDF...",
       "generatePdfButton": "สร้าง PDF",

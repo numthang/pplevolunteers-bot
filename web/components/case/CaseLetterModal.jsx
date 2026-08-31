@@ -160,9 +160,17 @@ export default function CaseLetterModal({ refId, onClose }) {
       <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-disc-border shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-disc-border shrink-0">
           <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">{t('letter.title')}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-disc-text text-2xl leading-none">&times;</button>
+          {/* ย้อนกลับ + ปิด อยู่มุมขวาบนคู่กัน — ท้ายโมดัลเหลือแต่ปุ่มที่ "ทำอะไรกับหนังสือ" เท่านั้น */}
+          <div className="flex items-center gap-3 shrink-0">
+            {step === 'edit' && drafts.length > 0 && (
+              <button onClick={() => setStep('pick')} className="text-base whitespace-nowrap text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
+                {t('letter.backToListButton')}
+              </button>
+            )}
+            <button onClick={onClose} aria-label={t('common.close')} className="text-gray-400 hover:text-gray-700 dark:hover:text-disc-text text-2xl leading-none">&times;</button>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
@@ -271,19 +279,9 @@ export default function CaseLetterModal({ refId, onClose }) {
         {/* Footer — มือถือ: 2 แถว (ปุ่มรองบน · ปุ่มหลักล่าง เต็มความกว้าง ให้นิ้วโป้งถึง)
             เดิมยัด 4 ปุ่มแถวเดียว justify-between → บนจอ ~350px ข้อความหักกลางปุ่ม ("บันทึก\nร่าง")
             whitespace-nowrap กันข้อความหักในปุ่ม · flex-1 ให้ปุ่มหลักแบ่งความกว้างกันเองบนมือถือ */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-disc-border shrink-0 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-between sm:items-center">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={onClose} className="px-3 sm:px-4 py-2 text-base whitespace-nowrap text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
-              {t('common.close')}
-            </button>
-            {step === 'edit' && drafts.length > 0 && (
-              <button onClick={() => setStep('pick')} className="px-3 sm:px-4 py-2 text-base whitespace-nowrap text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
-                {t('letter.backToListButton')}
-              </button>
-            )}
-            {savedMsg && <span className="text-sm whitespace-nowrap text-green-600 dark:text-green-400">{savedMsg}</span>}
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-disc-border shrink-0 flex items-center justify-end gap-2 sm:gap-3">
+          {savedMsg && <span className="mr-auto text-sm whitespace-nowrap text-green-600 dark:text-green-400">{savedMsg}</span>}
+          <div className="flex flex-1 sm:flex-none items-center gap-2 sm:gap-3">
             {step === 'edit' && (
               <button onClick={saveDraft} disabled={saving} className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base whitespace-nowrap hover:border-brand-orange hover:text-brand-orange disabled:opacity-50 transition">
                 {saving ? t('common.saving') : t('letter.saveDraftButton')}
