@@ -2,6 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import useAutoGrow from '@/lib/useAutoGrow.js'
+
+/**
+ * หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง
+ * เพราะ cases.letters เก็บ "ร่างที่ยังไม่ได้ส่ง" ไม่ใช่ทะเบียนหนังสือที่ออกไปแล้ว
+ * ที่อยู่สาขา/ผู้ประสานงานเปลี่ยนเมื่อไหร่ ต้องมีผลกับทุกใบที่พิมพ์หลังจากนั้น
+ *
+ * ร่างยุคแรก (30 มิ.ย.) แช่ค่าพวกนี้ไว้ในร่าง แล้วมันชนะ config ตอน generate โดยไม่มีช่องให้เห็นหรือแก้
+ * → โยนทิ้งตอนโหลด ไม่ให้ไหลกลับเข้า fields อีก
+ */
+const STALE_HEADER_KEYS = ['org_name', 'address', 'coordinator_name', 'coordinator_phone']
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const labelCls = 'block text-sm font-semibold mb-1 text-gray-700 dark:text-disc-text'
@@ -23,23 +34,25 @@ export default function CaseLetterModal({ refId, onClose }) {
   const [generating, setGenerating] = useState(false)
   const [pages, setPages]           = useState([])
   const [pdfBase64, setPdfBase64]   = useState(null)
+  const [signerDefaults, setSignerDefaults] = useState({})
+  const bodyRef = useAutoGrow(fields?.body)
 
-  // โหลดรายการร่างที่บันทึกไว้
+  // โหลดรายการร่างที่บันทึกไว้ + ค่าเริ่มต้นผู้ลงนาม
   useEffect(() => {
     fetch(`/api/case/${refId}/letter/drafts`)
       .then(r => r.json())
       .then(d => {
+        const defaults = d.signerDefaults || {}
         setDrafts(d.drafts || [])
-        if ((d.drafts || []).length === 0) {
-          loadAiDraft()
-        } else {
-          setStep('pick')
-        }
+        setSignerDefaults(defaults)
+        // ส่ง defaults เข้าไปตรงๆ — setState ยังไม่มีผลจนถึง render ถัดไป อ่าน state ที่นี่จะได้ค่าเก่า
+        if ((d.drafts || []).length === 0) loadAiDraft(defaults)
+        else setStep('pick')
       })
-      .catch(() => loadAiDraft())
+      .catch(() => loadAiDraft({}))
   }, [refId])
 
-  function loadAiDraft() {
+  function loadAiDraft(defaults) {
     setStep('loading')
     setDraftId(null)
     fetch(`/api/case/${refId}/letter/draft`, { method: 'POST' })
@@ -52,6 +65,9 @@ export default function CaseLetterModal({ refId, onClose }) {
           recipient_name:  d.draft.recipient_name || '',
           attachments:     d.draft.attachments || '-',
           body:            d.draft.body || '',
+          signer_name:     defaults.signer_name || '',
+          signer_position: defaults.signer_position || '',
+          signer_phone:    defaults.signer_phone || '',
         })
         setStep('edit')
       })
@@ -60,8 +76,15 @@ export default function CaseLetterModal({ refId, onClose }) {
 
   function loadSavedDraft(draft) {
     const { id, saved_at, ...f } = draft
+    for (const k of STALE_HEADER_KEYS) delete f[k]
     setDraftId(id)
-    setFields(f)
+    setFields({
+      // ร่างยุคก่อนไม่มี 3 ช่องนี้ — ตกมาใช้ค่าเริ่มต้นของคนที่เปิด ไม่ปล่อยให้ input เป็น undefined
+      signer_name:     signerDefaults.signer_name || '',
+      signer_position: signerDefaults.signer_position || '',
+      signer_phone:    signerDefaults.signer_phone || '',
+      ...f,
+    })
     setStep('edit')
   }
 
@@ -203,7 +226,36 @@ export default function CaseLetterModal({ refId, onClose }) {
 
               <div>
                 <label className={labelCls}>{t('letter.bodyLabel')}</label>
-                <textarea className={inputCls} rows={8} value={fields.body} onChange={set('body')} style={{ resize: 'vertical' }} />
+                {/* ⛔ ห้ามใส่ autoGrow(e.target) ใน onChange — useAutoGrow ทำให้แล้ว 1 ครั้งต่อ render */}
+                <textarea
+                  ref={bodyRef}
+                  className={`${inputCls} resize-none overflow-hidden min-h-[180px]`}
+                  value={fields.body}
+                  onChange={set('body')}
+                />
+              </div>
+
+              <div className="pt-2 border-t border-gray-200 dark:border-disc-border space-y-4">
+                <div>
+                  <p className={labelCls}>{t('letter.signerSectionTitle')}</p>
+                  <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letter.signerSectionHint')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>{t('letter.signerNameLabel')}</label>
+                    <input className={inputCls} value={fields.signer_name} onChange={set('signer_name')} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('letter.signerPhoneLabel')}</label>
+                    <input className={inputCls} value={fields.signer_phone} onChange={set('signer_phone')} placeholder={t('letter.signerPhonePlaceholder')} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>{t('letter.signerPositionLabel')}</label>
+                  <input className={inputCls} value={fields.signer_position} onChange={set('signer_position')} placeholder={t('letter.signerPositionPlaceholder')} />
+                </div>
               </div>
 
               {error && <p className="text-sm text-red-500">{error}</p>}

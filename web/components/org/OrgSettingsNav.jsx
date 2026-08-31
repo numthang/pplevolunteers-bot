@@ -15,6 +15,8 @@ const TAB_HREFS = [
   { href: '/org/settings/ai', key: 'ai' },
   // ลายน้ำ + สี CI + สไตล์การ์ด ย้ายมาจาก /bot/media/* (2026-08-10) — เป็นอัตลักษณ์ของแบรนด์ ไม่ผูก guild
   { href: '/org/settings/brand', key: 'brand' },
+  // หัวจดหมาย/ผู้ประสานงานของหนังสือร้องเรียน ต่อจังหวัด (2026-08-31) — เดิมมีแต่ตาราง ไม่มี UI ต้องยิง SQL มือ
+  { href: '/org/settings/letter', key: 'letter' },
 ]
 
 // desktop = sidebar (list แนวตั้ง) · mobile = dropdown overlay (ไม่ดันเนื้อหาลง, เมนูโตได้ไม่จำกัด)

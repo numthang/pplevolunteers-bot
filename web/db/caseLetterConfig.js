@@ -8,6 +8,23 @@ export async function getLetterConfig(orgId, province) {
   return rows[0] || null
 }
 
+/**
+ * หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter
+ *
+ * signer_name/signer_position ยังอยู่ที่นี่แม้ผู้ลงนามจริงจะเก็บในร่างแล้ว เพราะเป็น **ค่าเริ่มต้น**:
+ * ตำแหน่งใช้ตั้งต้นทุกใบ · ชื่อใช้ตอนคนร่างไม่ได้กรอกชื่อ-สกุลในโปรไฟล์ (1,273/6,751 เท่านั้นที่กรอก)
+ * และเป็นคอลัมน์ NOT NULL — ถ้าหน้าตั้งค่าไม่ให้กรอก จะเพิ่มจังหวัดใหม่ไม่ได้เลย
+ */
+export async function listLetterConfigs(orgId) {
+  const { rows } = await pool.query(
+    `SELECT province, org_name, address, signer_name, signer_position,
+            coordinator_name, coordinator_phone, updated_at
+       FROM case_letter_config WHERE org_id = $1 ORDER BY province`,
+    [orgId],
+  )
+  return rows
+}
+
 export async function upsertLetterConfig(orgId, province, data) {
   const { org_name, address, signer_name, signer_position, coordinator_name, coordinator_phone } = data
   await pool.query(

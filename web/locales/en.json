@@ -546,6 +546,13 @@
       "attachmentsLabel": "Attachments",
       "attachmentsPlaceholder": "- Document...",
       "bodyLabel": "Letter body",
+      "signerSectionTitle": "Signer",
+      "signerSectionHint": "Defaults to your name — change it if you are drafting on someone else's behalf",
+      "signerNameLabel": "Signer name",
+      "signerPositionLabel": "Position",
+      "signerPositionPlaceholder": "e.g. Ratchaburi working group",
+      "signerPhoneLabel": "Phone",
+      "signerPhonePlaceholder": "08x-xxx-xxxx",
       "pageAlt": "Page {page}",
       "backToEditButton": "← Edit again",
       "backToListButton": "← Back to list",
@@ -1320,7 +1327,8 @@
         "roles": "Roles & areas",
         "social": "Social accounts",
         "ai": "AI",
-        "brand": "Brand"
+        "brand": "Brand",
+        "letter": "Complaint letterhead"
       },
       "settingsLabel": "Settings: ",
       "pageHeading": "Organization Settings"
@@ -1573,6 +1581,28 @@
       "workingMsg": "Verifying email…",
       "successMsg": "Email verified — you can now sign in with this email",
       "invalidLinkMsg": "Invalid or expired link"
+    },
+    "letterConfig": {
+      "loading": "Loading...",
+      "noAccess": "You need case management permission to configure this page",
+      "description": "Letterhead and coordinator printed on complaint letters — set per province",
+      "empty": "No province configured yet — cases cannot generate letters until their province is added",
+      "addButton": "+ Add province",
+      "provinceLabel": "Province",
+      "orgNameLabel": "Organization name on letterhead",
+      "orgNamePlaceholder": "e.g. People's Party Ratchaburi branch",
+      "addressLabel": "Address",
+      "signerNameLabel": "Signer name (default)",
+      "signerPositionLabel": "Signer position (default)",
+      "signerHint": "Used as the starting value when drafting — the drafter can change it in the modal",
+      "coordinatorNameLabel": "Coordinator name",
+      "coordinatorPhoneLabel": "Coordinator phone",
+      "coordinatorHint": "Printed at the bottom of every letter — changes apply to every letter printed from now on",
+      "saveButton": "Save",
+      "savingButton": "Saving...",
+      "cancelButton": "Cancel",
+      "saveSuccess": "Saved",
+      "saveError": "Failed to save"
     }
   },
   "profile": {

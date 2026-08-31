@@ -546,6 +546,13 @@
       "attachmentsLabel": "สิ่งที่แนบมา",
       "attachmentsPlaceholder": "- เอกสาร...",
       "bodyLabel": "เนื้อหาหนังสือ",
+      "signerSectionTitle": "ผู้ลงนาม",
+      "signerSectionHint": "ค่าเริ่มต้นคือชื่อของคุณ — แก้ได้ถ้าร่างแทนคนอื่น",
+      "signerNameLabel": "ชื่อผู้ลงนาม",
+      "signerPositionLabel": "ตำแหน่ง",
+      "signerPositionPlaceholder": "เช่น คณะทำงานพรรคประชาชนราชบุรี",
+      "signerPhoneLabel": "เบอร์โทร",
+      "signerPhonePlaceholder": "08x-xxx-xxxx",
       "pageAlt": "หน้า {page}",
       "backToEditButton": "← แก้ไขอีกครั้ง",
       "backToListButton": "← รายการ",
@@ -1320,7 +1327,8 @@
         "roles": "ยศและพื้นที่",
         "social": "บัญชีโซเชียล",
         "ai": "AI",
-        "brand": "อัตลักษณ์"
+        "brand": "อัตลักษณ์",
+        "letter": "หัวจดหมายร้องเรียน"
       },
       "settingsLabel": "ตั้งค่า: ",
       "pageHeading": "ตั้งค่าองค์กร"
@@ -1573,6 +1581,28 @@
       "workingMsg": "กำลังยืนยันอีเมล…",
       "successMsg": "ยืนยันอีเมลสำเร็จ — ใช้อีเมลนี้เข้าสู่ระบบได้แล้ว",
       "invalidLinkMsg": "ลิงก์ไม่ถูกต้องหรือหมดอายุ"
+    },
+    "letterConfig": {
+      "loading": "กำลังโหลด...",
+      "noAccess": "ต้องมีสิทธิ์ดูแลเรื่องร้องเรียนจึงจะตั้งค่าหน้านี้ได้",
+      "description": "หัวจดหมายและผู้ประสานงานที่จะพิมพ์บนหนังสือร้องเรียน — ตั้งแยกตามจังหวัด",
+      "empty": "ยังไม่มีจังหวัดไหนตั้งค่าไว้ — เคสจะสร้างหนังสือไม่ได้จนกว่าจะเพิ่มจังหวัดของเคสนั้น",
+      "addButton": "+ เพิ่มจังหวัด",
+      "provinceLabel": "จังหวัด",
+      "orgNameLabel": "ชื่อองค์กรบนหัวจดหมาย",
+      "orgNamePlaceholder": "เช่น สาขาพรรคประชาชนราชบุรี",
+      "addressLabel": "ที่อยู่",
+      "signerNameLabel": "ชื่อผู้ลงนาม (ค่าเริ่มต้น)",
+      "signerPositionLabel": "ตำแหน่งผู้ลงนาม (ค่าเริ่มต้น)",
+      "signerHint": "ใช้ตั้งต้นตอนร่างหนังสือ — คนร่างแก้เป็นชื่อตัวเองหรือคนอื่นได้ในโมดัล",
+      "coordinatorNameLabel": "ชื่อผู้ประสานงาน",
+      "coordinatorPhoneLabel": "เบอร์ผู้ประสานงาน",
+      "coordinatorHint": "พิมพ์ท้ายหน้าหนังสือทุกฉบับ — แก้ที่นี่แล้วมีผลกับทุกใบที่พิมพ์หลังจากนี้",
+      "saveButton": "บันทึก",
+      "savingButton": "กำลังบันทึก...",
+      "cancelButton": "ยกเลิก",
+      "saveSuccess": "บันทึกแล้ว",
+      "saveError": "บันทึกไม่สำเร็จ"
     }
   },
   "profile": {

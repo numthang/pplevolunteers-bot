@@ -1598,3 +1598,16 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
 --   ⚠️ ไม่กระทบหน้าติดตามสาธารณะ /complaint/[ref] (user เคาะ: เข้ากรุ = จัดบ้านภายใน ไม่ใช่คำตอบต่อผู้ร้อง)
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 CREATE INDEX IF NOT EXISTS cases_active_idx ON cases (org_id, archived_at) WHERE archived_at IS NULL;
+
+
+-- 2026-08-31 · cases.letters: ลบค่าหัว/ท้ายจดหมายที่ถูกแช่ไว้ในร่างยุคแรก (30 มิ.ย.)
+--   ร่างยุคนั้นเก็บ org_name/address/coordinator_* ติดไปด้วย แล้วค่าที่แช่ไว้ **ชนะ** case_letter_config
+--   ตอนสร้าง PDF (route ทำ {...config, ...letterFields}) โดยไม่มีช่องให้เห็นหรือแก้ในโมดัลเลย
+--   → เปลี่ยนผู้ประสานงานในหน้าตั้งค่าแล้วร่างเก่ายังพิมพ์ชื่อเดิมออกมา โดยไม่มีใครรู้
+--   กฎที่เคาะ: cases.letters เก็บ "ร่างที่ยังไม่ได้ส่ง" → หัว/ท้ายดึงสดจาก config เสมอ
+--   (ผู้ลงนามยังเก็บในร่างต่อไป เพราะร่างแทนคนอื่นได้)
+UPDATE cases SET letters = (
+  SELECT jsonb_agg(d - 'org_name' - 'address' - 'coordinator_name' - 'coordinator_phone' ORDER BY ord)
+  FROM jsonb_array_elements(letters) WITH ORDINALITY AS t(d, ord)
+)
+WHERE jsonb_array_length(letters) > 0;

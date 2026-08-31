@@ -22,7 +22,7 @@ function thaiDate(d = new Date()) {
   return `${toThaiNumerals(d.getDate())} ${THAI_MONTHS[d.getMonth()]} ${toThaiNumerals(d.getFullYear() + 543)}`
 }
 
-export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, attachments, body, signer_name, signer_position, coordinator_name, coordinator_phone }) {
+export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, attachments, body, signer_name, signer_position, signer_phone, coordinator_name, coordinator_phone }) {
   const template = fs.readFileSync(TEMPLATE, 'binary')
   const zip = new PizZip(template)
   const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true })
@@ -40,6 +40,8 @@ export function generateComplaintLetterPdf({ org_name, address, subject, recipie
     body:              t(body),
     signer_name:       t(signer_name),
     signer_position:   t(signer_position),
+    // ทั้งบรรทัดประกอบที่นี่ ไม่ใช่ในเทมเพลต — เบอร์ว่างต้องไม่เหลือคำว่า "โทร" ลอยอยู่
+    signer_phone_line: signer_phone?.trim() ? t(`โทร ${signer_phone.trim()}`) : '',
     coordinator_name:  t(coordinator_name || '-'),
     coordinator_phone: t(coordinator_phone || '-'),
   })
