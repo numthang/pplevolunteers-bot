@@ -4008,6 +4008,23 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-08-31"
+    },
+    {
+      "id": "bug-212",
+      "timestamp": "2026-08-31T05:40:46.290Z",
+      "error_message": "มอบหมาย/ถอนผู้รับผิดชอบเคสแล้วการ์ด kanban ไม่เปลี่ยนตาม (ถอนตัวจาก /case แล้วการ์ดยังมีเจ้าภาพเดิม · ถอนจากบอร์ดแล้วเคสยังมีชื่ออยู่)",
+      "file": "web/db/cases.js, db/case.js, web/app/api/kanban/cards/[id]/route.js",
+      "root_cause": "เจ้าภาพถูกเก็บ 2 ที่ไม่เหมือนสถานะ — case_assignees (ต้นทาง) กับ kanban_cards.owner_user_id + kanban_card_helpers (สำเนา) · addAssignee/removeAssignee ทั้ง 2 ฝั่งเขียนแค่ตารางต้นทาง ส่วน claim/setCardOwner/addHelper ฝั่ง kanban เขียนแค่สำเนา ไม่มีใคร sync หลังการ์ดถูกสร้างครั้งแรก · reconcileEntityCards ก็ไม่ช่วยเพราะ SOURCE_SQL กรอง NOT EXISTS(link) = สร้างเฉพาะการ์ดใหม่",
+      "fix": "ยกขึ้นชั้น service: web/lib/caseAssign.js เป็นทางเดียวที่เปลี่ยนคนได้ (เขียน case_assignees → syncCaseCardPeople() → ping เธรด Discord → audit) ทุก route เรียกตัวนี้ · เจ้าภาพ = assignee คนแรก (assigned_at,user_id) ที่เหลือ = คนช่วย · ระวัง CHECK kanban_cards_owner_required ต้อง clamp status_type เป็น backlog ตอนถอดคนสุดท้าย · ของเก่าที่ดริฟต์กวาดด้วย scripts/kanban/syncCaseAssignees.mjs (ดันขึ้นต้นทางก่อน แล้วค่อย mirror ลง ห้ามสลับลำดับ ไม่งั้นคนช่วยที่มีแค่ในการ์ดโดนกวาดทิ้ง)",
+      "tags": [
+        "kanban",
+        "cases",
+        "sync",
+        "data-drift",
+        "assignee"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T05:40:46.290Z"
     }
   ]
 }

@@ -11,7 +11,21 @@ budget_tokens: 1000
 
 ## ✅ Done
 
-### รอบล่าสุด (2026-08-31 · commit `f819e0d` + `98a081a` ยังไม่ push · **SQL ลง prod แล้ว 10:05**)
+### รอบล่าสุด (2026-08-31 · commit `40b1477` ยังไม่ push · **prod ยังไม่รัน migration**)
+- **sync ผู้รับผิดชอบเคส ↔ การ์ด kanban 2 ทิศ** — เดิมเจ้าภาพเก็บ 2 ที่ไม่มีใคร sync
+  ทางเดียวที่เปลี่ยนคนได้ตอนนี้คือ `web/lib/caseAssign.js` (DB → `syncCaseCardPeople()` → ping เธรด → audit)
+  ทั้ง `/api/case/[ref]/assign` และปุ่มบนบอร์ด kanban (claim / ownerUserId / helpers) เรียก service ตัวเดียวกัน
+  เจ้าภาพ = assignee คนแรก · มอบหมายเพิ่มทั้งที่มีคนรับแล้ว = **ผู้รับผิดชอบร่วม** + ตอบ `notice` กลับ UI
+- **เคสมีเก็บเข้ากรุ + ลบถาวรแล้ว** (`cases.archived_at`) — ปุ่มที่ `/case/[ref]` ใช้กล่องเดียวกับ kanban/posts
+  ลบถาวร = admin · ลบการ์ด kanban ก่อน + unlink ไฟล์ใน `uploads/cases/` (โฟลเดอร์นี้ไม่มี gc)
+  ไม่แตะเธรด Discord (โพสต์บอกว่า "ปิดได้เลย") · **ไม่กระทบ `/complaint/[ref]`** ของผู้ร้อง
+- **การ์ดที่ผูกของจริงเก็บเข้ากรุ/ลบถาวรจากบอร์ดไม่ได้แล้ว** — `can.restore` ยังทำได้ (กันการ์ดค้างกรุ)
+- verify: build ผ่าน + smoke test ชั้น DB 16/16 (สร้างเคสจริง → sync คน → เข้ากรุ → ลบถาวร → เก็บกวาด)
+  ⬜ **ยังไม่มีใครกดจริงในเบราว์เซอร์** — ต้องให้ user กดที่ `/case/[ref]` กับบอร์ด kanban
+- ⚠️ **ก่อน deploy:** รัน migration ท้าย `scripts/migration/migration.sql` (`cases.archived_at`) แล้วรัน
+  `scripts/kanban/syncCaseAssignees.mjs --org 1 --dry` ก่อนของจริง (dev = 0/0 · prod ยังไม่ได้นับ)
+
+### ก่อนหน้า (2026-08-31 · commit `f819e0d` + `98a081a` ยังไม่ push · **SQL ลง prod แล้ว 10:05**)
 - **Docs — ตัวตนผู้รับเป็น "ต่อคน" ไม่ใช่ "ต่อใบ"** (bug จาก prod: คนเดียวมี 2 ใบ ใบที่ 2 เด้งฟอร์มยืนยันตัวตนซ้ำ)
   view `docs_entry_recipient` อ่าน `user_config docs_self_info` เป็นชั้นที่ 3 **เหนือ `cache_pple_member`**
   ลำดับใหม่: `override_data` (ต่อใบ) → คนนอก → ที่กรอกจากบัตร ปชช. → ทะเบียนพรรค (user เคาะ: cache พรรคไม่รู้จะ sync ไหม ห้ามพึ่งเป็นหลัก)
