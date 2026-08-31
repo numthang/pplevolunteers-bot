@@ -15,8 +15,9 @@ node scripts/dev/mobileAudit.mjs --routes /kanban          # หรือ --all 
 node scripts/dev/mobileAudit.mjs --routes /kanban --shot   # เก็บภาพลง .wolf/mobile-audit/ ด้วย
 ```
 
-รายงาน 4 อาการ เทียบกับ **ความกว้างจอที่สั่ง** (ไม่ใช่ `innerWidth` — ดูเหตุผลในหัวไฟล์สคริปต์):
+รายงาน 5 อาการ เทียบกับ **ความกว้างจอที่สั่ง** (ไม่ใช่ `innerWidth` — ดูเหตุผลในหัวไฟล์สคริปต์):
 `A` หน้ากว้างเกินจอ · `D` จอถูกถ่างจนหน้าถูกย่อ · `B` element ล้นขอบ (ชี้ตัวการนอกสุด) · `C` ของโดน `overflow-hidden` ตัดหาย
+· `E` แถวที่มี select/input แล้วเหลือที่ว่างท้ายแถว = ตัวควบคุมไม่เต็มความกว้าง (**คำแนะนำ ไม่ทำให้ exit 1**)
 
 - exit code 1 = เจอปัญหา · ต้องแก้ให้เหลือ 0 ก่อนบอกว่างานเสร็จ
 - หน้าที่มี dropdown/modal ให้เพิ่ม `steps` ใน `scripts/dev/mobileAudit.routes.mjs` ไม่งั้นตรวจไม่ถึง

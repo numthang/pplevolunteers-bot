@@ -23,10 +23,16 @@ budget_tokens: 1000
 - กฎถาวร: `md/WEB.md §จอมือถือ` (งบความกว้างจริงที่ 375 = **336px**) · `CLAUDE.md` บังคับรัน audit ก่อนปิดงาน
   · `.claude/commands/designqc.md` เขียนใหม่ (`openwolf designqc` ตายแล้วใน openwolf 2.5.0)
 - ผลสแกน 16 โซนอยู่ `md/PENDING.md §📱 Mobile layout` — เหลือ `/calling` `/posts` `/docs` (`-mx-3`→`-mx-1`) + `/integrations` (ตารางล้น 79px)
-- ⚠️ **ค้างเพราะไฟล์ชนกัน:** เลขในวงเล็บของ dropdown "แสดง" (`scopeCounts` + props `t`/`label`/`counts`)
-  และ `max-w-[calc(100vw-1.5rem)]` ของ panel 5 จุด — ยังไม่ได้ทำ เพราะมี session อื่นแก้ `KanbanHome.jsx`
-  อยู่พร้อมกัน (user สั่งให้หยุดรอ) · คีย์ `kanban.controls.optionWithCount` ใส่ th/en ไว้แล้ว
-- verify: eslint ผ่าน · `npm test` 504/504 ผ่าน · audit `--all` รันจริง
+- **รอบเก็บตก 2026-09-01 (หลัง session อื่นปล่อย `KanbanHome.jsx`) — ทำครบแล้ว:**
+  - เลขในวงเล็บใน dropdown "แสดง" (`scopeCounts`) · คีย์ `kanban.controls.optionWithCount`
+  - **มือถือ: ตัดป้าย "แสดง" ออก (เหลือใน `aria-label`) · dropdown + แถบค้นหาเต็มความกว้าง** (user สั่ง)
+  - `max-w-[calc(100vw_-_1.5rem)]` ที่ panel 6 จุด · เมนู "เรียงลำดับ" เป็น `static sm:relative` (เกาะขอบแถวบนมือถือ)
+  - ช่องกำหนดส่งในโมดัลเติม `w-full min-w-0` (เดิมไม่มี ต่างจาก pattern ร่วมใน `CardFieldsBox.jsx:106`)
+- **audit เพิ่มอาการ `E`** (แถวที่มี select/input แล้วเหลือที่ว่างท้ายแถว > 32px = ไม่เต็มความกว้าง)
+  ตามที่ user สั่ง — เป็นคำแนะนำ ไม่ทำให้ exit 1
+- ⛔ **`html { font-size: 18px }`** (`globals.css:22`) → `w-64` = 288px ไม่ใช่ 256 · จดไว้ที่ `md/WEB.md` + cerebrum
+- ⛔ Tailwind arbitrary value ต้องใช้ `_` แทนเว้นวรรค: `calc(100vw_-_1.5rem)` (เขียนผิดเองมาแล้ว 6 จุด CSS ทิ้งเงียบๆ)
+- verify: eslint ผ่าน · `npm test` 504/504 · audit `/kanban` ผ่าน **320 / 360 / 375 / 390px** · ดูรูปจริงแล้ว
 
 
 ### รอบล่าสุด — หน้าเคส `/case/[ref]` ยกเครื่อง (2026-08-31 เย็น · ⬜ **user ยังไม่ได้กดทดสอบในเบราว์เซอร์**)

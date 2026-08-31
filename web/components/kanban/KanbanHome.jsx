@@ -1163,9 +1163,11 @@ export default function KanbanHome() {
         </div>
         )}
 
-        {/* มือถือ: กินเต็มบรรทัดแล้วปล่อยให้ <select> ยืดเอง · จอกว้าง: กลับไปอยู่ในแถวเดียวกับตัวอื่น */}
+        {/* มือถือ: ไม่มีป้าย "แสดง" · <select> กินเต็มความกว้าง (user สั่ง 2026-09-01)
+            ป้ายยังอยู่ครบสำหรับ screen reader ผ่าน `aria-label` ของ <select> — ตัดแค่ตัวหนังสือที่มองเห็น
+            เหตุผล: บนมือถือมีตัวควบคุมแค่ 2 แถว บริบทชัดอยู่แล้ว ป้ายกินที่ไปเปล่าๆ ~48px */}
         <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
-          <span className="shrink-0 text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
+          <span className="hidden sm:inline shrink-0 text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
           <Segmented
             t={t}
             label={t('controls.showLabel')}
@@ -1182,13 +1184,14 @@ export default function KanbanHome() {
           />
         </div>
 
-        {/* ค้นหา / กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — มี "จัดกลุ่ม" อยู่ข้างใน) — ชิดขวาแถวเดียวกัน */}
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0 ml-auto">
+        {/* ค้นหา / กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — มี "จัดกลุ่ม" อยู่ข้างใน)
+            มือถือ = เต็มบรรทัด ช่องค้นหายืดกินที่ที่เหลือ · จอกว้าง = ชิดขวาแถวเดียวกับ "แสดง" เหมือนเดิม */}
+        <div className="relative flex flex-wrap items-center gap-1.5 min-w-0 w-full sm:w-auto sm:ml-auto">
           {/* ⭐ ช่องค้นหาอยู่ **นอก** กรวยกรอง — เป็นสิ่งที่คนหยิบใช้บ่อยสุด ต้องพิมพ์ได้เลย
               ไม่ต้องกดเปิดอะไรก่อน (ตัวเลือกในกรวยเป็นของที่เลือกนานๆ ครั้ง คนละจังหวะการใช้)
               ⚠️ กรองในเครื่องจากการ์ดที่โหลดมาแล้ว — ไม่ยิง API ใหม่ พิมพ์แล้วผลขยับทันที
                  (ชนเพดาน CARD_HARD_CAP เมื่อไหร่ แถบเตือน truncated ข้างล่างบอกอยู่แล้ว) */}
-          <div className="flex items-center gap-1.5 h-9 px-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg w-36 sm:w-52">
+          <div className="flex items-center gap-1.5 h-9 px-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg flex-1 min-w-0 sm:flex-none sm:w-52">
             <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
             <input
               value={textQuery}
@@ -1222,7 +1225,11 @@ export default function KanbanHome() {
             <Filter size={16} />
           </button>
 
-          <div ref={sortBoxRef} className="relative">
+          {/* ⚠️ มือถือทำตัว static ตั้งใจ — ให้ panel ข้างล่าง (`absolute right-0`) ไปเกาะขอบขวาของ
+              **แถวเครื่องมือ** แทนขอบขวาของปุ่ม · ปุ่มเรียงลำดับไม่ได้อยู่ริมขวาสุด (มีเฟืองต่อท้าย)
+              เกาะปุ่มแล้วเมนูกว้าง 288px จะยื่นพ้นขอบซ้ายจอ 29px ที่ 320px
+              ⛔ อย่าลืมว่า `html { font-size: 18px }` → `w-64` = **288px ไม่ใช่ 256px** (globals.css:22) */}
+          <div ref={sortBoxRef} className="static sm:relative">
             <button
               onClick={() => setSortOpen((v) => !v)}
               title={t('sort.toggleLabel')}

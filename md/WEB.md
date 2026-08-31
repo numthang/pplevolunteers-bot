@@ -248,8 +248,12 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 > (`12230e0 fix(team)`, `8408571 fix(case)`, `a97661d fix(kanban/board)` — reactive ทั้งหมด)
 > เหตุผลเดียวกับ §Type scale: โซนใหม่เดาเอง แล้ว user รับบทเป็นคนตรวจ
 
-**งบความกว้างจริง — ที่ 375px เหลือใช้ 336px** (`main px-1` 8px + `px-3` ของ layout โซน 24px + safe 7px)
-ในโมดัลเหลือ ~288px · ตัวเลขนี้คือเพดานจริง ไม่ใช่ 375
+⛔ **`html { font-size: 18px }`** (`app/globals.css:22`) — **ทุกคลาสที่เป็น rem ใหญ่กว่าที่เอกสาร Tailwind บอก 12.5%**
+`w-64` = **288px ไม่ใช่ 256** · `w-52` = 234 · `p-4` = 18px · `max-w-5xl` = 1152px ไม่ใช่ 1024
+(`sm:` `md:` เป็น media query หน่วย px จึงไม่โดนผลนี้) → **คำนวณความกว้างด้วยเลขจากเอกสาร Tailwind = ผิดทุกครั้ง**
+
+**งบความกว้างจริง — ที่ 375px เหลือใช้ ~339px** (`main px-1` 9px + `px-3` ของ layout โซน 27px)
+ในโมดัลเหลือ ~285px · ตัวเลขนี้คือเพดานจริง ไม่ใช่ 375
 
 ⛔ **กับดักที่ทำให้ "ดูแล้วไม่เห็นพัง" ทั้งที่พัง:** Chrome บนมือถือ **ถ่าง layout viewport เองเมื่อเนื้อหาล้น**
 (เช่น 375 → 409) แล้วย่อทั้งหน้าลงให้พอดีแทนที่จะตัด → เปิด DevTools แล้วดูเผินๆ "ไม่มีอะไรล้น"
@@ -262,11 +266,15 @@ node scripts/dev/mobileAudit.mjs --routes /หน้าที่แก้     # 
 node scripts/dev/mobileAudit.mjs --all                    # กวาดทุกโซน
 ```
 หน้าที่มี dropdown/modal ต้องเพิ่ม `steps` ใน `scripts/dev/mobileAudit.routes.mjs` ก่อน ไม่งั้นตรวจไม่ถึง
+สคริปต์ยังเตือน `E · ไม่เต็มความกว้าง` ให้ด้วย (แถวที่มี select/input แล้วเหลือที่ว่างท้ายแถว > 32px)
+— เป็นคำแนะนำ ไม่ทำให้ exit 1 แต่**บนมือถือค่าเริ่มต้นคือเต็มความกว้าง** ถ้าจงใจไม่เต็มให้เขียนเหตุผลกำกับในโค้ด
 
 | ห้าม | ให้ทำแทน |
 |---|---|
 | แถวปุ่ม / segmented ยาวๆ ที่ไม่มีทางหนี | `flex-wrap` **หรือ** `<select>` ที่ `sm:hidden` คู่กับแถบปุ่ม `hidden sm:inline-flex` (ดู `Segmented` ใน `KanbanHome.jsx`) |
-| `absolute` panel กว้างตายตัว (`w-64`, `w-72`) | เติม `max-w-[calc(100vw-1.5rem)]` เสมอ · หรือใช้ `w-full` ในกล่อง `relative` (`TagCombobox.jsx`) |
+| `absolute` panel กว้างตายตัว (`w-64`, `w-72`) | เติม `max-w-[calc(100vw_-_1.5rem)]` เสมอ (⚠️ **ต้องมี `_` รอบ `-`** ไม่งั้น Tailwind ปล่อย `calc(100vw-1.5rem)` ที่ CSS ทิ้งทั้งบรรทัดแบบเงียบๆ) · หรือ `w-full` ในกล่อง `relative` (`TagCombobox.jsx`) |
+| เมนูลอยเกาะปุ่มที่**ไม่ได้อยู่ริมขวาสุด**ของแถว | ให้กล่องครอบปุ่มเป็น `static sm:relative` แล้วให้แถวเป็น `relative` → มือถือเมนูเกาะขอบแถว จอกว้างเกาะปุ่มเหมือนเดิม (ดูเมนู "เรียงลำดับ" ใน `KanbanHome.jsx`) |
+| ตัวควบคุมบนมือถือกว้างครึ่งๆ กลางๆ | **มือถือให้เต็มความกว้าง** — กล่องครอบ `w-full sm:w-auto` · `<select>`/ช่องค้นหา `flex-1 min-w-0` · ป้ายที่ไม่จำเป็น `hidden sm:inline` (ย้ายไป `aria-label` แทน) |
 | กริดสองคอลัมน์ความกว้างตายตัวทุกจอ | `grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)]` (`FieldRow.jsx:25`) |
 | `p-6` / `px-6` ในโมดัล | `p-4 sm:p-6` — คืนพื้นที่ 16px ที่จอ 375 |
 | `opacity-0 group-hover:opacity-100` เป็นทางเดียวที่เข้าถึงปุ่ม | `opacity-100 sm:opacity-0 sm:group-hover:opacity-100` — **จอสัมผัสไม่มี hover** ปุ่มจะกดไม่ได้เลย |

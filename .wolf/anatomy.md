@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T16:45:24.645Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T19:35:55.934Z
 > Files: 1079 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -159,7 +159,7 @@
 - `kanban-create-context-menu.js` (~164 tok)
 - `message.js` — commands/message.js (~1630 tok)
 - `orgchart.js` — commands/orgchart.js (~3880 tok)
-- `panel.js` — commands/panel.js (~8881 tok)
+- `panel.js` — commands/panel.js (~9081 tok)
 - `post-import-context-menu.js` (~137 tok)
 - `rate-context-menu.js` — commands/rate-context-menu.js (~326 tok)
 - `rate.js` — commands/rate.js (~638 tok)
@@ -217,7 +217,7 @@
 - `aiConfig.js` — db/aiConfig.js (~937 tok)
 - `aiCreds.js` — นับ 1 ครั้งถ้ายังไม่เต็ม — ไม่ atomic (โควตาไม่ใช่เงิน เกิน 1-2 ครั้งรับได้ เหมือน postsAiQuota) (~1510 tok)
 - `aiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด (kind='slot') — ประกอบเสร็จพร้อมยิง AI (~504 tok)
-- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2622 tok)
+- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2714 tok)
 - `configResolver.js` — db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority (~716 tok)
 - `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary (~641 tok)
 - `forum.js` — pool: getForumConfig, getAllForumConfigs, upsertForumConfig + 7 more (~1254 tok)
@@ -247,7 +247,7 @@
 - `antiSpamHandler.js` — Anti-spam: duplicate ข้ามห้อง + mass-mention + honeypot channel (~1540 tok)
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
 - `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13094 tok)
-- `caseImportHandler.js` — เปิด modal ให้กรอกจังหวัด/ประเภท ก่อนสร้างเคส (~2309 tok)
+- `caseImportHandler.js` — เปิด modal ให้กรอกจังหวัด/ประเภท ก่อนสร้างเคส (~2294 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
 - `forumDashboard.js` — handlers/forumDashboard.js (~764 tok)
@@ -497,7 +497,7 @@
 - `identity-split-user-identities.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1080 tok)
 - `identity-users-seq.sql` — ═══════════════════════════════════════════════════════════════════════════ (~257 tok)
 - `kanbanLabelsToFields.mjs` — ชนิด field ที่รับป้ายได้ — อย่างอื่น (text/number/date/checkbox/url) ยัดป้ายลงไปไม่ได้ (~2627 tok)
-- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~25042 tok)
+- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~25163 tok)
 - `moveWatermarksToOrg.js` — scripts/migration/moveWatermarksToOrg.js (~2002 tok)
 - `org-access-redesign.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1417 tok)
 - `phone-identity.sql` — phone-identity.sql — Phone เป็น login identity ที่ verify ได้ (Phase 4 slice 1) (~279 tok)

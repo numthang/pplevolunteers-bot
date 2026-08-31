@@ -19,6 +19,9 @@
  *   B  element ล้นขอบจอ           getBoundingClientRect().right > target  (เอาเฉพาะตัวนอกสุด = ตัวการจริง)
  *   C  ของโดนตัดหายเงียบๆ         scrollWidth > clientWidth ขณะ overflow-x เป็น hidden/clip
  *      (ข้าม input/textarea/select — ช่องกรอกเลื่อนเนื้อหาในตัวเองเป็นเรื่องปกติ ไม่ใช่บั๊ก)
+ *   E  ตัวควบคุมไม่เต็มความกว้าง     แถวที่มี select/input/textarea แล้วเหลือที่ว่างท้ายแถว > 32px
+ *      (user สั่งให้ตรวจด้วย 2026-09-01: "ทำให้ equal fluid 100% in mobile view")
+ *      **ไม่นับเป็นข้อผิดพลาด (ไม่ทำให้ exit 1)** — เป็นคำแนะนำ บางแถวตั้งใจไม่เต็มก็มี ใช้ตาตัดสิน
  *
  * ⚠️ ข้อจำกัด: เห็นเฉพาะสิ่งที่ render อยู่จริงในสถานะที่สคริปต์พาไปถึง (ดู steps ใน
  *    mobileAudit.routes.mjs) — **ยังไม่แทนการกดจริงในเบราว์เซอร์** แค่ตัดงานค้นหาจุดล้นออกจาก user
@@ -229,6 +232,55 @@ const PROBE = (target) => `(() => {
     seen.push({ type: 'C', px: el.scrollWidth - el.clientWidth, ...describe(el) })
   }
 
+  // E — ตัวควบคุมบนมือถือที่ไม่ยืดเต็มความกว้าง (เฉพาะจอ <= 640 = ต่ำกว่า breakpoint sm)
+  //
+  // ⛔ รอบแรกวัดผิดระดับ: ไปวัด "กล่องที่ครอบ control" ซึ่งเป็น shrink-to-fit อยู่แล้ว → gap = 0 เสมอ
+  //    ตรวจ 16 โซนแล้วไม่ยิงสักจุด ทั้งที่หน้าจริงมีที่ว่างโล่ง · ต้องวัด **ทีละบรรทัดของพ่อ** ว่า
+  //    บรรทัดนั้นกินความกว้างที่พ่อมีให้หมดไหม (นับที่ว่างทั้งหัวบรรทัดและท้ายบรรทัด เพราะ ml-auto
+  //    ทำให้ของไปกองขวาแล้วเหลือช่องโหว่ซ้าย ซึ่งก็คือ "ไม่เต็มความกว้าง" เหมือนกัน)
+  if (W <= 640) {
+    const controls = [...document.querySelectorAll('select, textarea, input:not([type=checkbox]):not([type=radio]):not([type=hidden])')]
+    const checked = new Set()
+    for (const c of controls) {
+      const mc = meta.get(c)
+      if (!mc || !mc.vis) continue
+      let el = c
+      for (let up = 0; up < 5 && el.parentElement && el.parentElement !== document.body; up++) {
+        const box = el.parentElement
+        el = box
+        if (checked.has(box)) continue
+        checked.add(box)
+        const bcs = getComputedStyle(box)
+        if (!/flex|grid|block/.test(bcs.display)) continue
+        const br = box.getBoundingClientRect()
+        const left = br.left + (parseFloat(bcs.paddingLeft) || 0)
+        const right = br.right - (parseFloat(bcs.paddingRight) || 0)
+        if (right - left < 120) continue                      // กล่องแคบเกินกว่าจะพูดเรื่อง "เต็มความกว้าง"
+
+        // จับลูกเป็นบรรทัดๆ — **ต้องใช้การซ้อนทับแนวตั้ง ห้ามใช้ค่า top ตรงๆ**
+        // (ไอคอน 14px กับ input 36px ใน flex items-center มี top ไม่เท่ากัน → ถ้า group ด้วย top
+        //  ไอคอนจะกลายเป็น "บรรทัด" ของตัวเองที่กว้าง 14px แล้วรายงานว่าเหลือที่ว่าง 174px = ผิด)
+        const kids = [...box.children].map((ch) => meta.get(ch)).filter((m) => m && m.vis)
+        kids.sort((a, b) => a.r.top - b.r.top)
+        const lines = []
+        for (const m of kids) {
+          const cur = lines[lines.length - 1]
+          if (cur && m.r.top < cur.bottom - 1) {            // ซ้อนทับแนวตั้ง = บรรทัดเดียวกัน
+            cur.l = Math.min(cur.l, m.r.left)
+            cur.r = Math.max(cur.r, m.r.right)
+            cur.bottom = Math.max(cur.bottom, m.r.bottom)
+          } else {
+            lines.push({ l: m.r.left, r: m.r.right, bottom: m.r.bottom })
+          }
+        }
+        for (const ln of lines) {
+          const slack = Math.round((ln.l - left) + (right - ln.r))
+          if (slack > 32) { seen.push({ type: 'E', px: slack, ...describe(box) }); break }
+        }
+      }
+    }
+  }
+
   return {
     path: location.pathname + location.search,
     title: document.title,
@@ -268,6 +320,15 @@ async function auditRoute(cdp, args, route) {
   const first = await cdp.eval(PROBE(args.width))
   states.push({ state: 'โหลดหน้า', ...first })
 
+  // ⚠️ ถ่ายรูป **ตรงนี้** ไม่ใช่ท้ายฟังก์ชัน — ถ่ายท้ายจะได้สภาพหลังเดิน steps ครบ
+  //    (เคยได้รูปหน้าจอที่โมดัลการ์ดเปิดค้างอยู่ แทนที่จะเป็นหน้าตอนโหลด)
+  if (args.shot) {
+    mkdirSync(OUT_DIR, { recursive: true })
+    const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
+    const name = `${route.path.replace(/\//g, '_') || '_root'}__${args.width}.png`
+    writeFileSync(join(OUT_DIR, name), Buffer.from(shot.data, 'base64'))
+  }
+
   const redirected = /\/(login|org\/login)$/.test(first.path)
   if (!redirected) {
     for (const step of route.steps || []) {
@@ -285,13 +346,6 @@ async function auditRoute(cdp, args, route) {
     }
   }
 
-  if (args.shot) {
-    mkdirSync(OUT_DIR, { recursive: true })
-    const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
-    const name = `${route.path.replace(/\//g, '_') || '_root'}__${args.width}.png`
-    writeFileSync(join(OUT_DIR, name), Buffer.from(shot.data, 'base64'))
-  }
-
   return { route, redirected, states }
 }
 
@@ -306,6 +360,7 @@ async function main() {
   let chrome = null
   let cdp = null
   let bad = 0
+  let advisory = 0
 
   try {
     const token = await mintLoginToken()
@@ -331,6 +386,7 @@ async function main() {
       }
       const shown = new Set()
       const lines = []
+      let hardHit = false
       for (const s of res.states) {
         if (s.missing) { lines.push(`  ⚠️  ${s.state}`); continue }
         const tooWide = s.scrollWidth > s.target + 1
@@ -338,19 +394,24 @@ async function main() {
         const fresh = s.findings.filter((f) => !shown.has(keyOf(f)))
         fresh.forEach((f) => shown.add(keyOf(f)))
         if (!tooWide && !expanded && !fresh.length) continue
+        if (tooWide || expanded || fresh.some((f) => f.type !== 'E')) hardHit = true
+        advisory += fresh.filter((f) => f.type === 'E').length
         lines.push(`  [${s.state}]`)
         if (tooWide) lines.push(`    A · หน้ากว้าง ${s.scrollWidth}px เกินจอ ${s.target}px`)
         if (expanded) lines.push(`    D · จอถูกถ่างเป็น ${s.innerWidth}px (Chrome ย่อหน้าลงให้พอดี = สิ่งที่คนเห็นว่า "แหก")`)
         for (const f of fresh) {
-          lines.push(`    ${f.type} · เกิน ${f.px}px · <${f.tag}> ${f.box} "${f.txt}"`)
+          lines.push(f.type === 'E'
+            ? `    E · เหลือที่ว่างท้ายแถว ${f.px}px — ตัวควบคุมไม่เต็มความกว้าง (แนะนำ ไม่นับเป็นข้อผิดพลาด)`
+            : `    ${f.type} · เกิน ${f.px}px · <${f.tag}> ${f.box} "${f.txt}"`)
           lines.push(`        ${f.cls}`)
         }
       }
-      if (lines.length) { bad++; console.log(`${route.path}\n${lines.join('\n')}\n`) }
+      if (lines.length) { if (hardHit) bad++; console.log(`${route.path}\n${lines.join('\n')}\n`) }
       else console.log(`${route.path}\n  ✓ ไม่พบปัญหา\n`)
     }
 
     console.log(bad ? `เจอปัญหา ${bad} หน้า` : 'ผ่านทุกหน้า')
+    if (advisory) console.log(`+ ข้อแนะนำอีก ${advisory} จุด (E · ไม่เต็มความกว้าง — ไม่นับเป็นข้อผิดพลาด)`)
   } finally {
     cdp?.close()
     chrome?.kill()
