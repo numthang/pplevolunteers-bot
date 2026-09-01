@@ -729,12 +729,9 @@
       "smsSending": "Sending…",
       "smsSent": "SMS sent",
       "smsFailed": "Could not send SMS",
-      "provinceMoveButton": "Move province",
-      "provinceMoveConfirm": "Confirm move",
-      "provinceMoveCancel": "Cancel",
       "provinceMoving": "Moving…",
       "provinceMoveFailed": "Could not move province",
-      "provinceMoveWarning": "The reference number stays the same (already sent to the complainant) · province controls who can see this case"
+      "provinceMoveWarning": "Selecting a province moves the case immediately · the reference number stays the same"
     },
     "archive": {
       "banner": "This case is archived — hidden from the case list and the kanban board, but the complainant can still track it.",

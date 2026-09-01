@@ -729,11 +729,8 @@
       "smsSending": "กำลังส่ง…",
       "smsSent": "ส่ง SMS แล้ว",
       "smsFailed": "ส่ง SMS ไม่สำเร็จ",
-      "provinceMoveButton": "ย้ายจังหวัด",
-      "provinceMoveConfirm": "ยืนยันย้ายจังหวัด",
-      "provinceMoveCancel": "ยกเลิก",
       "provinceMoving": "กำลังย้าย…",
-      "provinceMoveWarning": "เลขอ้างอิงเดิมไม่เปลี่ยนตาม (แจ้งผู้ร้องเรียนไปแล้ว) · จังหวัดคุมสิทธิ์การมองเห็นเคสนี้",
+      "provinceMoveWarning": "เลือกจังหวัดแล้วย้ายทันที · เลขอ้างอิงเดิมไม่เปลี่ยนตาม",
       "provinceMoveFailed": "ย้ายจังหวัดไม่สำเร็จ"
     },
     "archive": {

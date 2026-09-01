@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import useCaseAutosave from './useCaseAutosave.js'
 import CaseSaveBadge from './CaseSaveBadge.jsx'
-import ProvinceCombobox from './ProvinceCombobox.jsx'
 
 const selectCls = 'w-full rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange'
 
 /**
  * การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave
  *
- * **จังหวัด** เป็น action แยก (ปุ่มย้าย + ยืนยัน) ไม่ใช่ autosave เพราะมันคุมสิทธิ์การมองเห็น
- * และ ref ที่แจ้งผู้ร้องไปแล้วจะไม่เปลี่ยนตาม — ต้องให้คนกดยืนยันโดยเห็นผลข้างเคียงก่อน
+ * **จังหวัด** เป็น dropdown เลือกแล้วย้ายเลย (user เคาะ 2026-09-01 — เดิมเป็นปุ่ม+ยืนยัน 3 จังหวะ
+ * "ทำแบบง่ายๆ เลือก dropdown เลยไม่ได้เหรอ") · ยิง PATCH เองไม่ผ่าน useCaseAutosave เพราะ
+ * ฝั่ง API เป็น action แยกที่เช็ค scope ปลายทาง ไม่ได้อยู่ใน EDITABLE_CASE_FIELDS
+ * ⚠️ ref ไม่เปลี่ยนตาม (แจ้งผู้ร้องไปแล้ว) — บอกไว้เป็นบรรทัดกำกับใต้ช่อง
  * ที่เหลือ (ช่องทาง/วันที่รับเรื่อง/เธรด) เป็นข้อเท็จจริงของระบบ ไม่ใช่ของที่คนแก้
  */
 export default function CaseMetaEditor({
@@ -27,20 +28,18 @@ export default function CaseMetaEditor({
     initial: { category: initial.category || '' },
   })
 
-  const [moving, setMoving] = useState(false)
-  const [nextProvince, setNextProvince] = useState('')
   const [moveState, setMoveState] = useState('idle')   // idle | saving
   const [moveError, setMoveError] = useState('')
 
-  async function confirmMove() {
-    if (!nextProvince || nextProvince === province) return
+  async function move(next) {
+    if (!next || next === province) return
     setMoveState('saving')
     setMoveError('')
     try {
       const res = await fetch(`/api/case/${refId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ province: nextProvince }),
+        body: JSON.stringify({ province: next }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok || d.error) {
@@ -48,8 +47,6 @@ export default function CaseMetaEditor({
         setMoveError(d.error || t('edit.provinceMoveFailed'))
         return
       }
-      setMoving(false)
-      setNextProvince('')
       setMoveState('idle')
       router.refresh()
     } catch {
@@ -82,17 +79,20 @@ export default function CaseMetaEditor({
         </dd>
 
         <dt className="text-gray-400 dark:text-disc-muted">{t('edit.provinceLabel')}</dt>
-        <dd className="text-gray-900 dark:text-disc-text flex items-center gap-2 flex-wrap">
-          <span>{province}</span>
-          {canEdit && !moving && (
-            <button
-              type="button"
-              onClick={() => { setMoving(true); setNextProvince(''); setMoveError('') }}
-              className="text-sm text-brand-orange hover:underline"
+        <dd className="text-gray-900 dark:text-disc-text">
+          {canEdit ? (
+            <select
+              value={province}
+              onChange={e => move(e.target.value)}
+              disabled={moveState === 'saving'}
+              className={`${selectCls} disabled:opacity-50`}
             >
-              {t('edit.provinceMoveButton')}
-            </button>
-          )}
+              {/* จังหวัดปัจจุบันอาจไม่ใช่จังหวัดจริง ('ไม่ระบุ' จากเคสที่บอทสร้างยุคก่อน)
+                  หรืออยู่นอก scope คนนี้ — ต้องมีเป็นตัวเลือกไว้ ไม่งั้น select โชว์ค่าว่าง */}
+              {!provinces.includes(province) && <option value={province}>{province}</option>}
+              {provinces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          ) : province}
         </dd>
         <dt className="text-gray-400 dark:text-disc-muted">{t('manage.channelLabel')}</dt>
         <dd className="text-gray-900 dark:text-disc-text">{sourceLabel}</dd>
@@ -109,34 +109,13 @@ export default function CaseMetaEditor({
         </dd>
       </dl>
 
-      {/* ย้ายจังหวัด — ต้องกดยืนยัน ไม่ autosave: ref ไม่เปลี่ยนตาม และเคสอาจหลุดสายตาทีมเดิม */}
-      {moving && (
-        <div className="flex flex-col gap-2 rounded-lg border border-warm-200 dark:border-disc-border p-3">
-          <ProvinceCombobox
-            value={nextProvince}
-            onChange={setNextProvince}
-            provinces={provinces}
-          />
-          <p className="text-sm text-gray-500 dark:text-disc-muted">{t('edit.provinceMoveWarning')}</p>
-          {moveError && <p className="text-sm text-red-500">{moveError}</p>}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={confirmMove}
-              disabled={!nextProvince || nextProvince === province || moveState === 'saving'}
-              className="px-4 py-2 rounded-lg bg-brand-orange text-white text-base hover:bg-brand-orange-light disabled:opacity-50"
-            >
-              {moveState === 'saving' ? t('edit.provinceMoving') : t('edit.provinceMoveConfirm')}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMoving(false); setNextProvince(''); setMoveError('') }}
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text text-base"
-            >
-              {t('edit.provinceMoveCancel')}
-            </button>
-          </div>
-        </div>
+      {canEdit && (moveState === 'saving' || moveError) && (
+        <p className={`text-sm ${moveError ? 'text-red-500' : 'text-gray-500 dark:text-disc-muted'}`}>
+          {moveError || t('edit.provinceMoving')}
+        </p>
+      )}
+      {canEdit && !moveError && moveState !== 'saving' && (
+        <p className="text-sm text-gray-500 dark:text-disc-muted">{t('edit.provinceMoveWarning')}</p>
       )}
 
       {threadUrl && (
