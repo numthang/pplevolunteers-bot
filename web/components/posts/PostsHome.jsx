@@ -102,7 +102,7 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
               {STATUS_LABELS[post.status] || post.status}
             </span>
             <span className="text-xs text-warm-400 dark:text-disc-muted hidden sm:inline">
-              {fmtDateTime(post.updated_at)}
+              {fmtDateTime(post.created_at)}
             </span>
             {/* กดที่ปุ่มแล้วต้องไม่เปิดโพสต์ → stopPropagation
                 มือถือไม่มี hover จริง — เดิม opacity-0 group-hover:opacity-100 เลยกลายเป็นปุ่มโปร่งใส
