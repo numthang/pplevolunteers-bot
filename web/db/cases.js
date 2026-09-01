@@ -620,3 +620,22 @@ export async function deleteLetterDraft(caseId, draftId) {
   const letters = (rows[0]?.letters || []).filter(l => l.id !== draftId)
   await pool.query(`UPDATE cases SET letters = $2 WHERE id = $1`, [caseId, JSON.stringify(letters)])
 }
+
+/**
+ * ร่างหนังสือ 1 ฉบับสำหรับ "ลิงก์ PDF สาธารณะ" (/complaint/[ref]/letter/[id])
+ *
+ * 🔓 ไม่มี org scope / ไม่มี session — เพราะ route ที่เรียกเปิดได้โดยไม่ต้องล็อกอิน
+ *    ความลับอยู่ที่ draftId (uuid v4 = เดาไม่ได้) และรู้ ref อย่างเดียวเปิดไม่ได้
+ *    คืนเฉพาะ field ที่ต้องใช้ประกอบ PDF — ห้ามคืนทั้งแถว cases (มี PII ผู้ร้อง)
+ */
+export async function getPublicLetterDraft(ref, draftId) {
+  const { rows } = await pool.query(
+    `SELECT org_id, province, letters FROM cases WHERE ref = $1`,
+    [ref],
+  )
+  const c = rows[0]
+  if (!c) return null
+  const draft = (c.letters || []).find(l => l.id === draftId)
+  if (!draft) return null
+  return { orgId: c.org_id, province: c.province, draft }
+}

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { ExternalLink, Trash2 } from 'lucide-react'
+import CopyButton from '@/components/CopyButton.jsx'
 import useAutoGrow from '@/lib/useAutoGrow.js'
 
 /**
@@ -35,6 +37,7 @@ export default function CaseLetterModal({ refId, onClose }) {
   const [pages, setPages]           = useState([])
   const [pdfBase64, setPdfBase64]   = useState(null)
   const [signerDefaults, setSignerDefaults] = useState({})
+  const [deletingId, setDeletingId] = useState(null)
   const bodyRef = useAutoGrow(fields?.body)
 
   // โหลดรายการร่างที่บันทึกไว้ + ค่าเริ่มต้นผู้ลงนาม
@@ -102,6 +105,15 @@ export default function CaseLetterModal({ refId, onClose }) {
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || t('letter.saveDraftError'))
       if (!draftId) setDraftId(d.draft.id)
+      // ปุ่ม "ย้อนกลับ" ที่หัวโมดัลขึ้นจาก drafts.length — ร่างแรกของเคสต้องดันเข้า state ตรงนี้
+      // ไม่งั้นบันทึกแล้วยังไม่มีทางกลับไปหน้ารายการจนกว่าจะปิดโมดัลเปิดใหม่
+      setDrafts(prev => {
+        const i = prev.findIndex(x => x.id === d.draft.id)
+        if (i === -1) return [...prev, d.draft]
+        const next = [...prev]
+        next[i] = d.draft
+        return next
+      })
       setSavedMsg(t('letter.savedMsg'))
       setTimeout(() => setSavedMsg(''), 2000)
     } catch (e) {
@@ -109,6 +121,33 @@ export default function CaseLetterModal({ refId, onClose }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function deleteDraft(id) {
+    if (!window.confirm(t('letter.deleteConfirm'))) return
+    setDeletingId(id)
+    setError('')
+    try {
+      const res = await fetch(`/api/case/${refId}/letter/save`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || t('letter.deleteError'))
+      setDrafts(prev => prev.filter(x => x.id !== id))
+      // ร่างที่เปิดค้างอยู่ถูกลบ = ไม่มีที่ให้อัปเดตแล้ว กดบันทึกครั้งหน้าต้องเป็นร่างใหม่
+      if (draftId === id) setDraftId(null)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  /** ลิงก์สาธารณะ — เปิดได้โดยไม่ต้องล็อกอิน ความลับคือ id ของร่าง (uuid) */
+  function publicUrl(id) {
+    return `${typeof window === 'undefined' ? '' : window.location.origin}/complaint/${refId}/letter/${id}`
   }
 
   async function generate() {
@@ -188,18 +227,47 @@ export default function CaseLetterModal({ refId, onClose }) {
           {step === 'pick' && (
             <div className="space-y-3">
               <p className="text-sm text-gray-500 dark:text-disc-muted mb-1">{t('letter.pickPrompt')}</p>
+              {/* แถวร่าง = ปุ่มเปิดร่าง (ซ้าย) + ปุ่มจัดการ (ขวา) — ห้ามซ้อน <button>/<a> ในปุ่มใหญ่ตัวเดียว */}
               {drafts.map(d => (
-                <button
+                <div
                   key={d.id}
-                  onClick={() => loadSavedDraft(d)}
-                  className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-disc-border hover:border-brand-orange hover:bg-orange-50 dark:hover:bg-disc-hover transition"
+                  className="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-disc-border hover:border-brand-orange transition"
                 >
-                  <p className="text-base font-medium text-gray-900 dark:text-disc-text truncate">{d.subject || t('letter.noSubject')}</p>
-                  <p className="text-sm text-gray-400 dark:text-disc-muted mt-0.5">{t('letter.savedAt', { date: fmtDate(d.saved_at) })}</p>
-                </button>
+                  <button
+                    onClick={() => loadSavedDraft(d)}
+                    className="flex-1 min-w-0 text-left px-4 py-3 rounded-l-lg hover:bg-orange-50 dark:hover:bg-disc-hover transition"
+                  >
+                    <p className="text-base font-medium text-gray-900 dark:text-disc-text truncate">{d.subject || t('letter.noSubject')}</p>
+                    <p className="text-sm text-gray-400 dark:text-disc-muted mt-0.5">{t('letter.savedAt', { date: fmtDate(d.saved_at) })}</p>
+                  </button>
+                  <div className="flex items-center gap-1 pr-2 shrink-0">
+                    <a
+                      href={publicUrl(d.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={t('letter.publicLinkOpen')}
+                      aria-label={t('letter.publicLinkOpen')}
+                      className="p-1 rounded text-gray-400 dark:text-disc-muted hover:text-brand-orange transition-colors"
+                    >
+                      <ExternalLink size={16} />
+                    </a>
+                    <CopyButton text={publicUrl(d.id)} />
+                    <button
+                      onClick={() => deleteDraft(d.id)}
+                      disabled={deletingId === d.id}
+                      title={t('letter.deleteButton')}
+                      aria-label={t('letter.deleteButton')}
+                      className="p-1 rounded text-gray-400 dark:text-disc-muted hover:text-red-500 disabled:opacity-50 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
               ))}
+              <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkHint')}</p>
+              {error && <p className="text-sm text-red-500">{error}</p>}
               <button
-                onClick={loadAiDraft}
+                onClick={() => loadAiDraft(signerDefaults)}
                 className="w-full py-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-disc-border text-gray-500 dark:text-disc-muted hover:border-brand-orange hover:text-brand-orange transition text-base"
               >
                 {t('letter.newDraftButton')}
@@ -268,6 +336,26 @@ export default function CaseLetterModal({ refId, onClose }) {
               {pages.map((src, i) => (
                 <img key={i} src={src} alt={t('letter.pageAlt', { page: i + 1 })} className="w-full rounded-lg border border-gray-200 dark:border-disc-border" />
               ))}
+              {/* ลิงก์สาธารณะชี้ที่ "ร่างที่บันทึกไว้" ไม่ใช่ภาพพรีวิวข้างบน — แก้แล้วยังไม่บันทึก ลิงก์จะยังเป็นฉบับเก่า */}
+              {draftId ? (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-disc-border px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-disc-text">{t('letter.publicLinkLabel')}</p>
+                    <a
+                      href={publicUrl(draftId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate text-sm text-orange hover:underline"
+                    >
+                      {publicUrl(draftId)}
+                    </a>
+                  </div>
+                  <CopyButton text={publicUrl(draftId)} />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkNeedsSave')}</p>
+              )}
+              <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkHint')}</p>
               <button onClick={() => setStep('edit')} className="w-full py-2 text-sm text-gray-500 dark:text-disc-muted hover:text-orange border border-gray-200 dark:border-disc-border rounded-lg transition">
                 {t('letter.backToEditButton')}
               </button>

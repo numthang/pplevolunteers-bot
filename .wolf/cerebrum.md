@@ -116,6 +116,7 @@
 
 ## Key Learnings
 
+- **ลิงก์ PDF หนังสือร้องเรียนสาธารณะ = capability URL** (`/complaint/[ref]/letter/[draftId]` · route handler ไม่มี gate) — ความลับคือ draftId (uuid v4 ใน `cases.letters`) เห็นได้เฉพาะคนที่ผ่าน `gateCase` · รู้ ref เฉยๆ เปิดไม่ได้ · ลบร่าง = ลิงก์ตาย 404 ทันที · **สร้าง PDF สดทุกครั้ง ไม่แช่ไฟล์** (user เคาะ 2026-09-01) → แก้ร่างแล้วลิงก์เดิมได้ฉบับใหม่ + หัว/ท้ายจดหมายตาม `case_letter_config` ล่าสุดเสมอ · ตัวประกอบ PDF อยู่ `web/lib/caseLetterPdf.js` ใช้ร่วมกับ `/api/case/[ref]/letter/generate` (ลอกโค้ดซ้ำ 2 ที่ = หัวจดหมายเพี้ยนคนละใบ)
 - **sharp: `.resize()` ทำก่อน `.composite()` เสมอในไปป์ไลน์เดียวกัน** — ต่อ `.resize()` ท้าย composite จะย่อ "ผืน" ก่อน แล้วรูปที่จะวางทับกลายเป็นใหญ่กว่า → `Image to composite must have same dimensions or smaller` · ต้องย่อผืนกับตัวรูปให้พอดีก่อนแล้วค่อย composite (bug-462)
 - **sharp `metadata()` ไม่สน `autoOrient: true`** (0.34) — คืนขนาดก่อนหมุนเสมอ · EXIF orientation 5-8 = รูปตะแคง ต้องสลับ w/h เองก่อนคำนวณสัดส่วน (แต่ `toBuffer()` หมุนให้จริง) (bug-462)
 - **Instagram feed/carousel รับสัดส่วน 4:5 (0.8) – 1.91:1 เท่านั้น** หลุดกรอบ = `IG API: The aspect ratio is not supported` · carousel บังคับทุกใบสัดส่วนเดียวกันโดยยึดใบแรก แล้ว IG ครอบใบที่เหลือทิ้งเอง → `fitImagesForIg()` ใน `services/metaApi.js` เติมขอบเบลอให้เข้ากรอบ + ดันทุกใบให้เท่าใบแรกก่อนยิง (user เคาะ "เติมขอบเบลอ ไม่ครอบ" 2026-08-28)

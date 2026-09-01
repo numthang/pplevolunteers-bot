@@ -18,7 +18,7 @@ export default function CopyButton({ text, className = '' }) {
       className={`shrink-0 p-1 rounded text-warm-400 dark:text-disc-muted hover:text-brand-orange transition-colors ${className}`}
       title="คัดลอก"
     >
-      {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+      {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
     </button>
   )
 }

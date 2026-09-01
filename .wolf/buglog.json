@@ -4993,6 +4993,22 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-01T12:00:44.557Z"
+    },
+    {
+      "id": "bug-20260901-letter-newdraft-defaults",
+      "timestamp": "2026-09-01T13:40:42.045633Z",
+      "error_message": "กด \"+ สร้างร่างใหม่ด้วย AI\" จากหน้ารายการร่าง แล้วช่องผู้ลงนาม/ตำแหน่ง/เบอร์โทร ว่างเปล่า (ทั้งที่เปิดโมดัลครั้งแรกมีค่าให้)",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "ผูก handler เป็น onClick={loadAiDraft} ตรงๆ → React ส่ง SyntheticEvent เข้าไปเป็นพารามิเตอร์ `defaults` แทน signerDefaults ที่ตั้งใจ · defaults.signer_name จึง undefined → ตกไป '' ทุกช่อง เงียบๆ ไม่มี error",
+      "fix": "onClick={() => loadAiDraft(signerDefaults)} · กฎทั่วไป: ฟังก์ชันที่รับพารามิเตอร์ ห้ามส่งเป็น event handler ตรงๆ ต้องห่อ arrow เสมอ",
+      "tags": [
+        "react",
+        "event-handler",
+        "case",
+        "letter"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T13:40:42.045633Z"
     }
   ]
 }

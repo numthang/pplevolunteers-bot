@@ -562,7 +562,14 @@
       "loadDraftError": "โหลดร่างไม่สำเร็จ",
       "saveDraftError": "บันทึกไม่สำเร็จ",
       "generateError": "สร้างเอกสารไม่สำเร็จ",
-      "downloadFilename": "หนังสือร้องเรียน-{ref}"
+      "downloadFilename": "หนังสือร้องเรียน-{ref}",
+      "deleteButton": "ลบร่าง",
+      "deleteConfirm": "ลบร่างนี้? ลิงก์สาธารณะของร่างนี้จะใช้ไม่ได้ทันที",
+      "deleteError": "ลบร่างไม่สำเร็จ",
+      "publicLinkLabel": "ลิงก์ PDF สาธารณะ",
+      "publicLinkOpen": "เปิด PDF (ลิงก์สาธารณะ)",
+      "publicLinkHint": "ลิงก์ PDF เปิดได้โดยไม่ต้องล็อกอิน — ใครมีลิงก์ก็เปิดดูได้ ส่งต่อเฉพาะคนที่ควรเห็น",
+      "publicLinkNeedsSave": "กด “บันทึกร่าง” ก่อน จึงจะมีลิงก์ PDF สาธารณะ"
     },
     "newForm": {
       "provinceLabel": "จังหวัด *",

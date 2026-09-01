@@ -562,7 +562,14 @@
       "loadDraftError": "Failed to load draft",
       "saveDraftError": "Failed to save",
       "generateError": "Failed to generate document",
-      "downloadFilename": "complaint-letter-{ref}"
+      "downloadFilename": "complaint-letter-{ref}",
+      "deleteButton": "Delete draft",
+      "deleteConfirm": "Delete this draft? Its public link will stop working immediately.",
+      "deleteError": "Could not delete the draft",
+      "publicLinkLabel": "Public PDF link",
+      "publicLinkOpen": "Open PDF (public link)",
+      "publicLinkHint": "The PDF link opens without logging in — anyone with the link can read it, so share it only with people who should see it.",
+      "publicLinkNeedsSave": "Save the draft first to get a public PDF link."
     },
     "newForm": {
       "provinceLabel": "Province *",

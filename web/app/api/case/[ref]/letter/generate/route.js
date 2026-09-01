@@ -1,7 +1,5 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { getLetterConfig } from '@/db/caseLetterConfig.js'
-import { getOrgConfig } from '@/db/orgConfig.js'
-import { generateComplaintLetterPdf } from '@/lib/generateComplaintLetter.js'
+import { buildCaseLetterPdf, LetterConfigMissingError } from '@/lib/caseLetterPdf.js'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs'
@@ -23,28 +21,11 @@ export async function POST(req, { params }) {
     if (!letterFields[f]?.trim()) return Response.json({ error: `กรุณาใส่ ${f}` }, { status: 400 })
   }
 
-  const config = await getLetterConfig(orgId, caseRow.province)
-  if (!config) return Response.json({ error: `ยังไม่มี config หนังสือสำหรับจังหวัด ${caseRow.province}` }, { status: 400 })
-
-  const fields = {
-    org_name:          config.org_name,
-    address:           config.address,
-    signer_name:       config.signer_name,
-    signer_position:   config.signer_position,
-    coordinator_name:  config.coordinator_name,
-    coordinator_phone: config.coordinator_phone,
-    ...letterFields,
-    // ⚠️ **ต้องอยู่หลัง spread** — letterFields มาจาก body ของ client ตรงๆ
-    //    ถ้าอยู่ก่อน ผู้เรียกส่ง logo_path เองมาทับได้ = สั่งให้ server อ่านไฟล์ที่ไหนก็ได้
-    // โลโก้ 2 ชั้น: ของสาขาจังหวัดนี้ → โลโก้กลางของ org → ตราที่ฝังมากับ template.docx
-    logo_path:         config.logo_path || await getOrgConfig(orgId, 'case_letter_logo'),
-  }
-
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cletter-'))
   const tmpPdf = path.join(tmpDir, 'letter.pdf')
 
   try {
-    const pdfBuf = generateComplaintLetterPdf(fields)
+    const pdfBuf = await buildCaseLetterPdf(orgId, caseRow.province, letterFields)
     fs.writeFileSync(tmpPdf, pdfBuf)
 
     await execFileAsync('pdftoppm', ['-jpeg', '-r', '120', tmpPdf, path.join(tmpDir, 'pg')])
@@ -58,6 +39,7 @@ export async function POST(req, { params }) {
 
     return Response.json({ pages, pdfBase64 }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (err) {
+    if (err instanceof LetterConfigMissingError) return Response.json({ error: err.message }, { status: 400 })
     console.error('[letter/generate]', err)
     return Response.json({ error: err.message || 'สร้างเอกสารไม่สำเร็จ' }, { status: 500 })
   } finally {
