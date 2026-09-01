@@ -36,7 +36,7 @@ const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)
  * personal ของคนอื่นถูกตัดใน SQL — admin god-mode ส่ง includeAllPersonal = true
  * (ชั้น API ยังต้องกรองด้วย canReadPost อีกที เมื่อ policy.read = 'team')
  */
-export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includePosted = false, includeAllPersonal = false, source = null, limit = 200 } = {}) {
+export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includePosted = false, includeAllPersonal = false, source = null, limit = 200, offset = 0 } = {}) {
   const params = [orgId, userId]
   let where = `e.org_id = $1 AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`
   if (!includeArchived) where += ` AND e.archived_at IS NULL`
@@ -65,6 +65,9 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
   else if (category)      { params.push(category); where += ` AND e.category = $${params.length}` }
 
   params.push(limit)
+  const limitIdx = params.length
+  params.push(offset)
+  const offsetIdx = params.length
   const { rows } = await pool.query(
     `SELECT ${COLS}, ${OWNER_NAME} AS owner_name,
             (SELECT COUNT(*) FROM post_episode_media m WHERE m.episode_id = e.id) AS media_count,
@@ -89,7 +92,7 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
        LEFT JOIN dc_guilds g ON g.guild_id = e.guild_id
       WHERE ${where}
       ORDER BY e.updated_at DESC
-      LIMIT $${params.length}`,
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
     params
   )
   return rows

@@ -10,6 +10,7 @@ import * as postDB from '@/db/posts/episodes.js'
  *   `backfill` = คลังกระทู้เก่าที่กวาดเข้ามาย้อนหลัง — **ซ่อนจากทุกค่าข้างบนรวมทั้ง `all`**
  *   เพราะมีทีละ 500+ ใบ ปนเมื่อไหร่ก็กิน limit จนงานจริงตกขอบ (ดู listPosts)
  * `posted=1` — รวมโพสต์ที่เผยแพร่ครบทุกช่องทางแล้วด้วย (default ฟีดหลักซ่อนไว้)
+ * `offset` — เลื่อนหน้า (limit คงที่ 200/หน้าใน listPosts) ใช้กับปุ่ม "โหลดเพิ่ม" ฝั่ง backfill ที่มี 500+ ใบ
  */
 export async function GET(req) {
   const ctx = await postsContext()
@@ -23,10 +24,11 @@ export async function GET(req) {
   const includeArchived = searchParams.get('archived') === '1'
   const includePosted = searchParams.get('posted') === '1'
   const source = ['discord', 'all', 'backfill'].includes(searchParams.get('source')) ? searchParams.get('source') : null
+  const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10) || 0)
 
   try {
     const rows = await postDB.listPosts(ctx.orgId, ctx.userId, {
-      visibility, category, status, includeArchived, includePosted, source,
+      visibility, category, status, includeArchived, includePosted, source, offset,
       includeAllPersonal: isAdmin(ctx.access),
     })
     // SQL กรองแค่ personal ของคนอื่น ยังไม่รู้เรื่อง policy.read='team' — กรองซ้ำที่นี่

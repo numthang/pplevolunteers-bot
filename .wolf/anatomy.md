@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:21:18.807Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:34:19.574Z
 > Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -1343,7 +1343,7 @@
 
 ## web/app/api/posts/
 
-- `route.js` — GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=d (~873 tok)
+- `route.js` — GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=d (~931 tok)
 
 ## web/app/api/posts/[id]/
 
@@ -2044,7 +2044,7 @@
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9214 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9571 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
@@ -2131,7 +2131,7 @@
 - `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
-- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~7620 tok)
+- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~7654 tok)
 - `jobs.js` — สร้างงานโพสต์ 1 แถวต่อ 1 แพลตฟอร์ม (batch เดียวกัน) (~1642 tok)
 - `media.js` — หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด (~1904 tok)
 - `series.js` — ซีรีส์ทั้งหมดที่ user คนนี้มีสิทธิ์ "เห็นได้อย่างน้อยระดับ org" (~1633 tok)

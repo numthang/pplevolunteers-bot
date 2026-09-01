@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Sparkles, Image as ImageIcon, Trash2, RotateCcw, X, Check } from 'lucide-react'
 
@@ -220,6 +220,13 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
+  // "โหลดเพิ่ม" — /api/posts จำกัด 200 ใบ/หน้า (ดู listPosts) ปนกันได้ทุกฟิลเตอร์ แต่เจอจริงที่ backfill
+  // (500+ ใบ) หน้าอื่นแทบไม่แตะเพดานนี้อยู่แล้ว · hasMore เดาจาก "หน้าที่ได้มาเต็ม 200 พอดี"
+  const PAGE_SIZE = 200
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const offsetRef = useRef(0)
+
   // ปลายทางของโพสต์ใหม่ที่จำไว้ล่าสุด (client only) — 'discord'/'org' คือค่าจากแท็บรุ่นก่อน
   useEffect(() => {
     const saved = window.localStorage.getItem('posts_mode')
@@ -227,8 +234,8 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     else if (['personal', 'org'].includes(saved)) setCreateAs(saved)
   }, [])
 
-  const loadPosts = useCallback(async () => {
-    setLoading(true)
+  const loadPosts = useCallback(async (offset = 0, append = false) => {
+    if (append) setLoadingMore(true); else setLoading(true)
     try {
       const params = new URLSearchParams()
       // source=all = รวมของจากตะกร้าดิสฯ เข้าฟีดด้วย (default ของ API คือซ่อน)
@@ -243,22 +250,27 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       if (postState === 'archived' || postState === 'posted') { params.set('archived', '1'); params.set('posted', '1') }
       if (category) params.set('category', category)
       if (status) params.set('status', status)
+      if (offset) params.set('offset', String(offset))
 
       const res = await fetch(`/api/posts?${params.toString()}`)
       const json = await res.json().catch(() => ({}))
       const rows = res.ok && json.success ? json.data : []
       const isFullyPosted = (p) => Number(p.published_count) > 0 && Number(p.queued_count) === 0
-      setPosts(
+      const filtered =
         postState === 'archived' ? rows.filter(p => p.archived_at) :
         postState === 'posted'   ? rows.filter(isFullyPosted) :
         rows
-      )
+      setPosts(prev => append ? [...prev, ...filtered] : filtered)
+      setHasMore(rows.length === PAGE_SIZE)
+      offsetRef.current = offset + rows.length
     } catch {
-      setPosts([])
+      if (!append) setPosts([])
     } finally {
-      setLoading(false)
+      if (append) setLoadingMore(false); else setLoading(false)
     }
   }, [filter, postState, category, status, reloadNonce])
+
+  const loadMore = useCallback(() => { loadPosts(offsetRef.current, true) }, [loadPosts])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -597,6 +609,15 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
               onRestore={handleRestore}
             />
           ))}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="self-center mt-2 px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50"
+            >
+              {loadingMore ? 'กำลังโหลด...' : `โหลดเพิ่ม (แสดง ${posts.length} ใบ)`}
+            </button>
+          )}
         </div>
       )}
 
