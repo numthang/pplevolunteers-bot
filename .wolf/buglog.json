@@ -4927,6 +4927,23 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T10:50:56.100Z"
+    },
+    {
+      "id": "bug-269",
+      "timestamp": "2026-09-01T10:51:49.284Z",
+      "error_message": "Generated SQL used guild_id column and string updated_by — both removed/changed by org migration",
+      "file": "scripts/finance/parse-kbank-statement.js",
+      "root_cause": "Script never updated after org-scope migration (finance_transactions dropped guild_id in favor of org_id int FK; updated_by became FK to users.id). Also used MySQL INSERT IGNORE syntax with no Postgres equivalent unique constraint to target.",
+      "fix": "Rewrote args to take org_id + optional fund_id + optional fromDate/toDate range filter; SQL generation now inserts org_id/fund_id/source columns, drops updated_by (left NULL), uses plain INSERT (no ON CONFLICT target exists — dedup handled via date-range filter instead).",
+      "tags": [
+        "finance",
+        "postgres-migration",
+        "script",
+        "org-scope"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T10:51:49.284Z"
     }
   ]
 }

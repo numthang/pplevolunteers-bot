@@ -243,22 +243,20 @@ function parseRows(text) {
   // ── SQL ────────────────────────────────────────────────────────────────────
   const sqlLines = [
     `-- KBank statement import`,
-    `-- account_id=${accountId} guild_id=${guildId}`,
+    `-- account_id=${accountId} org_id=${orgId} fund_id=${fundId ?? 'NULL'}`,
     `-- Generated: ${new Date().toISOString()}`,
     `-- Rows: ${rows.length}`,
-    '',
-    //`DELETE FROM finance_transactions WHERE account_id=${accountId};`,
     '',
   ]
 
   for (const r of rows) {
     sqlLines.push(
-      `INSERT IGNORE INTO finance_transactions ` +
-      `(guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, ref_id, balance_after, txn_at, updated_by, updated_at) ` +
+      `INSERT INTO finance_transactions ` +
+      `(org_id, account_id, fund_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, ref_id, balance_after, source, txn_at, updated_at) ` +
       `VALUES (` +
-      `${escSQL(guildId)}, ${accountId}, ${escSQL(r.type)}, ${r.amount}, ` +
+      `${orgId}, ${accountId}, ${fundId ?? 'NULL'}, ${escSQL(r.type)}, ${r.amount}, ` +
       `${escSQL(r.description)}, ${escSQL(r.counterpart_name)}, ${escSQL(r.counterpart_account)}, ${escSQL(r.channel || 'กสิกรไทย')}, ` +
-      `${escSQL(r.ref_id)}, ${r.balance_after ?? 'NULL'}, ${escSQL(r.txn_at_str)}, ${escSQL('statement_import')}, NOW()` +
+      `${escSQL(r.ref_id)}, ${r.balance_after ?? 'NULL'}, ${escSQL('statement_import')}, ${escSQL(r.txn_at_str)}, NOW()` +
       `);`
     )
   }
