@@ -31,7 +31,7 @@ function fmtDateTime(d) {
 }
 
 const selectCls =
-  'h-9 pl-3 pr-8 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal cursor-pointer'
+  'w-full sm:w-auto h-9 pl-3 pr-8 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal cursor-pointer'
 
 // badge บอกที่มาของโพสต์ — ฟีดเดียวปนกันทุกแหล่ง ต้องดูออกใน 1 สายตาว่าใบไหนมาจากไหน
 // 3 แหล่ง 3 สี: ดิสคอร์ด = ม่วงน้ำเงินแบบ Discord · ส่วนตัว = เขียวมะนาว · องค์กร = teal

@@ -5284,6 +5284,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T17:51:09.434Z"
+    },
+    {
+      "id": "bug-291",
+      "timestamp": "2026-09-01T18:04:15.962Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Had 'h-9 pl-3 pr-8 text-sm rounded-lg border border-wa",
+      "fix": "Changed to 'w-full sm:w-auto h-9 pl-3 pr-8 text-sm rounded-lg",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T18:04:15.962Z"
     }
   ]
 }

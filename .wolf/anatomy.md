@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:58:42.823Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T18:04:15.902Z
 > Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2044,7 +2044,7 @@
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9574 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9579 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
