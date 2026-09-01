@@ -86,7 +86,6 @@ export default async function CaseManageDetail({ params }) {
             <CaseContentEditor
               refId={c.ref}
               canEdit={canEdit}
-              aiSummary={c.ai_summary}
               initial={{ title: c.title, detail: c.detail }}
             />
             {/* ปุ่มลบอยู่มุมขวาล่างของการ์ดเนื้อหา — ตำแหน่งเดียวกับ "เก็บเข้ากรุ" ใน /posts/[id] */}

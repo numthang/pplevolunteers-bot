@@ -15,7 +15,7 @@ const inputBase = 'w-full rounded-lg border border-gray-300 dark:border-disc-bor
  *    PATCH ที่แตะ title โพสต์แจ้ง "✏️ แก้หัวข้อเคส" ลงเธรด Discord ทุกครั้ง
  *    (app/api/case/[ref]/route.js) — เซฟทุก 800ms = เธรดโดนสแปมตอนพิมพ์
  */
-export default function CaseContentEditor({ refId, canEdit, initial, aiSummary }) {
+export default function CaseContentEditor({ refId, canEdit, initial }) {
   const t = useTranslations('case')
 
   const validate = useCallback((payload) => {
@@ -39,7 +39,6 @@ export default function CaseContentEditor({ refId, canEdit, initial, aiSummary }
           {initial.title || t('manage.noTitle')}
         </h1>
         <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{initial.detail || '—'}</p>
-        {aiSummary && <AiSummary text={aiSummary} label={t('manage.aiSummaryHeading')} />}
       </div>
     )
   }
@@ -70,17 +69,6 @@ export default function CaseContentEditor({ refId, canEdit, initial, aiSummary }
           className={`${inputBase} px-3 py-2.5 text-base resize-none overflow-hidden min-h-[140px]`}
         />
       </div>
-
-      {aiSummary && <AiSummary text={aiSummary} label={t('manage.aiSummaryHeading')} />}
-    </div>
-  )
-}
-
-function AiSummary({ text, label }) {
-  return (
-    <div className="pt-3 border-t border-gray-100 dark:border-disc-border">
-      <h3 className="text-sm font-semibold text-orange mb-1">{label}</h3>
-      <p className="text-sm text-gray-700 dark:text-disc-muted whitespace-pre-wrap">{text}</p>
     </div>
   )
 }
