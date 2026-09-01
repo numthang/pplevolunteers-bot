@@ -264,7 +264,6 @@ export default function CaseLetterModal({ refId, onClose }) {
                   </div>
                 </div>
               ))}
-              <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkHint')}</p>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <button
                 onClick={() => loadAiDraft(signerDefaults)}
@@ -355,7 +354,6 @@ export default function CaseLetterModal({ refId, onClose }) {
               ) : (
                 <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkNeedsSave')}</p>
               )}
-              <p className="text-sm text-gray-400 dark:text-disc-muted">{t('letter.publicLinkHint')}</p>
               <button onClick={() => setStep('edit')} className="w-full py-2 text-sm text-gray-500 dark:text-disc-muted hover:text-orange border border-gray-200 dark:border-disc-border rounded-lg transition">
                 {t('letter.backToEditButton')}
               </button>

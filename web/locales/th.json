@@ -568,7 +568,6 @@
       "deleteError": "ลบร่างไม่สำเร็จ",
       "publicLinkLabel": "ลิงก์ PDF สาธารณะ",
       "publicLinkOpen": "เปิด PDF (ลิงก์สาธารณะ)",
-      "publicLinkHint": "ลิงก์ PDF เปิดได้โดยไม่ต้องล็อกอิน — ใครมีลิงก์ก็เปิดดูได้ ส่งต่อเฉพาะคนที่ควรเห็น",
       "publicLinkNeedsSave": "กด “บันทึกร่าง” ก่อน จึงจะมีลิงก์ PDF สาธารณะ"
     },
     "newForm": {
