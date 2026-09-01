@@ -28,9 +28,10 @@ function thaiDate(d = new Date()) {
 
 // เทมเพลตฝัง 2 tab ไว้หน้า {body} ให้ย่อหน้าแรกเท่านั้น (linebreaks:true ทำ \n เป็นแค่ตัดบรรทัดในย่อหน้าเดียวกัน
 // ไม่ใช่ย่อหน้าใหม่ — ย่อหน้าถัดไปเลยไม่ได้ indent ตามไปด้วย) ย่อหน้าที่ 2 เป็นต้นไปจึงต้องเติม tab เองที่นี่
+// ต่อบรรทัดด้วย \n เดียว (ไม่ใช่ \n\n) — ย่อหน้าราชการไทยขึ้นบรรทัดใหม่+เยื้องเลย ไม่เว้นบรรทัดว่างคั่น
 function indentParagraphs(text) {
   const paras = String(text || '').split(/\n\s*\n/)
-  return paras.map((p, i) => (i === 0 ? p : `\t\t${p}`)).join('\n\n')
+  return paras.map((p, i) => (i === 0 ? p : `\t\t${p}`)).join('\n')
 }
 
 export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, reference, attachments, body, signer_name, signer_position, signer_phone, coordinator_name, coordinator_phone, logo_path }) {
