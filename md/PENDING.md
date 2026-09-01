@@ -1320,6 +1320,9 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 - [ ] prod `/www/wwwroot/pple-volunteers` → `deploy.sh:44` เป็นบรรทัดเดียวที่รันจริง · อีก ~12 ไฟล์ใน `scripts/` เป็น comment วิธีรัน
 - [ ] GitHub repo `numthang/pplevolunteers-bot` → rename (GitHub redirect ให้อยู่แล้ว ไม่พังทันที)
 - [ ] 🔒 **git remote มี GitHub PAT plain text** (`ghp_...` ใน origin URL) → revoke + ออกใหม่ตอน rename repo
+  - **ตรวจแล้ว 2026-09-01: ไม่เคยหลุดขึ้น GitHub** — โทเคนอยู่แค่ `.git/config` (ไฟล์ไม่ถูก track) · `git log --all -S'ghp_'` เจอแต่คอมมิตที่เขียนบรรทัดโน้ตนี้เอง ไม่ใช่ค่าจริง · `.git/config` แก้ล่าสุด 2026-07-23
+  - ⚠️ ตอนทำจริง **ต้องแก้ remote บน prod ก่อน revoke** — `deploy.sh` ใช้ `git pull` ถ้า revoke ก่อน deploy พังทันที · prod ควรใช้ **deploy key** (read-only ต่อ repo) ไม่ใช่ PAT ที่เข้าถึงทุก private repo ของบัญชี
+  - 🙈 อย่ารัน `git remote -v` แล้วแปะผลลัพธ์ที่ไหน — ค่าโทเคนโผล่เต็มๆ (โดนไปแล้วรอบหนึ่ง 2026-09-01)
 - [ ] pm2 `pple-dcbot` / `pple-web` — จะเปลี่ยนก็ได้ ไม่ผูกอะไร
 - [ ] docs `md/*.md` + `CLAUDE.md` (~10 ไฟล์) — งาน mechanical ล้วน โยน subagent ได้
 
