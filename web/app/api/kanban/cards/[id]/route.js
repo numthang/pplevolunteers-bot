@@ -24,7 +24,7 @@ const REASON_TEXT = {
 function transitionError(card, reason) {
   if (reason !== 'linked') return REASON_TEXT[reason] || 'ย้ายไม่ได้'
   const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
-  return `การบ้านใบนี้ผูกกับ${kind}อยู่ — สถานะเปลี่ยนที่หน้า${kind}เท่านั้น แล้วการ์ดจะขยับตามเอง`
+  return `KANBANใบนี้ผูกกับ${kind}อยู่ — สถานะเปลี่ยนที่หน้า${kind}เท่านั้น แล้วการ์ดจะขยับตามเอง`
 }
 
 export async function GET(_req, { params }) {
@@ -63,7 +63,7 @@ export async function PATCH(req, { params }) {
 
   // ── เปลี่ยนสถานะ ──
   if (body.statusType !== undefined) {
-    if (!canChangeStatus(card, access, userId)) return err(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะการบ้านใบนี้')
+    if (!canChangeStatus(card, access, userId)) return err(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะKANBANใบนี้')
     const gate = checkStatusTransition(card, body.statusType)
     if (!gate.ok) return err(400, transitionError(card, gate.reason))
     return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, body.statusType) })
@@ -72,9 +72,9 @@ export async function PATCH(req, { params }) {
   // ── เอาออกจากกรุ ──
   // ใช้ด่านเดียวกับตอนเก็บเข้ากรุ (canArchiveCard) — คนที่เก็บเข้าได้ต้องเอาออกได้
   if (body.restore === true) {
-    if (!canArchiveCard(card, access, userId)) return err(403, 'เอาออกจากกรุได้เฉพาะคนที่สร้างการบ้านใบนี้')
+    if (!canArchiveCard(card, access, userId)) return err(403, 'เอาออกจากกรุได้เฉพาะคนที่สร้างKANBANใบนี้')
     const ok = await cardDB.unarchiveCard(orgId, card.id)
-    if (!ok) return err(400, 'การบ้านใบนี้ไม่ได้อยู่ในกรุ')
+    if (!ok) return err(400, 'KANBANใบนี้ไม่ได้อยู่ในกรุ')
     return Response.json({ card: await cardDB.getCard(orgId, card.id) })
   }
 
@@ -132,7 +132,7 @@ export async function PATCH(req, { params }) {
   }
 
   // ── autosave เนื้อหา ──
-  if (!canEditCard(card, access, userId)) return err(403, 'ไม่มีสิทธิ์แก้การบ้านใบนี้')
+  if (!canEditCard(card, access, userId)) return err(403, 'ไม่มีสิทธิ์แก้KANBANใบนี้')
 
   const fields = {}
   if (body.title !== undefined) {
@@ -140,11 +140,11 @@ export async function PATCH(req, { params }) {
     //    ตอบเหตุผลกลับไปเลย ดีกว่าเงียบแล้วให้ผู้ใช้พิมพ์ทิ้งแล้วเห็นชื่อเดิมเด้งกลับ
     if (isLinkedCard(card)) {
       const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
-      return err(400, `ชื่อการบ้านใบนี้มาจาก${kind} — แก้ชื่อที่หน้า${kind} แล้วการ์ดจะเปลี่ยนตามเอง`)
+      return err(400, `ชื่อKANBANใบนี้มาจาก${kind} — แก้ชื่อที่หน้า${kind} แล้วการ์ดจะเปลี่ยนตามเอง`)
     }
     const t = String(body.title).trim()
-    if (!t) return err(400, 'ต้องมีชื่อการบ้าน')
-    if (t.length > 200) return err(400, 'ชื่อการบ้านยาวเกิน 200 ตัวอักษร')
+    if (!t) return err(400, 'ต้องมีชื่อKANBAN')
+    if (t.length > 200) return err(400, 'ชื่อKANBANยาวเกิน 200 ตัวอักษร')
     fields.title = t
   }
   if (body.detail !== undefined)        fields.detail = body.detail
@@ -153,9 +153,9 @@ export async function PATCH(req, { params }) {
   if (!Object.keys(fields).length)      return err(400, 'ไม่มีอะไรให้แก้')
 
   const res = await cardDB.updateCard(orgId, card.id, fields, { lockToken: body.lockToken })
-  if (res.notFound) return err(404, 'ไม่พบการบ้านใบนี้')
+  if (res.notFound) return err(404, 'ไม่พบKANBANใบนี้')
   // 409 = คนอื่นแก้ไปแล้ว → คืนของจริงใน DB ให้ UI ถามว่าจะโหลดใหม่ไหม (ห้าม last-write-wins)
-  if (res.conflict) return Response.json({ error: 'มีคนแก้การบ้านใบนี้ไปแล้ว', card: res.card }, { status: 409 })
+  if (res.conflict) return Response.json({ error: 'มีคนแก้KANBANใบนี้ไปแล้ว', card: res.card }, { status: 409 })
   return Response.json({ card: res.card })
 }
 
@@ -174,16 +174,16 @@ export async function DELETE(req, { params }) {
   //    กันซ้ำกับ `can:` ใน GET เพราะ route นี้ยิงตรงได้ ไม่ได้ผ่าน UI เสมอ
   if (isLinkedCard(ctx.card)) {
     const kind = LINK_KIND_LABEL[ctx.card.link?.entity_type] || 'ของจริง'
-    return err(400, `การบ้านใบนี้ผูกกับ${kind}อยู่ — ลบหรือเก็บเข้ากรุที่หน้า${kind} แล้วการ์ดจะตามไปเอง`)
+    return err(400, `KANBANใบนี้ผูกกับ${kind}อยู่ — ลบหรือเก็บเข้ากรุที่หน้า${kind} แล้วการ์ดจะตามไปเอง`)
   }
 
   if (new URL(req.url).searchParams.get('purge') === '1') {
     if (!canPurge(ctx.access)) return err(403, 'ลบถาวรได้เฉพาะแอดมิน')
     const ok = await cardDB.deleteCard(ctx.orgId, ctx.card.id)
-    if (!ok) return err(404, 'ไม่พบการบ้านใบนี้')
+    if (!ok) return err(404, 'ไม่พบKANBANใบนี้')
     return Response.json({ ok: true, purged: true })
   }
 
-  if (!canArchiveCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'เก็บเข้ากรุได้เฉพาะคนที่สร้างการบ้านใบนี้')
+  if (!canArchiveCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'เก็บเข้ากรุได้เฉพาะคนที่สร้างKANBANใบนี้')
   return Response.json({ ok: await cardDB.archiveCard(ctx.orgId, ctx.card.id) })
 }

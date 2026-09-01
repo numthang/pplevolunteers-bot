@@ -1,11 +1,11 @@
-// /api/kanban/cards — รายการการบ้าน + สร้างใหม่
+// /api/kanban/cards — รายการKANBAN + สร้างใหม่
 //
-// GET  ?view=mine       → หน้าแรก "การบ้านของฉัน" (2 กอง: ต้องส่ง / ช่วย)
+// GET  ?view=mine       → หน้าแรก "KANBANของฉัน" (2 กอง: ต้องส่ง / ช่วย)
 //      ?view=unassigned → งานที่ยังไม่มีคนรับ
 //      ?view=all        → ทั้ง org
-// POST                  → สร้างการบ้าน
+// POST                  → สร้างKANBAN
 //
-// ⛔ POST นี้ต้องถูกเรียก "ตอนกดปุ่มบันทึก" เท่านั้น — ห้ามยิงตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์ม
+// ⛔ POST นี้ต้องถูกเรียก "ตอนกดปุ่มบันทึก" เท่านั้น — ห้ามยิงตอนกดปุ่ม "เพิ่มKANBAN" เพื่อเปิดฟอร์ม
 //    (CLAUDE.md 2026-07-30 · เคสจริง /posts เคยทำแล้วได้ร่างเปล่าค้าง DB 5 แถว)
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
 import { STATUS_TYPES, formatRef, canPurge } from '@/lib/kanbanAccess.js'
@@ -72,11 +72,11 @@ export async function POST(req) {
 
   const body = await req.json().catch(() => ({}))
   const title = String(body.title || '').trim()
-  if (!title) return err(400, 'ต้องมีชื่อการบ้าน')
-  if (title.length > 200) return err(400, 'ชื่อการบ้านยาวเกิน 200 ตัวอักษร')
+  if (!title) return err(400, 'ต้องมีชื่อKANBAN')
+  if (title.length > 200) return err(400, 'ชื่อKANBANยาวเกิน 200 ตัวอักษร')
   if (body.statusType && !STATUS_TYPES.includes(body.statusType)) return err(400, 'สถานะไม่ถูกต้อง')
 
-  // assignToMe = ทางลัดของหน้า "การบ้านของฉัน" — client ไม่ต้องรู้ userId ตัวเอง
+  // assignToMe = ทางลัดของหน้า "KANBANของฉัน" — client ไม่ต้องรู้ userId ตัวเอง
   // (เคสปกติที่สุดคือจดงานของตัวเอง → ต้องเข้ากอง "ต้องส่ง" ทันที ไม่ใช่ไปกองรอรับแล้วกดรับซ้ำ)
   const ownerUserId = body.assignToMe ? ctx.userId : (body.ownerUserId ? Number(body.ownerUserId) : null)
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น — กันไม่ให้ client ยัด status มาชน CHECK ของ DB

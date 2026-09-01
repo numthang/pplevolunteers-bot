@@ -80,7 +80,7 @@ export async function cardContext(cardId) {
     : looksLikeRef(id)
       ? await cardDB.getCardByRef(ctx.orgId, parseRef(id), ctx.viewer)
       : null
-  if (!card) return { ...ctx, error: err(404, 'ไม่พบการบ้านใบนี้') }
+  if (!card) return { ...ctx, error: err(404, 'ไม่พบ KANBAN ใบนี้') }
 
   return { ...ctx, card }
 }

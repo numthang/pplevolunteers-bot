@@ -17,7 +17,7 @@ export async function PATCH(req, { params }) {
   if (ctx.error) return ctx.error
 
   if (!canEditCard(ctx.card, ctx.access, ctx.userId)) {
-    return err(403, 'ไม่มีสิทธิ์แก้ข้อมูลของการบ้านใบนี้')
+    return err(403, 'ไม่มีสิทธิ์แก้ข้อมูลของKANBANใบนี้')
   }
 
   const body = await req.json().catch(() => ({}))
@@ -32,7 +32,7 @@ export async function PATCH(req, { params }) {
   if (!check.ok) return err(400, check.error)
 
   const res = await fieldDB.setCardFieldValue(ctx.orgId, ctx.card.id, def.id, def.type, check.value)
-  if (res.notFound) return err(404, 'ไม่พบการบ้านใบนี้')
+  if (res.notFound) return err(404, 'ไม่พบKANBANใบนี้')
 
   return Response.json({ card: await cardDB.getCard(ctx.orgId, ctx.card.id) })
 }

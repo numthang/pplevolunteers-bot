@@ -25,7 +25,7 @@ export async function GET(req, { params }) {
 export async function POST(req, { params }) {
   const ctx = await cardContext((await params).id)
   if (ctx.error) return ctx.error
-  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้การบ้านใบนี้')
+  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้KANBANใบนี้')
 
   const body = await req.json().catch(() => ({}))
   if (!body.fieldId) return err(400, 'ต้องระบุ fieldId')
@@ -38,7 +38,7 @@ export async function POST(req, { params }) {
     if (!opts.some((o) => String(o.id) === String(body.optionId))) return err(400, 'ไม่พบตัวเลือกนี้ในช่องข้อมูลนี้')
 
     const item = await fieldDB.addChecklistItem(ctx.orgId, ctx.card.id, field.id, { optionId: body.optionId })
-    if (!item) return err(404, 'ไม่พบการบ้านใบนี้')
+    if (!item) return err(404, 'ไม่พบKANBANใบนี้')
     return Response.json({ item }, { status: 201 })
   }
 
@@ -55,14 +55,14 @@ export async function POST(req, { params }) {
 
   const item = await fieldDB.addChecklistItem(ctx.orgId, ctx.card.id, field.id,
     option ? { optionId: option.id } : { text })
-  if (!item) return err(404, 'ไม่พบการบ้านใบนี้')
+  if (!item) return err(404, 'ไม่พบKANBANใบนี้')
   return Response.json({ item }, { status: 201 })
 }
 
 export async function PATCH(req, { params }) {
   const ctx = await cardContext((await params).id)
   if (ctx.error) return ctx.error
-  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้การบ้านใบนี้')
+  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้KANBANใบนี้')
 
   const body = await req.json().catch(() => ({}))
 
@@ -71,7 +71,7 @@ export async function PATCH(req, { params }) {
     if (!body.fieldId) return err(400, 'ต้องระบุ fieldId')
     const orderedIds = body.reorder.map((x) => String(x).trim()).filter((x) => /^\d+$/.test(x))
     const ok = await fieldDB.reorderChecklistItems(ctx.orgId, ctx.card.id, body.fieldId, orderedIds)
-    if (!ok) return err(404, 'ไม่พบการบ้านใบนี้')
+    if (!ok) return err(404, 'ไม่พบKANBANใบนี้')
     return Response.json({ ok: true })
   }
 
@@ -118,7 +118,7 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   const ctx = await cardContext((await params).id)
   if (ctx.error) return ctx.error
-  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้การบ้านใบนี้')
+  if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์แก้KANBANใบนี้')
 
   const itemId = new URL(req.url).searchParams.get('itemId')
   if (!itemId) return err(400, 'ต้องระบุงานย่อย')

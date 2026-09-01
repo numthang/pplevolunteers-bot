@@ -18,7 +18,7 @@ export async function POST(req, { params }) {
 
   const target = (await req.json().catch(() => ({}))).userId
   if (target && Number(target) !== ctx.userId) {
-    if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์เพิ่มคนช่วยในการบ้านใบนี้')
+    if (!canEditCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์เพิ่มคนช่วยในKANBANใบนี้')
     const linked = await caseOfCard(ctx.orgId, ctx.card)
     if (linked) {
       await assignCase(ctx.orgId, linked, Number(target), { actorUserId: ctx.userId, app: 'kanban' })
@@ -49,7 +49,7 @@ export async function DELETE(req, { params }) {
   const target = Number(new URL(req.url).searchParams.get('userId')) || ctx.userId
   // ถอนตัวเองออกได้เสมอ · ถอดคนอื่นต้องมีสิทธิ์แก้
   if (target !== ctx.userId && !canEditCard(ctx.card, ctx.access, ctx.userId)) {
-    return err(403, 'ไม่มีสิทธิ์ถอดคนช่วยออกจากการบ้านใบนี้')
+    return err(403, 'ไม่มีสิทธิ์ถอดคนช่วยออกจากKANBANใบนี้')
   }
   const linkedDel = await caseOfCard(ctx.orgId, ctx.card)
   if (linkedDel) {
