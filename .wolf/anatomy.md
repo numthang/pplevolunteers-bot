@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T16:35:27.323Z
-> Files: 1097 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:21:18.807Z
+> Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -217,7 +217,7 @@
 - `aiConfig.js` — db/aiConfig.js (~937 tok)
 - `aiCreds.js` — นับ 1 ครั้งถ้ายังไม่เต็ม — ไม่ atomic (โควตาไม่ใช่เงิน เกิน 1-2 ครั้งรับได้ เหมือน postsAiQuota) (~1510 tok)
 - `aiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด (kind='slot') — ประกอบเสร็จพร้อมยิง AI (~504 tok)
-- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2714 tok)
+- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2760 tok)
 - `configResolver.js` — db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority (~716 tok)
 - `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary (~641 tok)
 - `forum.js` — pool: getForumConfig, getAllForumConfigs, upsertForumConfig + 7 more (~1254 tok)
@@ -233,7 +233,7 @@
 - `orgchartConfig.js` — Upsert channel mapping ของ role (~1736 tok)
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~730 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของ OTP (dc_user_config, key = discord_id) แยกจาก userConfig 2026-07-29 (~330 tok)
-- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1350 tok)
+- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1368 tok)
 - `ratings.js` — เพิ่ม rating ใหม่ (~783 tok)
 - `reports.js` — เพิ่ม report ใหม่ (~694 tok)
 - `settings.js` — db/settings.js (~353 tok)
@@ -247,7 +247,7 @@
 - `antiSpamHandler.js` — Anti-spam: duplicate ข้ามห้อง + mass-mention + honeypot channel (~1540 tok)
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
 - `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13094 tok)
-- `caseImportHandler.js` — เปิด modal ให้กรอกจังหวัด/ประเภท ก่อนสร้างเคส (~2294 tok)
+- `caseImportHandler.js` — เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01) (~2170 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
 - `forumDashboard.js` — handlers/forumDashboard.js (~764 tok)
@@ -262,7 +262,7 @@
 - `orgchartPanelHandler.js` — handlers/orgchartPanelHandler.js (~2429 tok)
 - `orgchartProvinceSelect.js` — handlers/orgchartProvinceSelect.js (~48 tok)
 - `orgchartRoleSelect.js` — handlers/orgchartRoleSelect.js (~44 tok)
-- `postImportHandler.js` — เปิด modal ให้กรอกหมวด (ไม่บังคับ) ก่อนนำเข้า — ใช้ได้เฉพาะข้อความในเธรด (~1712 tok)
+- `postImportHandler.js` — เปิด modal ให้กรอกหมวด (ไม่บังคับ) ก่อนนำเข้า — ใช้ได้เฉพาะข้อความในเธรด (~1743 tok)
 - `provinceSelect.js` — handlers/provinceSelect.js (~1569 tok)
 - `rateStars.js` — Handler สำหรับ customId ที่ขึ้นต้นด้วย "rate_stars:" และ "rate_submit:" (~935 tok)
 - `ratingPage.js` — Handler สำหรับ customId: ratings_page:{targetId}:{page} (~239 tok)
@@ -431,8 +431,10 @@
 - `backfill-intro-peoplesparty.js` — scripts/data/backfill-intro-peoplesparty.js (~3823 tok)
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
+- `backfillCaseCreatedAt.js` — backfillCaseCreatedAt.js — แก้ cases.created_at ของเคสที่มาจาก Discord ให้ตรงวันที่ตั้งกระทู้จริง (~879 tok)
 - `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~5990 tok)
-- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5400 tok)
+- `backfillPostCreatedAt.js` — backfillPostCreatedAt.js — แก้ post_episodes.created_at ของโพสต์ที่มาจาก Discord ให้ตรงวันที่ตั้งกระ (~899 tok)
+- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5426 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
 - `extract-intro-ratchaburi-csv.js` — scripts/extract-intro-csv.js (~1790 tok)
@@ -1437,7 +1439,7 @@
 
 ## web/app/api/posts/categories/
 
-- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~614 tok)
+- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~683 tok)
 
 ## web/app/api/posts/jobs/[jobId]/
 
@@ -2042,7 +2044,7 @@
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — 'use client' หน้าแรกโมดูล posts: กล่องไอเดีย AI + dropdown filter 3 ตัว + รายการโพสต์เป็นแถวยาว พร้อมแถบ % ความสมบูรณ์ (CHECKS 4 ข้อ) + ตัวเรียง ใกล้เสร็จก่อน/แก้ล่าสุด (~1400 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9214 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
@@ -2129,7 +2131,7 @@
 - `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
-- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~6388 tok)
+- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~7620 tok)
 - `jobs.js` — สร้างงานโพสต์ 1 แถวต่อ 1 แพลตฟอร์ม (batch เดียวกัน) (~1642 tok)
 - `media.js` — หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด (~1904 tok)
 - `series.js` — ซีรีส์ทั้งหมดที่ user คนนี้มีสิทธิ์ "เห็นได้อย่างน้อยระดับ org" (~1633 tok)

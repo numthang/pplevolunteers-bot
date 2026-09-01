@@ -3,8 +3,7 @@ My Tasks and bug issue
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 - ทำไมมีแค่ปี 69 วันที่แสดงคือวันที่อะไร
-- footer ซ้อน 2 หน้า
-- ai ร่างหนังสือร้องเรียน แบ่งเป็น 3 paragraph ที่มา เนื้อหา สรุปสิ่งที่ต้องการ 
+http://localhost:3000/posts?filter=backfill ตอนนีี้แสดงได้สูงสุด 200 posts ใช่ไหม อยากดูโพสต์เก่าๆ ด้วยทำไงดี แล้วก็ช่วยทำ mobileaudit หน้านี้ด้วยนะ
 
 # PLATFOR{m}.ORG
 - platfor.org

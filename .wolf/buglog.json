@@ -5140,6 +5140,118 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T16:18:55.307Z"
+    },
+    {
+      "id": "bug-282",
+      "timestamp": "2026-09-01T17:06:53.868Z",
+      "error_message": "Wrong reference: updated_at should be created_at",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Used \"updated_at\" instead of \"created_at\"",
+      "fix": "Changed updated_at → created_at",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:06:53.868Z"
+    },
+    {
+      "id": "bug-283",
+      "timestamp": "2026-09-01T17:07:56.776Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/lib/orgFeatures.js",
+      "root_cause": "Had 'การบ้าน'",
+      "fix": "Changed to 'KANBAN'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:07:56.776Z"
+    },
+    {
+      "id": "bug-284",
+      "timestamp": "2026-09-01T17:12:41.013Z",
+      "error_message": "Missing await",
+      "file": "web/db/posts/episodes.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:12:41.013Z"
+    },
+    {
+      "id": "bug-285",
+      "timestamp": "2026-09-01T17:12:55.824Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/posts/categories/route.js",
+      "root_cause": "Was returning: Response.json({ success: true, data, canManage: ca",
+      "fix": "Now returns: Response.json({ success: true, data, backfillCount",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:12:55.824Z"
+    },
+    {
+      "id": "bug-286",
+      "timestamp": "2026-09-01T17:13:30.752Z",
+      "error_message": "Wrong reference: option should be backfillCount",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Used \"option\" instead of \"backfillCount\"",
+      "fix": "Changed option → backfillCount",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:13:30.752Z"
+    },
+    {
+      "id": "bug-287",
+      "timestamp": "2026-09-01T17:20:24.855Z",
+      "error_message": "Significant refactor of episodes.js",
+      "file": "web/db/posts/episodes.js",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 8→22 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:20:24.855Z"
+    },
+    {
+      "id": "bug-288",
+      "timestamp": "2026-09-01T17:21:18.882Z",
+      "error_message": "Null/undefined access in PostsHome.jsx",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:21:18.882Z"
     }
   ]
 }
