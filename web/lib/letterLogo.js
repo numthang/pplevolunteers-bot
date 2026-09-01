@@ -12,9 +12,10 @@
  */
 import sharp from 'sharp'
 
-/** EMU — หน่วยของ docx · 914400 EMU = 1 นิ้ว · สูง 800100 ≈ 2.22 ซม. */
-export const LOGO_BOX_H_EMU = 800100
-export const LOGO_BOX_W_EMU = 923570
+/** EMU — หน่วยของ docx · 914400 EMU = 1 นิ้ว, 360000 EMU = 1 ซม. · สูง 1260000 = 3.5 ซม.
+ *  (เดิม 800100 ≈ 2.22 ซม. — เล็กไปในเทมเพลตใหม่ที่ {%LOGO} เป็นพารากราฟเดี่ยวกลางหน้า ไม่ใช่ table cell แคบๆ แบบเดิม) */
+export const LOGO_BOX_H_EMU = 1260000
+export const LOGO_BOX_W_EMU = 1454439
 
 /** พิกเซลที่ฝังจริง — สูง 320px พอสำหรับภาพ 2.2 ซม. บนกระดาษ ไม่ต้องใหญ่กว่านี้ */
 export const LOGO_PX_H = 320

@@ -1628,4 +1628,13 @@ ALTER TABLE case_config ADD COLUMN IF NOT EXISTS default_province VARCHAR(50);
 ALTER TABLE case_letter_config ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255);
 
 
+-- 2026-09-01 · org_ai_prompts: ล้าง override เก่าของ 'case.letter_draft' (ร่างหนังสือร้องเรียนด้วย AI)
+--   แก้ head เริ่มต้นใน config/aiPrompts.js ให้บังคับ 3 ย่อหน้าเป๊ะตามโครงหนังสือราชการ (ที่มา/เนื้อหา/สรุป)
+--   แต่ org ที่เคย override slot นี้ไว้ก่อนหน้าจะไม่เห็นการเปลี่ยนแปลง (head ของ org ชนะเสมอ)
+--   ลบแถว override = กลับไปใช้ค่าเริ่มต้นในโค้ด เหมือนกดปุ่ม "คืนค่าเดิม" ในหน้า /org/settings/ai
+--   ⚠️ ถ้ามี org ตั้งใจ custom ข้อความ slot นี้ไว้เอง จะหายไปด้วย — เช็คก่อนรันถ้าไม่แน่ใจ:
+--     SELECT org_id, updated_at FROM org_ai_prompts WHERE value = 'case.letter_draft' AND kind = 'slot';
+DELETE FROM org_ai_prompts WHERE value = 'case.letter_draft' AND kind = 'slot';
+
+
 -- production ทำถึงตรงนี้

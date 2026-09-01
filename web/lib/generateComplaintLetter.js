@@ -26,6 +26,13 @@ function thaiDate(d = new Date()) {
   return `${toThaiNumerals(d.getDate())} ${THAI_MONTHS[d.getMonth()]} ${toThaiNumerals(d.getFullYear() + 543)}`
 }
 
+// เทมเพลตฝัง 2 tab ไว้หน้า {body} ให้ย่อหน้าแรกเท่านั้น (linebreaks:true ทำ \n เป็นแค่ตัดบรรทัดในย่อหน้าเดียวกัน
+// ไม่ใช่ย่อหน้าใหม่ — ย่อหน้าถัดไปเลยไม่ได้ indent ตามไปด้วย) ย่อหน้าที่ 2 เป็นต้นไปจึงต้องเติม tab เองที่นี่
+function indentParagraphs(text) {
+  const paras = String(text || '').split(/\n\s*\n/)
+  return paras.map((p, i) => (i === 0 ? p : `\t\t${p}`)).join('\n\n')
+}
+
 export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, reference, attachments, body, signer_name, signer_position, signer_phone, coordinator_name, coordinator_phone, logo_path }) {
   const template = fs.readFileSync(TEMPLATE, 'binary')
   const zip = new PizZip(template)
@@ -74,7 +81,7 @@ export function generateComplaintLetterPdf({ org_name, address, subject, recipie
     // ทั้งบรรทัดประกอบที่นี่ ไม่ใช่ในเทมเพลต — ว่างต้องไม่เหลือคำว่า "อ้างถึง" ลอยอยู่
     reference_line:    reference?.trim() ? t(`อ้างถึง ${reference.trim()}`) : '',
     attachments:       t(attachments || '-'),
-    body:              t(body),
+    body:              t(indentParagraphs(body)),
     signer_name:       t(signer_name),
     signer_position:   t(signer_position),
     // ทั้งบรรทัดประกอบที่นี่ ไม่ใช่ในเทมเพลต — เบอร์ว่างต้องไม่เหลือคำว่า "โทร" ลอยอยู่
