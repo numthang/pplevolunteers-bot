@@ -94,6 +94,7 @@ async function handleCaseImportModal(interaction) {
     guild_id: interaction.guildId, province, category, title, source: 'discord',
     complainant_name: complainantName, complainant_phone: null,
     discord_thread_id: threadId, created_by: interaction.user.id,
+    created_at: thread.createdAt || null, // เคสนำเข้าย้อนหลัง → ใช้วันที่ตั้งกระทู้จริง ไม่ใช่เวลาที่กดนำเข้า
   });
   if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
 

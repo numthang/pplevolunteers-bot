@@ -99,6 +99,7 @@ async function createCase(data) {
     guild_id, province, category = null, title = null, detail = null, source = 'discord',
     complainant_name, complainant_phone, complainant_line_id = null,
     discord_thread_id = null, created_by = null, consent_at = null,
+    created_at = null, // นำเข้ากระทู้เก่า → ส่ง thread.createdAt เพื่อให้ตรงวันที่ตั้งกระทู้จริง แทนเวลาที่กดนำเข้า
   } = data;
   const ref = await generateRef(guild_id, province);
   // แปลงที่ขอบ: guild_id (varchar, จาก caller) → org_id (int, เขียนลง cases) · created_by (discord snowflake) → users.id
@@ -109,12 +110,12 @@ async function createCase(data) {
     `INSERT INTO cases
        (org_id, discord_guild_id, ref, province, category, title, detail, source, status,
         complainant_name, complainant_phone, complainant_line_id,
-        discord_thread_id, created_by, consent_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'open',$9,$10,$11,$12,$13,$14)
+        discord_thread_id, created_by, consent_at, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'open',$9,$10,$11,$12,$13,$14,COALESCE($15, NOW()))
      RETURNING *`,
     [orgId, guild_id, ref, province, category, title, detail, source,
      complainant_name, complainant_phone, complainant_line_id,
-     discord_thread_id, createdByUserId, consent_at],
+     discord_thread_id, createdByUserId, consent_at, created_at],
   );
 
   // ⭐ เคสทุกใบต้องมีการ์ดใน kanban (user เคาะ 2026-08-24) — คู่กับ hook ฝั่งเว็บใน web/db/cases.js
