@@ -120,13 +120,27 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
   return rows
 }
 
-/** จำนวนโพสต์ในคลังกระทู้เก่านำเข้า (created_via='backfill') ของ org — ใช้โชว์ตัวเลขบน option ตัวกรอง */
-export async function countBackfillPosts(orgId) {
+/** จำนวนโพสต์แยกตามตัวกรอง "แหล่ง" ทั้ง 5 ปุ่ม (งานปัจจุบัน/ส่วนตัว/องค์กร/ดิสคอร์ด/กระทู้เก่านำเข้า)
+ *  ใช้โชว์ตัวเลขบน option ของ dropdown — นับแบบเดียวกับเงื่อนไข source ใน listPosts() แต่ตัด
+ *  ส่วน "posted"/postState ออก (ง่ายกว่า ตรงกับที่ listCategories ก็ไม่นับส่วนนั้นเหมือนกัน) */
+export async function countPostsBySource(orgId, userId, { includeAllPersonal = false } = {}) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*)::int AS count FROM post_episodes WHERE org_id = $1 AND created_via = 'backfill' AND archived_at IS NULL`,
-    [orgId]
+    `SELECT
+       COUNT(*) FILTER (WHERE e.created_via <> 'backfill')::int AS all_count,
+       COUNT(*) FILTER (WHERE e.created_via <> 'backfill' AND e.channel_id IS NULL AND e.visibility = 'personal')::int AS personal_count,
+       COUNT(*) FILTER (WHERE e.created_via <> 'backfill' AND e.channel_id IS NULL AND e.visibility = 'org')::int AS org_count,
+       COUNT(*) FILTER (WHERE e.created_via <> 'backfill' AND e.channel_id IS NOT NULL)::int AS discord_count,
+       COUNT(*) FILTER (WHERE e.created_via = 'backfill')::int AS backfill_count
+     FROM post_episodes e
+     WHERE e.org_id = $1 AND e.archived_at IS NULL
+       AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
+    [orgId, userId]
   )
-  return rows[0].count
+  const r = rows[0]
+  return {
+    all: r.all_count, personal: r.personal_count, org: r.org_count,
+    discord: r.discord_count, backfill: r.backfill_count,
+  }
 }
 
 export async function getPost(id) {

@@ -205,7 +205,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [idea, setIdea] = useState('')
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
-  const [backfillCount, setBackfillCount] = useState(0)
+  const [sourceCounts, setSourceCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
@@ -269,10 +269,10 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const res = await fetch(`/api/posts/categories${q}`)
       const json = await res.json().catch(() => ({}))
       setCategories(res.ok && json.success ? json.data : [])
-      setBackfillCount(res.ok && json.success ? (json.backfillCount || 0) : 0)
+      setSourceCounts(res.ok && json.success ? (json.sourceCounts || {}) : {})
     } catch {
       setCategories([])
-      setBackfillCount(0)
+      setSourceCounts({})
     }
   }, [filter, reloadNonce])
 
@@ -507,11 +507,11 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         <select value={filter} onChange={(e) => selectFilter(e.target.value)} className={selectCls}>
           {/* ⚠️ ห้ามตั้งชื่อว่า "ทุกแหล่ง" — มันไม่รวม 📚 กระทู้เก่านำเข้า (user ทักถูก 2026-08-28)
               4 ตัวแรก = มุมมองของ "งานปัจจุบัน" · ตัวสุดท้าย = คลังของเก่า คนละแกนกัน ไม่ใช่ subset */}
-          <option value="all">งานปัจจุบัน</option>
-          <option value="personal">ส่วนตัว</option>
-          <option value="org">{orgName}</option>
-          <option value="discord">💬 จากดิสคอร์ด</option>
-          <option value="backfill">📚 กระทู้เก่านำเข้า ({backfillCount})</option>
+          <option value="all">งานปัจจุบัน ({sourceCounts.all ?? 0})</option>
+          <option value="personal">ส่วนตัว ({sourceCounts.personal ?? 0})</option>
+          <option value="org">{orgName} ({sourceCounts.org ?? 0})</option>
+          <option value="discord">💬 จากดิสคอร์ด ({sourceCounts.discord ?? 0})</option>
+          <option value="backfill">📚 กระทู้เก่านำเข้า ({sourceCounts.backfill ?? 0})</option>
         </select>
 
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
