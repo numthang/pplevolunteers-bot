@@ -16,26 +16,29 @@
 
 ## 🚪 ช่องทางรับเรื่อง
 
-1. **Public web form** `/case/new?province=<ชื่อจังหวัด>` (ไม่ต้อง login)
+1. **Public web form** `/complaint/new?province=<ชื่อจังหวัด>` (ไม่ต้อง login)
    - province มาจาก URL (ผู้ประสานงานแชร์ลิงก์จังหวัดตัวเอง) · ไม่มี → dropdown picker
    - บังคับ: ชื่อ + เบอร์ + consent (PDPA) · optional: LINE id + ไฟล์แนบ
-   - หลัง submit → SMS ลิงก์ติดตาม + สร้าง forum thread
+   - หลัง submit → SMS ลิงก์ติดตาม + สร้าง forum thread (`createForumThread()` ใน `POST /api/case` — ผูก thread ให้ตั้งแต่ตอนสร้าง ไม่มีขั้นตอนเชื่อมทีหลัง)
 
 2. **Discord import** — context menu `📋 นำเข้าเป็นเคสร้องเรียน` บนข้อความในกระทู้
-   - modal กรอกจังหวัด (pre-fill จาก `case_default_province`) + ประเภท
+   - modal กรอกจังหวัด (pre-fill จาก `case_config.default_province` ตั้งผ่าน `/panel case`) + ประเภท
    - กระทู้เดิม = thread ของเคส · AI สรุปกระทู้อัตโนมัติ (`ai_summary`)
 
 ---
 
 ## 🗺️ Routes
 
+> ⚠️ **เปลี่ยนชื่อเส้นทางแล้ว 2026-08-30** — ฝั่งประชาชนย้ายไป `/complaint/*` ทั้งชุด · `/case/*` เหลือไว้ให้คนทำงานล้วนๆ
+> ลิงก์ที่ส่งให้ผู้ร้อง (SMS / ข้อความในเธรด) ต้องเป็น `/complaint/[ref]` เสมอ — `/case/[ref]` ติด gate เข้าไม่ได้
+
 | Route | สาธารณะ? | หน้าที่ |
 |---|---|---|
-| `/case` | ✅ public | dashboard สาธารณะ + ช่องติดตาม ref + ปุ่มแจ้งใหม่ |
-| `/case/new` | ✅ public | ฟอร์มแจ้งเรื่อง |
-| `/case/[ref]` | ✅ public | ติดตามสถานะ + public note timeline (ไม่มี PII) |
-| `/case/manage` | 🔒 caseworker | รายการเคส (scope-filtered) |
-| `/case/manage/[ref]` | 🔒 caseworker | จัดการเคส (PII + actions) |
+| `/complaint` | ✅ public | dashboard สาธารณะ + ช่องติดตาม ref + ปุ่มแจ้งใหม่ |
+| `/complaint/new` · `/complaint/new/[province]` | ✅ public | ฟอร์มแจ้งเรื่อง (ไม่ระบุจังหวัด = picker) |
+| `/complaint/[ref]` | ✅ public | ติดตามสถานะ + public note timeline (ไม่มี PII) |
+| `/case` | 🔒 caseworker | รายการเคส (scope-filtered) |
+| `/case/[ref]` | 🔒 caseworker | จัดการเคส (PII + actions) |
 
 **กันหลุด PII ระดับโครงสร้าง:** หน้า public ใช้ `getCaseByRefPublic()` (query เฉพาะ field ปลอดภัย) · หน้าทีมงานใช้ `getCaseByRefFull()` หลังผ่าน gate
 
@@ -52,10 +55,12 @@
 ## ⚙️ ตั้งค่า bot
 
 ```
-/panel case channel:#ห้อง-forum-เรื่องร้องเรียน
+/panel case channel:#ห้อง-forum-เรื่องร้องเรียน default_province:ราชบุรี
 ```
 - ต้องเป็น **forum channel** · เก็บใน `case_config.forum_channel_id`
-- `case_default_province` (key ใน `dc_guild_config`) — จังหวัด pre-fill ตอน import
+- `case_config.default_province` — จังหวัดตั้งต้นของ auto-import + pre-fill ในโมดัลตอน import
+  - **ย้ายมาจาก `dc_guild_config` key `case_default_province` แล้ว (2026-09-01)** — key เดิมไม่มี UI ให้ตั้งตั้งแต่เกิด ต้องยัด DB เอง · ตอนนี้ตั้งผ่าน `/panel case` ได้ตรงๆ
+  - ไม่ตั้ง = auto-import ตกไป `'ไม่ระบุ'` → ref ขึ้นต้น `00-` และ **ทีมที่ scope รายจังหวัดมองไม่เห็นเคสเลย**
 
 **deploy slash command ใหม่:** รัน `./deploy.sh` (มี `/panel case` + context menu + เปลี่ยน `/case` เก่าเป็น `/report`)
 
@@ -141,7 +146,7 @@
 
 ## 🔄 Discord sync (timeline)
 
-ปุ่ม "อัปเดต timeline" บนหน้า `/case/manage/[ref]` → `POST /api/case/[ref]/timeline/refresh`
+ปุ่ม "อัปเดต timeline" บนหน้า `/case/[ref]` → `POST /api/case/[ref]/timeline/refresh`
 
 **กลไก = watermark** (`cases.last_synced_message_id` — ที่คั่นว่า sync ถึงข้อความไหนแล้ว)
 ดึง Discord `?after=<watermark>` → ส่งข้อความใหม่ + timeline เดิม 30 รายการเข้า AI (Haiku) → insert + เลื่อนที่คั่น
@@ -206,7 +211,7 @@
 ### ⚠️ ก่อน deploy prod
 1. รัน `scripts/migration/migration.sql` บน prod DB — สร้าง `case_config`/`cases`/`case_assignees`/`case_attachments`/`case_timeline`/`audit_logs`/`case_letter_config` + `letters` column (IF NOT EXISTS ปลอดภัย)
 2. `./deploy.sh` ลง slash command ใหม่ (`/panel case` + context menu + `/report`)
-3. เปิด feature: เพิ่ม `"cases"` ใน `dc_guild_config.enabled_features` + `/panel case` ตั้ง forum channel + ตั้ง `case_default_province`
+3. เปิด feature: เพิ่ม `"cases"` ใน `dc_guild_config.enabled_features` + `/panel case` ตั้ง forum channel + `default_province`
 4. สร้าง Discord role + map permission `caseworker` ใน `dc_guild_roles`
 5. **เทสต์ happy-path จริง** (ฟอร์ม → SMS เข้าเบอร์ตัวเอง → forum thread เกิด) — ยังไม่ได้เทสต์เพราะ SMS ยิงจริง
 6. **แก้ crontab บน prod** — `sync-act-events.js` ย้ายไป `scripts/data/` แล้ว ต้องอัปเดต path ใน crontab ของ `www`
@@ -217,7 +222,7 @@
 
 ### 🔧 Backlog — Case System UX
 - [x] **ปุ่มสีส้ม** — CaseNewForm + CaseManageActions ใช้ `bg-orange`/`bg-brand-orange` แล้ว
-- [x] **URL `/case/new/[province]`** — route มีแล้ว (`/case/new` = picker, `/case/new/ราชบุรี` = fix จังหวัด)
+- [x] **URL `/complaint/new/[province]`** — route มีแล้ว (`/complaint/new` = picker, `/complaint/new/ราชบุรี` = fix จังหวัด)
 - [x] **ถอนตัวจากเคส** (2026-07-14) — ปุ่ม "ถอนตัวจากเคสนี้" + `DELETE /api/case/[ref]/assign` (`removeAssignee`) + audit `case.unassigned`
 - [x] **ลิงก์คลิกได้ Discord↔เว็บ** (2026-07-14) — ref ในข้อความ bot เป็นลิงก์ไปหน้า manage (base จาก `guild_config.web_base_url` → fallback `.env WEB_BASE_URL`) · หน้า manage โชว์ชื่อ+ลิงก์กระทู้ Discord
 - [x] **รองรับ alias จังหวัด** (2026-07-14) — พิมพ์ "กรุงเทพ/กทม/กรุงเทพฯ" → normalize เป็น "กรุงเทพมหานคร" (`normalizeProvinceName`) ตอน import
@@ -239,7 +244,7 @@
 
 ### 🆕 Auto-import เมื่อสร้างกระทู้ใหม่ใน forum
 - `threadCreate` listener ใน `index.js` → เช็คว่า thread อยู่ใน `case_config.forum_channel_id`
-- auto สร้าง case: `source='discord'`, `province=case_default_province`, `title`=thread title, `detail`=first message, `created_by`=Discord ID ผู้สร้าง
+- auto สร้าง case: `source='discord'`, `province=case_config.default_province`, `title`=thread title, `detail`=first message, `created_by`=Discord ID ผู้สร้าง
 - AI สรุป → `ai_summary` · โพสต์ใน thread: "✅ เข้าระบบแล้ว · ref: `XX-XX-XXXX`"
 - ไฟล์: `index.js` + `handlers/caseImportHandler.js` (เพิ่ม `handleThreadCreate`)
 

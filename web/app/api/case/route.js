@@ -106,7 +106,9 @@ export async function POST(req) {
     }
   }
 
-  const trackUrl = `${baseUrl(req)}/case/${row.ref}`
+  // ⚠️ ต้องเป็น /complaint/[ref] (หน้าติดตามสาธารณะ) ไม่ใช่ /case/[ref] ที่เป็นหน้าจัดการของเจ้าหน้าที่
+  //    ลิงก์นี้ไปทั้ง SMS ถึงผู้ร้องและข้อความในเธรด — ชี้ผิด = ผู้ร้องเปิดแล้วโดนกัน login
+  const trackUrl = `${baseUrl(req)}/complaint/${row.ref}`
 
   // SMS tracking link (best-effort)
   if (smsConfigured()) {
