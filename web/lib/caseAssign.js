@@ -14,7 +14,7 @@
 
 import { addAssignee, removeAssignee, getAssignees, getCaseById } from '@/db/cases.js'
 import { syncCaseCardPeople } from '@/db/kanban/links.js'
-import { postToThread } from '@/lib/caseDiscord.js'
+import { postToThread, caseRefLink } from '@/lib/caseDiscord.js'
 import { logAction } from '@/db/auditLog.js'
 
 /**
@@ -36,7 +36,7 @@ export async function assignCase(orgId, caseRow, userId, { actorUserId, targetDi
   if (caseRow.discord_thread_id) {
     const mentions = assignees.filter(a => a.discord_id).map(a => `<@${a.discord_id}>`).join(' ')
     if (mentions) {
-      await postToThread(caseRow.discord_thread_id, `👤 ผู้รับผิดชอบเคส **${caseRow.ref}**: ${mentions}`)
+      await postToThread(caseRow.discord_thread_id, `👤 ผู้รับผิดชอบเคส ${caseRefLink(caseRow.ref)}: ${mentions}`)
         .catch(() => {})
     }
   }

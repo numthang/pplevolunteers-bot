@@ -8,7 +8,7 @@ import {
 } from '@/db/cases.js'
 import { saveCaseFile, isAllowedMime, MAX_FILE_SIZE, MAX_FILES } from '@/lib/caseUploads.js'
 import { sendSms, normalizePhone, smsConfigured } from '@/lib/sendSms.js'
-import { createForumThread } from '@/lib/caseDiscord.js'
+import { createForumThread, caseRefLink } from '@/lib/caseDiscord.js'
 
 const RATE_PER_PHONE = 3   // เคส/24ชม. ต่อเบอร์
 const RATE_PER_IP = 10     // เคส/24ชม. ต่อ IP (เผื่อ NAT/มือถือ)
@@ -124,7 +124,7 @@ export async function POST(req) {
     const cfg = await getCaseConfig(guildId)
     if (cfg?.forum_channel_id) {
       const content = [
-        `**${row.ref}** · ${province}${category ? ` · ${category}` : ''}`,
+        `${caseRefLink(row.ref)} · ${province}${category ? ` · ${category}` : ''}`,
         ``,
         `**${title}**`,
         detail,

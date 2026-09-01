@@ -3,7 +3,7 @@ import { updateCaseFields, EDITABLE_CASE_FIELDS, archiveCase, deleteCase, transf
 import { deleteCaseFiles } from '@/lib/caseUploads.js'
 import { isAdmin, canAccessCaseProvince } from '@/lib/caseAccess.js'
 import geographyData from '@/lib/thailand-geography.json'
-import { postToThread } from '@/lib/caseDiscord.js'
+import { postToThread, caseRefLink } from '@/lib/caseDiscord.js'
 import { CASE_CATEGORIES } from '@/lib/caseOptions.js'
 import { sendSms, normalizePhone, smsConfigured } from '@/lib/sendSms.js'
 import { logAction } from '@/db/auditLog.js'
@@ -68,7 +68,7 @@ export async function PATCH(req, { params }) {
     if (caseRow.discord_thread_id) {
       await postToThread(
         caseRow.discord_thread_id,
-        `📍 ย้ายจังหวัดของเคส **${caseRow.ref}** จาก **${caseRow.province}** → **${body.province}** (เลขอ้างอิงเดิมไม่เปลี่ยน)`,
+        `📍 ย้ายจังหวัดของเคส ${caseRefLink(caseRow.ref)} จาก **${caseRow.province}** → **${body.province}** (เลขอ้างอิงเดิมไม่เปลี่ยน)`,
       ).catch(e => console.error('[PATCH /api/case] postToThread province', e.message))
     }
 
@@ -137,7 +137,7 @@ export async function PATCH(req, { params }) {
 
   // หัวข้อเปลี่ยน → ชื่อ thread ใน Discord จะค้างของเก่า อย่างน้อยต้องแจ้งในเธรด
   if (caseRow.discord_thread_id && changed.includes('title')) {
-    await postToThread(caseRow.discord_thread_id, `✏️ แก้หัวข้อเคส **${caseRow.ref}** → **${updated.title}**`)
+    await postToThread(caseRow.discord_thread_id, `✏️ แก้หัวข้อเคส ${caseRefLink(caseRow.ref)} → **${updated.title}**`)
       .catch(e => console.error('[PATCH /api/case] postToThread', e.message))
   }
 

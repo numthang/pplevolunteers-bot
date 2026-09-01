@@ -5,6 +5,8 @@
  * ทุกฟังก์ชัน best-effort: error → log + คืน null (อย่าให้ล้มจนเคสสร้างไม่ได้)
  */
 
+import { BASE_URL } from './baseUrl.js'
+
 const API = 'https://discord.com/api/v10'
 const TOKEN = process.env.DISCORD_BOT_TOKEN
 
@@ -94,4 +96,18 @@ export async function fetchThreadMessages(threadId, afterId = null) {
     console.error('[caseDiscord.fetchThreadMessages]', e.message)
     return []
   }
+}
+
+/**
+ * เลขเคสในข้อความ Discord **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01)
+ * — คนอ่านในเธรดเห็นเลขแล้วต้องกดไปหน้าเคสได้ทันที ไม่ต้องไปค้นเองในเว็บ
+ *
+ * คู่แฝดฝั่งบอทคือ `getCaseManageUrl()` ใน `db/case.js` (ที่นั่นอ่าน base จาก guild_config
+ * เพราะบอทคุยได้หลาย guild) · ฝั่งเว็บเสิร์ฟจากโดเมนเดียว → ใช้ BASE_URL (NEXTAUTH_URL) พอ
+ *
+ * ⚠️ ชี้ /case/[ref] (หน้าจัดการของเจ้าหน้าที่) ไม่ใช่ /complaint/[ref] ที่เป็นหน้าติดตามสาธารณะ
+ *    — ข้อความพวกนี้อยู่ในเธรดของทีมงาน ไม่ได้ส่งถึงผู้ร้อง
+ */
+export function caseRefLink(ref) {
+  return `[${ref}](${BASE_URL}/case/${ref})`
 }

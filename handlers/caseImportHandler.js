@@ -6,6 +6,16 @@ const caseDb = require('../db/case');
 const { fetchAllMessages } = require('../services/fetchMessages');
 const { generateTimeline } = require('../services/caseTimeline');
 
+/**
+ * เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01)
+ * — ตั้งค่า web_base_url ยังไม่ได้ตั้ง → ตกกลับเป็นตัวหนาเฉยๆ ดีกว่าไม่มีข้อความ
+ * คู่แฝดฝั่งเว็บ: `caseRefLink()` ใน `web/lib/caseDiscord.js` (แก้ต้องแก้คู่กัน)
+ */
+async function refLink(guildId, ref) {
+  const url = await caseDb.getCaseManageUrl(guildId, ref).catch(() => null);
+  return url ? `[${ref}](${url})` : `**${ref}**`;
+}
+
 /** เปิด modal ให้กรอกจังหวัด/ประเภท ก่อนสร้างเคส */
 async function handleCaseImportStart(interaction) {
   const thread = interaction.channel;
@@ -61,7 +71,7 @@ async function handleCaseImportModal(interaction) {
   // กันซ้ำ: กระทู้นี้ถูกนำเข้าแล้วหรือยัง
   const existing = await caseDb.getCaseByThreadId(threadId);
   if (existing) {
-    return interaction.editReply({ content: `⚠️ กระทู้นี้ถูกนำเข้าเป็นเคส **${existing.ref}** แล้ว` });
+    return interaction.editReply({ content: `⚠️ กระทู้นี้ถูกนำเข้าเป็นเคส ${await refLink(interaction.guildId, existing.ref)} แล้ว` });
   }
 
   // complainant = เจ้าของกระทู้ (ถ้าดึงได้)
@@ -98,12 +108,11 @@ async function handleCaseImportModal(interaction) {
 
   // โพสต์ยืนยันในเธรด
   try {
-    const manageUrl = await caseDb.getCaseManageUrl(interaction.guildId, row.ref);
-    const refLabel = manageUrl ? `[${row.ref}](${manageUrl})` : `**${row.ref}**`;
+    const refLabel = await refLink(interaction.guildId, row.ref);
     await thread.send(`📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}${category ? ` · ${category}` : ''}`);
   } catch { /* best-effort */ }
 
-  return interaction.editReply({ content: `✅ สร้างเคส **${row.ref}** จากกระทู้นี้แล้ว` });
+  return interaction.editReply({ content: `✅ สร้างเคส ${await refLink(interaction.guildId, row.ref)} จากกระทู้นี้แล้ว` });
 }
 
 /**
@@ -157,8 +166,7 @@ async function handleThreadCreate(thread) {
       }
     } catch (e) { console.error('[caseImport] threadCreate timeline', e.message); }
 
-    const manageUrl = await caseDb.getCaseManageUrl(thread.guildId, row.ref);
-    const refLabel = manageUrl ? `[${row.ref}](${manageUrl})` : `**${row.ref}**`;
+    const refLabel = await refLink(thread.guildId, row.ref);
     await thread.send(`📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}`).catch(() => {});
   } catch (err) {
     console.error('[caseImport] handleThreadCreate:', err.message);
