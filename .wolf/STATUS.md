@@ -48,10 +48,17 @@ budget_tokens: 1000
 placeholder ที่โค้ดส่งให้ตอนนี้: `{org_name} {address} {date} {subject} {recipient_title} {recipient_name}
 {attachments} {body} {signer_name} {signer_position} {signer_phone_line}`
 
-**⚠️ ต้องถาม user ก่อนลงมือ:**
-1. "ทำใหม่ทั้งหมด" = แค่เลย์เอาต์/เทมเพลต หรือรวม flow ด้วย (เลขที่หนังสือ · ทะเบียนหนังสือส่ง · ผู้รับหลายราย · แนบไฟล์จริง)?
-2. เทมเพลตที่ user ทำมือมา = **เลิกใช้ `buildComplaintLetterTemplate.mjs`** หรือให้ script รับไฟล์นั้นเป็น base?
-3. ชุด placeholder เปลี่ยนไหม (เพิ่ม/ตัดตัวไหน)
+**✅ user เคาะแล้ว (2026-09-01 เย็น):**
+1. งานนี้ **ส่วนใหญ่เป็น layout** — ไม่ได้รื้อ flow (ไม่มีเลขที่หนังสือ/ทะเบียนส่ง/ผู้รับหลายราย ในรอบนี้)
+2. **เลิกใช้ `buildComplaintLetterTemplate.mjs`** → docx ที่ user ทำมือคือตัวจริง commit เข้า repo
+   (เหตุผล: งาน layout ต้องลากเองใน LibreOffice · สคริปต์เคยล้างตราพรรคที่ user ยัดมือทุกครั้งที่รัน)
+   ⚠️ แลกกับ git diff อ่านไม่ออก → ต้องจดว่าเวอร์ชันไหนเปลี่ยนอะไร ก่อน commit ทับ
+   ⚠️ โค้ดสลับโลโก้ยิงที่ entry `word/media/logo.png` — docx ที่ Word/LO สร้างจะชื่อ `image1.png`
+      → ตอนไฟล์มาถึงต้องเช็ค `unzip -l` แล้วปรับชื่อ entry หรือปรับค่าคงที่ในโค้ดให้ตรง
+3. placeholder เพิ่ม 2 อย่าง:
+   - `{reference}` (อ้างถึง) — **ต้องทำเป็น section `{#reference}อ้างถึง {reference}{/reference}`**
+     ไม่งั้นเว้นว่างแล้วเหลือบรรทัดเปล่าค้างในหนังสือ · AI ไม่ต้องเดาช่องนี้ ให้คนกรอกเอง
+   - `attachments` เปลี่ยน `<input>` → `<textarea>` + `useAutoGrow` (ฝั่ง PDF ไม่ต้องแก้ `linebreaks: true` เปิดอยู่แล้ว)
 
 **Acceptance:** พรีวิวในโมดัล + ลิงก์สาธารณะต้องออกไฟล์เดียวกัน (ทั้งคู่วิ่งผ่าน `caseLetterPdf.js`) ·
 เช็ค placeholder ไม่โดนตัด run ด้วย `unzip -p ไฟล์.docx word/document.xml | grep -o '{[^}<]*}'`
