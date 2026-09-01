@@ -1,9 +1,7 @@
 My Tasks and bug issue
 - เอา งานกองทุนเข้า kanban ของปีนี้
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
-- http://localhost:3000/posts/ ไม่มี app menu บน hamburger
-งั้นทำแบบนี้ เลียนแบบ posts มี 2 option คือ 1. สรุปเนื้อหา 2. ร่างหนังสือร้องเรียน 
-เอาปุ่ม ร่างหนังสือร้องเรียนออก
+- หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 
 # PLATFOR{m}.ORG
 - platfor.org

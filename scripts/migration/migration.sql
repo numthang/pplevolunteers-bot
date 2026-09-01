@@ -1618,7 +1618,6 @@ WHERE jsonb_array_length(letters) > 0;
 --   ย้ายมาเป็นคอลัมน์จริงคู่กับ forum_channel_id ตั้งผ่าน /panel case ได้แล้ว
 ALTER TABLE case_config ADD COLUMN IF NOT EXISTS default_province VARCHAR(50);
 
--- production ทำถึงตรงนี้
 
 
 
@@ -1627,3 +1626,6 @@ ALTER TABLE case_config ADD COLUMN IF NOT EXISTS default_province VARCHAR(50);
 --   (org_config key 'case_letter_logo') → ตราที่ฝังมากับ template.docx
 --   สาขาจังหวัดมีตราของตัวเอง แต่จังหวัดที่ยังไม่ตั้งต้องไม่ค้างไม่มีหัวจดหมาย
 ALTER TABLE case_letter_config ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255);
+
+
+-- production ทำถึงตรงนี้

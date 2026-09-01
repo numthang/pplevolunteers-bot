@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T10:51:28.374Z
-> Files: 1083 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T11:51:46.756Z
+> Files: 1085 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~45982 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~46604 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5796 tok)
 
 ## md/archive/
@@ -309,7 +309,7 @@
 
 ## md/case/
 
-- `CASE.md` — Case System — ระบบเรื่องร้องเรียน (~1888 tok)
+- `CASE.md` — Case System — ระบบเรื่องร้องเรียน (~4100 tok)
 
 ## md/civicflow/
 
@@ -783,7 +783,7 @@
 
 ## web/app/api/case/
 
-- `route.js` — POST /api/case — public intake (ไม่ต้อง login) (~1580 tok)
+- `route.js` — POST /api/case — public intake (ไม่ต้อง login) (~1638 tok)
 
 ## web/app/api/case/[ref]/
 
@@ -1625,11 +1625,11 @@
 ## web/app/case/
 
 - `layout.js` — Next.js layout (~313 tok)
-- `page.js` — Next.js page component (~1526 tok)
+- `page.js` — Next.js page component (~1026 tok)
 
 ## web/app/case/[ref]/
 
-- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2179 tok)
+- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2135 tok)
 
 ## web/app/case/manage/
 
@@ -1899,7 +1899,7 @@
 - `LocaleSwitcher.jsx` — LOCALES (~510 tok)
 - `LoginButton.jsx` — LoginButton — uses useState (~1774 tok)
 - `LoginPanel.jsx` — ERROR_MESSAGES (~4860 tok)
-- `Nav.jsx` — Ic (~11966 tok)
+- `Nav.jsx` — Ic (~12141 tok)
 - `NoGuildNotice.jsx` — NoGuildNotice (~268 tok)
 - `OpenInBrowserNotice.jsx` — ทางออกจากมินิเบราว์เซอร์ของแอปแชต — ใช้กับหน้าที่ "คนนอกกดลิงก์เข้ามา" แล้วต้องล็อกอิน (~1000 tok)
 - `OrgSwitcherMenu.jsx` — TONES (~2732 tok)
@@ -1934,6 +1934,7 @@
 - `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
 - `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~972 tok)
 - `CaseEditButton.jsx` — inputCls (~1966 tok)
+- `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1332 tok)
 - `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~4159 tok)
@@ -1941,6 +1942,7 @@
 - `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
+- `CaseRow.jsx` — การ์ดเคสในรายการ /case — ทรงเดียวกับการ์ดโพสต์ที่ /posts (user สั่งให้เหมือนกัน 2026-09-01) (~2232 tok)
 - `CaseSaveBadge.jsx` — ป้ายสถานะการบันทึกของหน้าเคส — บังคับมีทุกการ์ดที่ autosave (กฎ CLAUDE.md §กฎการบันทึก) (~244 tok)
 - `CaseTimeline.jsx` — fmtDate — renders form (~2334 tok)
 - `LocationButton.jsx` — extractProvince (~722 tok)
