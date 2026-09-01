@@ -5074,6 +5074,72 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T14:37:43.000Z"
+    },
+    {
+      "id": "bug-278",
+      "timestamp": "2026-09-01T15:59:59.971Z",
+      "error_message": "Wrong reference: body should be indentParagraphs",
+      "file": "web/lib/generateComplaintLetter.js",
+      "root_cause": "Used \"body\" instead of \"indentParagraphs\"",
+      "fix": "Changed body → indentParagraphs",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T15:59:59.971Z"
+    },
+    {
+      "id": "bug-279",
+      "timestamp": "2026-09-01T16:02:40.345Z",
+      "error_message": "Significant refactor of aiPrompts.js",
+      "file": "config/aiPrompts.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 14→17 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T16:02:40.345Z"
+    },
+    {
+      "id": "bug-270",
+      "timestamp": "2026-09-01T16:18:53.159Z",
+      "error_message": "Generated INSERT statement broken across two physical lines when a mid-word line wrap occurred in PDF text (e.g. \"ต่าง\nธนาคาร\")",
+      "file": "scripts/finance/parse-kbank-statement.js",
+      "root_cause": "Existing wrap-merge regex only rejoined lines with explicit ++ markers (used for names/descriptions); a plain PDF page-internal word wrap with no ++ marker left a raw newline inside restClean, which then landed inside a quoted SQL string field (counterpart_bank).",
+      "fix": "Strip all remaining newlines from restClean after footer-splitting, concatenating wrapped Thai text with no space (matches how Thai words wrap without spaces).",
+      "tags": [
+        "finance",
+        "pdf-parsing",
+        "script"
+      ],
+      "related_bugs": [
+        "bug-269"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T16:18:53.159Z"
+    },
+    {
+      "id": "bug-281",
+      "timestamp": "2026-09-01T16:18:55.307Z",
+      "error_message": "Significant refactor of letterLogo.js",
+      "file": "web/lib/letterLogo.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 3→4 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T16:18:55.307Z"
     }
   ]
 }

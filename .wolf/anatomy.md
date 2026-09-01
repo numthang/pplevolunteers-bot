@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T11:51:46.756Z
-> Files: 1085 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T16:35:27.323Z
+> Files: 1097 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -179,7 +179,7 @@
 
 - `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~546 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
-- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3774 tok)
+- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3864 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
 - `callingCategories.js` — Exports CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS (~595 tok)
 - `case-options.json` (~153 tok)
@@ -456,7 +456,7 @@
 ## scripts/finance/
 
 - `parse-kbank-statement copy.js` — parse-kbank-statement.js (~2787 tok)
-- `parse-kbank-statement.js` — parse-kbank-statement.js (~3140 tok)
+- `parse-kbank-statement.js` — parse-kbank-statement.js (~3168 tok)
 
 ## scripts/import/
 
@@ -497,7 +497,7 @@
 - `identity-split-user-identities.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1080 tok)
 - `identity-users-seq.sql` — ═══════════════════════════════════════════════════════════════════════════ (~257 tok)
 - `kanbanLabelsToFields.mjs` — ชนิด field ที่รับป้ายได้ — อย่างอื่น (text/number/date/checkbox/url) ยัดป้ายลงไปไม่ได้ (~2627 tok)
-- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~25163 tok)
+- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~25448 tok)
 - `moveWatermarksToOrg.js` — scripts/migration/moveWatermarksToOrg.js (~2002 tok)
 - `org-access-redesign.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1417 tok)
 - `phone-identity.sql` — phone-identity.sql — Phone เป็น login identity ที่ verify ได้ (Phase 4 slice 1) (~279 tok)
@@ -608,6 +608,16 @@
 - `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
 - `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
 - `_tmp_cdp_check4.mjs` — PORT: jsonGet, connect, send + 3 more (~1036 tok)
+- `_tmp_e2e.mjs` — Declares pdf (~246 tok)
+- `_tmp_gap_test.mjs` — Declares pdf (~210 tok)
+- `_tmp_indent_test.mjs` — Declares pdf (~209 tok)
+- `_tmp_logo_final.mjs` — Declares pdf (~194 tok)
+- `_tmp_logo_test.mjs` — Declares pdf (~192 tok)
+- `_tmp_logo_test2.mjs` — Declares pdf (~193 tok)
+- `_tmp_logo_test3.mjs` — Declares pdf (~194 tok)
+- `_tmp_test_final.mjs` — TEMPLATE: mkModules, render (~417 tok)
+- `_tmp_test_v2.mjs` — Declares TEMPLATE (~594 tok)
+- `_tmp_test_v2b.mjs` — TEMPLATE: mkModules (~370 tok)
 - `alias-hook.tmp.mjs` — TEMP — alias '@/' สำหรับ node ธรรมดา (ลบทิ้งหลังรัน) (~115 tok)
 - `alias-loader.mjs` — Exports resolve (~100 tok)
 - `casecheck.tmp.mjs` — TEMP — "ยังไม่มีผู้รับผิดชอบ 2" vs "เปิดอยู่ 180" ตัวไหนถูก (~212 tok)
@@ -811,7 +821,7 @@
 
 ## web/app/api/case/[ref]/letter/generate/
 
-- `route.js` — POST /api/case/[ref]/letter/generate — รับ letter fields จาก modal, ดึง config จาก DB, คืน preview + (~776 tok)
+- `route.js` — POST /api/case/[ref]/letter/generate — รับ letter fields จาก modal, ดึง config จาก DB, คืน preview + (~546 tok)
 
 ## web/app/api/case/[ref]/letter/save/
 
@@ -1648,6 +1658,10 @@
 
 - `page.js` — Next.js page component (~330 tok)
 
+## web/app/complaint/[ref]/letter/[draftId]/
+
+- `route.js` — GET /complaint/[ref]/letter/[draftId] — PDF หนังสือร้องเรียน **เปิดได้โดยไม่ต้องล็อกอิน** (~402 tok)
+
 ## web/app/cooking/
 
 - `CookingClient.jsx` — CartIcon (~8908 tok)
@@ -1937,7 +1951,7 @@
 - `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1332 tok)
 - `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
-- `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~4159 tok)
+- `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~5515 tok)
 - `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ (~1850 tok)
 - `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
@@ -2143,6 +2157,7 @@
 - `caseAttachmentSync.js` — นำเข้าไฟล์แนบ (รูป/เสียง) จากเธรด Discord ของเคส → case_attachments (~1149 tok)
 - `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~864 tok)
 - `caseGate.js` — Gate helper สำหรับ caseworker action APIs — รวม auth + permission + scope ไว้ที่เดียว (~547 tok)
+- `caseLetterPdf.js` — ประกอบ PDF หนังสือร้องเรียน 1 ใบ — ใช้ร่วมกัน 2 ทาง: (~528 tok)
 - `caseOptions.js` — Case options (categories / close reasons / status labels) — source of truth (~251 tok)
 - `caseOptionsClient.js` — Client-safe case labels (ไม่มี fs — ใช้ใน client components) (~84 tok)
 - `caseUploads.js` — Case attachments — เก็บไฟล์ภาพ/เสียง "นอก /public" เสิร์ฟผ่าน gated API เท่านั้น (~801 tok)
@@ -2161,7 +2176,7 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
-- `generateComplaintLetter.js` — โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — ทับรูปในเทมเพลตก่อน render (~1087 tok)
+- `generateComplaintLetter.js` — โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — แทรกเข้าไปตอน render ผ่าน image module (~1486 tok)
 - `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)
@@ -2180,7 +2195,7 @@
 - `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
 - `kanbanTextFilter.js` — ค้นการ์ดด้วยข้อความ — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanTextFilter.test.js) (~642 tok)
 - `kanbanUrlState.js` — แปลง "หน้าตาที่เห็นบนกระดาน" ↔ query string — ตรรกะล้วน ไม่แตะ DOM/React (~1520 tok)
-- `letterLogo.js` — โลโก้หัวจดหมายร้องเรียน — เรขาคณิตกลางที่ **สคริปต์สร้างเทมเพลตกับหน้าอัปโหลดต้องตรงกัน** (~354 tok)
+- `letterLogo.js` — โลโก้หัวจดหมายร้องเรียน — เรขาคณิตกลางที่ generateComplaintLetter.js ใช้เป็นขนาดแสดงผล (~447 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)
@@ -2287,8 +2302,8 @@
 
 ## web/locales/
 
-- `en.json` (~26162 tok)
-- `th.json` (~24998 tok)
+- `en.json` (~26540 tok)
+- `th.json` (~25368 tok)
 
 ## web/public/media-temp/
 

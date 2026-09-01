@@ -2,6 +2,9 @@ My Tasks and bug issue
 - เอา งานกองทุนเข้า kanban ของปีนี้
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
+- ทำไมมีแค่ปี 69 วันที่แสดงคือวันที่อะไร
+- footer ซ้อน 2 หน้า
+- ai ร่างหนังสือร้องเรียน แบ่งเป็น 3 paragraph ที่มา เนื้อหา สรุปสิ่งที่ต้องการ 
 
 # PLATFOR{m}.ORG
 - platfor.org

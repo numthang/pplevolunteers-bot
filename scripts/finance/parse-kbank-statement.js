@@ -94,7 +94,8 @@ function parseRows(text) {
     const rest    = m[3].trim()
 
     // ตัด page footer ออกก่อน (KBPDF... หรือ "หน้าที่ (PAGE" หรือ "ชื่อบัญชี")
-    const restClean = rest.split(/\nKBPDF|\nหน้าที่|\nชื่อบัญชี/)[0].trim()
+    // แล้วต่อคำที่ขึ้นบรรทัดใหม่กลางคำ (เช่น "ต่าง\nธนาคาร") กลับเป็นคำเดียว
+    const restClean = rest.split(/\nKBPDF|\nหน้าที่|\nชื่อบัญชี/)[0].trim().replace(/\n/g, '')
 
     // ข้าม page-break rows (ยอดยกมา / header ซ้ำ) — ใช้ restClean แทน rest
     if (/ยอดยกมา|วันที่มีผล/.test(restClean)) continue
