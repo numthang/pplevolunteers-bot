@@ -4895,6 +4895,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-31T20:14:49.936Z"
+    },
+    {
+      "id": "bug-267",
+      "timestamp": "2026-09-01T02:37:15.800Z",
+      "error_message": "Significant refactor of CaseManageActions.jsx",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 10→3 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T02:37:15.800Z"
     }
   ]
 }

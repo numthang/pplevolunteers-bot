@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
 import useAutoGrow from '@/lib/useAutoGrow.js'
-import CaseLetterModal from '@/components/case/CaseLetterModal.jsx'
 import CaseSaveBadge from '@/components/case/CaseSaveBadge.jsx'
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
@@ -15,15 +14,15 @@ const NEEDS_REASON = ['closed', 'rejected']
 const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
 
 /**
- * การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ
+ * การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ
  * ⛔ ปุ่มลบ/เอาออกจากกรุ **ย้ายไปอยู่ท้ายการ์ดเนื้อหา** แล้ว (CaseDeleteButton — วางแบบเดียวกับ /posts/[id])
  *    อย่าเอากลับมาปนกับปุ่มทำงานประจำวันตรงนี้
+ * ⛔ ปุ่ม "ร่างหนังสือร้องเรียน" ก็ย้ายไปรวมกับ AI dropdown ที่ CaseAiActions แล้ว (2026-09-01)
  */
 export default function CaseManageActions({ refId, status, isAssigned, closeReasons }) {
   const t = useTranslations('case')
   const router = useRouter()
   const [busy, setBusy] = useState(false)
-  const [showLetter, setShowLetter] = useState(false)
 
   // status
   const [newStatus, setNewStatus] = useState(status)
@@ -99,8 +98,6 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
   const needsReason = NEEDS_REASON.includes(newStatus)
 
   return (
-    <>
-    {showLetter && <CaseLetterModal refId={refId} onClose={() => setShowLetter(false)} />}
     <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 space-y-5">
       {/* รับเรื่อง / ถอนตัว */}
       {!isAssigned ? (
@@ -146,13 +143,6 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
         )}
       </div>
 
-      {/* ร่างหนังสือ */}
-      <div>
-        <button onClick={() => setShowLetter(true)} className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-brand-orange hover:text-brand-orange`}>
-          {t('actions.draftLetterButton')}
-        </button>
-      </div>
     </div>
-    </>
   )
 }

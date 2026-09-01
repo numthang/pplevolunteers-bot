@@ -10,6 +10,7 @@ import { getThreadName } from '@/lib/caseDiscord.js'
 import { smsConfigured } from '@/lib/sendSms.js'
 import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES, ALL_PROVINCES } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
+import CaseAiActions from '@/components/case/CaseAiActions.jsx'
 import CaseTimeline from '@/components/case/CaseTimeline.jsx'
 import CaseContentEditor from '@/components/case/CaseContentEditor.jsx'
 import CaseMetaEditor from '@/components/case/CaseMetaEditor.jsx'
@@ -87,10 +88,13 @@ export default async function CaseManageDetail({ params }) {
               refId={c.ref}
               canEdit={canEdit}
               initial={{ title: c.title, detail: c.detail }}
+              aiSummary={c.ai_summary}
             />
-            {/* ปุ่มลบอยู่มุมขวาล่างของการ์ดเนื้อหา — ตำแหน่งเดียวกับ "เก็บเข้ากรุ" ใน /posts/[id] */}
+            {/* ปุ่มลบอยู่มุมขวาล่างของการ์ดเนื้อหา — ตำแหน่งเดียวกับ "เก็บเข้ากรุ" ใน /posts/[id]
+                ปุ่ม AI อยู่แถวเดียวกัน ชิดซ้าย (เลียนแบบแถว AI+ลบของ PostEditor) */}
             {canEdit && (
-              <div className="flex pt-3 mt-3 border-t border-gray-100 dark:border-disc-border">
+              <div className="flex items-center pt-3 mt-3 border-t border-gray-100 dark:border-disc-border">
+                <CaseAiActions refId={c.ref} />
                 <CaseDeleteButton
                   refId={c.ref}
                   title={c.title || c.ref}

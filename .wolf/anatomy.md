@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T20:24:24.226Z
-> Files: 1081 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T02:38:30.008Z
+> Files: 1083 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -179,7 +179,7 @@
 
 - `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~546 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
-- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3633 tok)
+- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3774 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
 - `callingCategories.js` — Exports CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS (~595 tok)
 - `case-options.json` (~153 tok)
@@ -788,6 +788,10 @@
 ## web/app/api/case/[ref]/
 
 - `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2785 tok)
+
+## web/app/api/case/[ref]/ai/summary/
+
+- `route.js` — POST /api/case/[ref]/ai/summary — สรุปเนื้อหาเคสด้วย AI แบบกดเอง (ไม่ auto) (~409 tok)
 
 ## web/app/api/case/[ref]/assign/
 
@@ -1625,7 +1629,7 @@
 
 ## web/app/case/[ref]/
 
-- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2120 tok)
+- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2179 tok)
 
 ## web/app/case/manage/
 
@@ -1924,6 +1928,7 @@
 
 ## web/components/case/
 
+- `CaseAiActions.jsx` — ปุ่ม AI เดียว — เลือกโหมดจาก dropdown แล้วกด "ให้ AI ช่วย" (เลียนแบบ PostEditor.jsx) (~730 tok)
 - `CaseAttachmentGallery.jsx` — CaseAttachmentGallery (~900 tok)
 - `CaseComplainantEditor.jsx` — การ์ดผู้ร้องเรียน (PII) — autosave ทุกช่อง (~1516 tok)
 - `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
@@ -1932,7 +1937,7 @@
 - `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~4159 tok)
-- `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ (~1986 tok)
+- `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ (~1850 tok)
 - `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
@@ -2280,8 +2285,8 @@
 
 ## web/locales/
 
-- `en.json` (~24364 tok)
-- `th.json` (~23276 tok)
+- `en.json` (~26162 tok)
+- `th.json` (~24998 tok)
 
 ## web/public/media-temp/
 
