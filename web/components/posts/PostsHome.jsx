@@ -205,6 +205,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [idea, setIdea] = useState('')
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
+  const [backfillCount, setBackfillCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
@@ -268,8 +269,10 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const res = await fetch(`/api/posts/categories${q}`)
       const json = await res.json().catch(() => ({}))
       setCategories(res.ok && json.success ? json.data : [])
+      setBackfillCount(res.ok && json.success ? (json.backfillCount || 0) : 0)
     } catch {
       setCategories([])
+      setBackfillCount(0)
     }
   }, [filter, reloadNonce])
 
@@ -508,7 +511,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
           <option value="personal">ส่วนตัว</option>
           <option value="org">{orgName}</option>
           <option value="discord">💬 จากดิสคอร์ด</option>
-          <option value="backfill">📚 กระทู้เก่านำเข้า</option>
+          <option value="backfill">📚 กระทู้เก่านำเข้า ({backfillCount})</option>
         </select>
 
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>

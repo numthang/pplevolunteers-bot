@@ -120,6 +120,15 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
   return rows
 }
 
+/** จำนวนโพสต์ในคลังกระทู้เก่านำเข้า (created_via='backfill') ของ org — ใช้โชว์ตัวเลขบน option ตัวกรอง */
+export async function countBackfillPosts(orgId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM post_episodes WHERE org_id = $1 AND created_via = 'backfill' AND archived_at IS NULL`,
+    [orgId]
+  )
+  return rows[0].count
+}
+
 export async function getPost(id) {
   const { rows } = await pool.query(
     // org_name — ชื่อองค์กรเจ้าของโพสต์ ใช้เป็นตัวเลือกชื่อผู้พูดในการ์ดคำคม
