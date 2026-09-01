@@ -4944,6 +4944,55 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T10:51:49.284Z"
+    },
+    {
+      "id": "bug-270",
+      "timestamp": "2026-09-01T11:16:23.426Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/case/[ref]/page.js",
+      "root_cause": "Had 'next/link'",
+      "fix": "Changed to 'next/navigation'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T11:16:23.426Z"
+    },
+    {
+      "id": "bug-271",
+      "timestamp": "2026-09-01T11:21:15.925Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/api/case/route.js",
+      "root_cause": "Had `${baseUrl(req)}/case/${row.ref}`",
+      "fix": "Changed to `${baseUrl(req)}/complaint/${row.ref}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T11:21:15.925Z"
+    },
+    {
+      "id": "bug-20260831230906",
+      "timestamp": "2026-09-01T12:00:44.557Z",
+      "error_message": "mobileAudit B · <a> ล้นจอ 800px ที่ /case ทั้งที่ตาเห็นข้อความถูกตัดปกติ",
+      "file": "web/components/case/CaseRow.jsx",
+      "root_cause": "วาง truncate ไว้ที่ <h3> แล้วเอา <a> (inline) ไว้ข้างใน — กล่องของ inline element กว้างเท่าข้อความจริงเสมอ พ่อแค่ overflow-hidden ทับให้ตาไม่เห็น แต่ getBoundingClientRect ยังกว้างล้นจอ",
+      "fix": "ย้าย truncate ไปที่ <a> เอง (block truncate) แล้ว <h3> เหลือแค่ min-w-0 · เคสคู่กัน: <p line-clamp-1> ที่มี URL ยาวไม่มีที่หักบรรทัด ต้องเติม break-words ไม่งั้นโดนตัดกลางคำแบบไม่มี …",
+      "tags": [
+        "mobile",
+        "layout",
+        "tailwind",
+        "truncate",
+        "case"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T12:00:44.557Z"
     }
   ]
 }

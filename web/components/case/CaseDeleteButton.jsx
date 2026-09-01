@@ -14,7 +14,13 @@ import DeleteChoiceDialog from '@/components/kanban/DeleteChoiceDialog.jsx'
  * ⛔ ค่าตั้งต้นของปุ่มคือ "เก็บเข้ากรุ" เสมอ ห้ามผูกปุ่มเดียวกับลบถาวร
  *    (บทเรียนจาก kanban commit 37dd5e6: ปุ่มเขียนว่าเก็บเข้ากรุ แต่ทำงานเป็นลบถาวร = โกหกผู้ใช้)
  */
-export default function CaseDeleteButton({ refId, title = '', archived = false, canPurge = false, counts = { timeline: 0, attachments: 0 } }) {
+export default function CaseDeleteButton({
+  refId, title = '', archived = false, canPurge = false, counts = { timeline: 0, attachments: 0 },
+  // 'button' = ปุ่มมีข้อความ (ท้ายการ์ดหน้าเคส) · 'icon' = ไอคอนล้วนมุมขวาบนการ์ดในรายการ /case
+  variant = 'button',
+  // หน้ารายการอยู่ที่ /case อยู่แล้ว — ลบถาวรเสร็จให้ refresh พอ ไม่ต้องเด้งไปที่เดิม
+  redirectOnPurge = true,
+}) {
   const t = useTranslations('case')
   const router = useRouter()
   const [show, setShow] = useState(false)
@@ -30,7 +36,7 @@ export default function CaseDeleteButton({ refId, title = '', archived = false, 
       if (!res.ok) { setError(d.error || t('actions.genericFailMsg')); return }
       setShow(false)
       // ลบถาวรแล้วเคสไม่มีอยู่อีก → เด้งกลับ /case ไม่ใช่ refresh หน้าที่ 404 ไปแล้ว
-      if (permanent) router.push('/case')
+      if (permanent && redirectOnPurge) router.push('/case')
       else router.refresh()
     } catch (e) {
       setError(e.message || t('actions.genericFailMsg'))
@@ -72,7 +78,24 @@ export default function CaseDeleteButton({ refId, title = '', archived = false, 
         />
       )}
 
-      {archived ? (
+      {variant === 'icon' ? (
+        /* การ์ดในรายการคลิกทั้งใบเพื่อเปิดเคส → ปุ่มนี้ต้องกันคลิกทะลุ (stretched link อยู่ใต้ z-10)
+           มือถือไม่มี hover จริง — โชว์ปุ่มถาวร แล้วซ่อนจนกว่าจะ hover เฉพาะเครื่องที่ hover ได้
+           (เหมือน /posts: เคยเป็น opacity-0 ล้วน = dead zone มุมขวาบนที่กินการแตะไปเงียบๆ) */
+        <button
+          onClick={(e) => { e.stopPropagation(); archived ? restoreCase() : setShow(true) }}
+          disabled={busy}
+          title={archived ? t('actions.restoreCaseButton') : t('actions.deleteCaseButton')}
+          aria-label={archived ? t('actions.restoreCaseButton') : t('actions.deleteCaseButton')}
+          className={`relative z-10 p-1 rounded-lg transition disabled:opacity-50 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100 ${
+            archived
+              ? 'text-warm-500 dark:text-disc-muted hover:text-orange hover:bg-orange/10'
+              : 'text-warm-400 dark:text-disc-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover'
+          }`}
+        >
+          {archived ? <ArchiveRestore size={15} /> : <Trash2 size={15} />}
+        </button>
+      ) : archived ? (
         <button
           onClick={restoreCase}
           disabled={busy}

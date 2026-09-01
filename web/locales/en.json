@@ -639,7 +639,22 @@
       "filterUnassigned": "Unassigned",
       "filterAssigned": "Assigned",
       "filterDone": "Done",
-      "caseInfoHeading": "Case information"
+      "caseInfoHeading": "Case information",
+      "filterArchived": "Archived",
+      "emptyArchived": "No archived cases",
+      "noDetail": "No details yet",
+      "filterAnyAssignee": "Any owner",
+      "filterAssigneeLabel": "Filter by owner",
+      "filterStatusLabel": "Filter by status",
+      "filterStoreLabel": "Filter by storage",
+      "filterAllStatus": "All statuses",
+      "filterActive": "Still open",
+      "filterLive": "Active work",
+      "filterAllProvinces": "All provinces",
+      "filterAllCategories": "All types",
+      "filterNoCategory": "No type set",
+      "clearFilters": "Clear filters",
+      "resultCount": "{count} cases"
     },
     "actions": {
       "takeCaseButton": "Take this case",
@@ -741,6 +756,14 @@
       "heading": "Delete case",
       "impact": "Permanent deletion also removes {timeline} timeline entries and {attachments} attachments — this cannot be undone.",
       "hint": "Archiving removes it from the case list and kanban board; you can restore it anytime. The public tracking page keeps working, and the Discord thread is not deleted — the bot posts a note saying it can be closed."
+    },
+    "progress": {
+      "nextStep": "Next: {step}",
+      "stageAssign": "Assign an owner",
+      "stageWork": "Start working on it",
+      "stageClose": "Close the case",
+      "doneLabel": "Closed",
+      "rejectedLabel": "Rejected"
     }
   },
   "docs": {

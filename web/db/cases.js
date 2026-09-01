@@ -286,27 +286,62 @@ export const ACTIVE_STATUSES = ['open', 'in_progress']
 export const DONE_STATUSES = ['resolved', 'closed']   // ⛔ rejected (ตีกลับ) ไม่นับเป็น "เสร็จ"
 export const ACTIVE = 'active'   // ค่าพิเศษของ ?status= ใน URL → open + in_progress
 export const DONE = 'done'       // ค่าพิเศษของ ?status= ใน URL → resolved + closed
+export const NO_CATEGORY = '__none__'   // ค่าพิเศษของ ?category= ใน URL → ยังไม่ระบุประเภท
 const setSql = (arr) => `'{${arr.join(',')}}'`
 
 /**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)
  * @param {number} orgId  org-scope
  */
-export async function listCases(orgId, { provinces = null, status = null, assigned = null, mineUserId = null, limit = 100, offset = 0 } = {}) {
+export async function listCases(orgId, {
+  provinces = null, province = null, category = null,
+  status = null, assigned = null, mineUserId = null, archived = false,
+  limit = 100, offset = 0,
+} = {}) {
   const params = [orgId]
-  // ⛔ เคสในกรุไม่อยู่ในรายการทำงาน — ดูได้ทางเดียวคือเปิด URL ตรงๆ (getCaseByRefFull ไม่กรอง)
-  let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
-           FROM cases c WHERE org_id = $1 AND archived_at IS NULL`
+  // ⛔ เคสในกรุอยู่นอกรายการทำงานเสมอ — เห็นได้ทางเดียวคือ archived: true (ตัวกรอง "ในกรุ" ที่ /case)
+  // ⭐ thumb/assignees/ตัวนับ 2 ตัว — การ์ดที่ /case ใช้ครบทุกตัว (รูป/ผู้รับผิดชอบ/แถบความคืบหน้า/กล่องยืนยันลบ)
+  //    subquery ต่อแถว — limit หน้านี้ 300 ใบ ไม่คุ้มทำ JOIN+GROUP BY ให้อ่านยาก
+  let q = `SELECT c.id, c.ref, c.province, c.category, c.title, c.detail, c.status, c.source,
+                  c.created_at, c.updated_at, c.archived_at,
+                  (SELECT a.id FROM case_attachments a
+                    WHERE a.case_id = c.id AND a.mime LIKE 'image/%'
+                    ORDER BY a.created_at LIMIT 1)                                  AS thumb_att_id,
+                  (SELECT COUNT(*)::int FROM case_attachments a WHERE a.case_id = c.id) AS attachment_count,
+                  (SELECT COUNT(*)::int FROM case_timeline te WHERE te.case_id = c.id)  AS timeline_count,
+                  COALESCE((
+                    SELECT json_agg(COALESCE(
+                             (SELECT om.display_name FROM org_members om
+                               WHERE om.user_id = a.user_id AND om.org_id = c.org_id
+                                 AND om.display_name IS NOT NULL LIMIT 1),
+                             u.username, u.discord_id, a.user_id::text
+                           ) ORDER BY a.assigned_at)
+                      FROM case_assignees a
+                      LEFT JOIN users u ON u.id = a.user_id
+                     WHERE a.case_id = c.id
+                  ), '[]'::json)                                                    AS assignee_names
+           FROM cases c WHERE c.org_id = $1 AND c.archived_at IS ${archived ? 'NOT NULL' : 'NULL'}`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return []
     params.push(provinces)
-    q += ` AND province = ANY($${params.length})`
+    q += ` AND c.province = ANY($${params.length})`
   }
-  if (status === ACTIVE)     q += ` AND status = ANY(${setSql(ACTIVE_STATUSES)})`
-  else if (status === DONE)  q += ` AND status = ANY(${setSql(DONE_STATUSES)})`
+  // ⛔ จังหวัด/ประเภทต้องกรองใน SQL ไม่ใช่ .filter() ฝั่ง JS — LIMIT ตัดก่อนกรองแล้วรายการจะขาดหาย
+  if (province) {
+    params.push(province)
+    q += ` AND c.province = $${params.length}`
+  }
+  if (category === NO_CATEGORY) {
+    q += ` AND (c.category IS NULL OR c.category = '')`
+  } else if (category) {
+    params.push(category)
+    q += ` AND c.category = $${params.length}`
+  }
+  if (status === ACTIVE)     q += ` AND c.status = ANY(${setSql(ACTIVE_STATUSES)})`
+  else if (status === DONE)  q += ` AND c.status = ANY(${setSql(DONE_STATUSES)})`
   else if (status) {
     params.push(status)
-    q += ` AND status = $${params.length}`
+    q += ` AND c.status = $${params.length}`
   }
   // ⭐ assigned: 'none' = ยังไม่มีเจ้าภาพ · 'me' = ฉันรับผิดชอบ · 'any' = มีคนรับแล้ว
   //    ตรงกับ 3 บรรทัดบนการ์ดหน้าแรก (countCaseStats ข้างล่าง) — แก้ที่ไหนต้องแก้คู่กันเสมอ
@@ -319,7 +354,7 @@ export async function listCases(orgId, { provinces = null, status = null, assign
     q += ` AND NOT EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
   }
   params.push(limit, offset)
-  q += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`
+  q += ` ORDER BY c.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`
   const { rows } = await pool.query(q, params)
   return rows
 }
@@ -375,31 +410,32 @@ export async function countCaseStats(orgId, userId, provinces = null) {
 }
 
 /**
- * ตัวเลขในวงเล็บของ dropdown ตัวกรองที่ /case (user เคาะ 2026-08-31)
- * ⚠️ ทุกเลขต้องตรงกับ listCases ที่ตัวเลือกนั้นยิงเป๊ะ — เลือกแล้วต้องเจอจำนวนเท่าที่เขียนไว้
- *    total=ไม่กรองอะไร · unassigned/mine/assigned=ACTIVE+เจ้าภาพ · done=DONE_STATUSES ทั้งหมด (ไม่ตัด 30 วันแบบ countCaseStats)
+ * ค่าที่เลือกได้จริงใน dropdown ตัวกรองที่ /case + จำนวนต่อค่า (จังหวัด / ประเภท / ในกรุ)
+ *
+ * ⛔ ต้องนับจาก **ทั้ง org ในขอบเขตสิทธิ์** ไม่ใช่จากผลลัพธ์ที่กรองแล้ว — ไม่งั้นเลือกจังหวัดหนึ่ง
+ *    แล้วจังหวัดอื่นหายจาก dropdown (ของเดิมทำแบบนั้น: derive จาก rows ที่ query มา)
+ * ⚠️ เลขจังหวัด/ประเภทต้องนับฝั่งเดียวกับที่หน้ากำลังดูอยู่ (`archived`) — ไม่งั้นเลือก "ในกรุ"
+ *    แล้ว dropdown ยังโชว์เลขของงานที่ยังทำอยู่ = กดแล้วเจอไม่ตรงเลข
  */
-export async function countByFilter(orgId, userId, provinces = null) {
-  const ASSIGNED = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
-  const MINE = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2)`
-  const ACTIVE_SQL = `c.status = ANY(${setSql(ACTIVE_STATUSES)})`
-
-  const params = [orgId, userId || null]
-  let q = `SELECT COUNT(*)::int                                                       AS total,
-                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND NOT ${ASSIGNED})::int      AS unassigned,
-                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${MINE})::int              AS mine,
-                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${ASSIGNED})::int          AS assigned,
-                  COUNT(*) FILTER (WHERE c.status = ANY(${setSql(DONE_STATUSES)}))::int AS done
-             FROM cases c
-            WHERE c.org_id = $1 AND c.archived_at IS NULL`
+export async function listCaseFacets(orgId, provinces = null, archived = false) {
+  const params = [orgId]
+  const side = archived ? 'IS NOT NULL' : 'IS NULL'
+  let where = `org_id = $1`
   if (Array.isArray(provinces)) {
-    if (provinces.length === 0) return { total: 0, unassigned: 0, mine: 0, assigned: 0, done: 0 }
+    if (provinces.length === 0) return { provinces: [], categories: [], archived: 0 }
     params.push(provinces)
-    q += ` AND c.province = ANY($${params.length})`
+    where += ` AND province = ANY($${params.length})`
   }
-  const { rows } = await pool.query(q, params)
-  const r = rows[0] || {}
-  return { total: r.total || 0, unassigned: r.unassigned || 0, mine: r.mine || 0, assigned: r.assigned || 0, done: r.done || 0 }
+  const [prov, cat, arch] = await Promise.all([
+    pool.query(`SELECT province, COUNT(*)::int AS n FROM cases
+                 WHERE ${where} AND archived_at ${side} AND province IS NOT NULL
+                 GROUP BY province ORDER BY province`, params),
+    pool.query(`SELECT COALESCE(NULLIF(category, ''), '${NO_CATEGORY}') AS category, COUNT(*)::int AS n
+                  FROM cases WHERE ${where} AND archived_at ${side}
+                 GROUP BY 1 ORDER BY 1`, params),
+    pool.query(`SELECT COUNT(*)::int AS n FROM cases WHERE ${where} AND archived_at IS NOT NULL`, params),
+  ])
+  return { provinces: prov.rows, categories: cat.rows, archived: arch.rows[0]?.n || 0 }
 }
 
 /**

@@ -639,7 +639,22 @@
       "filterUnassigned": "ยังไม่มีเจ้าภาพ",
       "filterAssigned": "มีคนรับแล้ว",
       "filterDone": "เสร็จสิ้น",
-      "caseInfoHeading": "ข้อมูลเคส"
+      "caseInfoHeading": "ข้อมูลเคส",
+      "filterArchived": "ในกรุ",
+      "emptyArchived": "ยังไม่มีเคสในกรุ",
+      "noDetail": "ยังไม่มีรายละเอียด",
+      "filterAnyAssignee": "ทุกเจ้าภาพ",
+      "filterAssigneeLabel": "กรองตามผู้รับผิดชอบ",
+      "filterStatusLabel": "กรองตามสถานะ",
+      "filterStoreLabel": "กรองตามที่เก็บ",
+      "filterAllStatus": "ทุกสถานะ",
+      "filterActive": "ยังไม่ปิด",
+      "filterLive": "กำลังทำงาน",
+      "filterAllProvinces": "ทุกจังหวัด",
+      "filterAllCategories": "ทุกประเภท",
+      "filterNoCategory": "ยังไม่ระบุประเภท",
+      "clearFilters": "ล้างตัวกรอง",
+      "resultCount": "พบ {count} เรื่อง"
     },
     "actions": {
       "takeCaseButton": "รับเรื่องนี้",
@@ -741,6 +756,14 @@
       "heading": "ลบเคส",
       "impact": "ลบถาวรจะลบไทม์ไลน์ {timeline} รายการ และไฟล์แนบ {attachments} ไฟล์ไปด้วย — ย้อนกลับไม่ได้",
       "hint": "เก็บเข้ากรุ = เอาออกจากรายการเคสและบอร์ดการบ้าน ย้อนคืนได้ทุกเมื่อ · หน้าติดตามของผู้ร้องยังเปิดได้เหมือนเดิม · เธรดใน Discord ไม่ถูกลบ ระบบจะโพสต์บอกในเธรดว่าปิดได้แล้ว"
+    },
+    "progress": {
+      "nextStep": "ขั้นต่อไป: {step}",
+      "stageAssign": "มอบหมายผู้รับผิดชอบ",
+      "stageWork": "ลงมือดำเนินการ",
+      "stageClose": "ปิดจบเรื่อง",
+      "doneLabel": "ปิดจบแล้ว",
+      "rejectedLabel": "ตีกลับแล้ว"
     }
   },
   "docs": {
