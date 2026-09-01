@@ -39,6 +39,7 @@ export default function CaseLetterModal({ refId, onClose }) {
   const [signerDefaults, setSignerDefaults] = useState({})
   const [deletingId, setDeletingId] = useState(null)
   const bodyRef = useAutoGrow(fields?.body)
+  const attachmentsRef = useAutoGrow(fields?.attachments)
 
   // โหลดรายการร่างที่บันทึกไว้ + ค่าเริ่มต้นผู้ลงนาม
   useEffect(() => {
@@ -66,6 +67,7 @@ export default function CaseLetterModal({ refId, onClose }) {
           subject:         d.draft.subject || '',
           recipient_title: d.draft.recipient_title || '',
           recipient_name:  d.draft.recipient_name || '',
+          reference:       d.draft.reference || '',
           attachments:     d.draft.attachments || '-',
           body:            d.draft.body || '',
           signer_name:     defaults.signer_name || '',
@@ -82,10 +84,11 @@ export default function CaseLetterModal({ refId, onClose }) {
     for (const k of STALE_HEADER_KEYS) delete f[k]
     setDraftId(id)
     setFields({
-      // ร่างยุคก่อนไม่มี 3 ช่องนี้ — ตกมาใช้ค่าเริ่มต้นของคนที่เปิด ไม่ปล่อยให้ input เป็น undefined
+      // ร่างยุคก่อนไม่มี 4 ช่องนี้ — ตกมาใช้ค่าเริ่มต้นของคนที่เปิด ไม่ปล่อยให้ input เป็น undefined
       signer_name:     signerDefaults.signer_name || '',
       signer_position: signerDefaults.signer_position || '',
       signer_phone:    signerDefaults.signer_phone || '',
+      reference:       '',
       ...f,
     })
     setStep('edit')
@@ -293,8 +296,20 @@ export default function CaseLetterModal({ refId, onClose }) {
               </div>
 
               <div>
+                <label className={labelCls}>{t('letter.referenceLabel')}</label>
+                <input className={inputCls} value={fields.reference} onChange={set('reference')} placeholder={t('letter.referencePlaceholder')} />
+              </div>
+
+              <div>
                 <label className={labelCls}>{t('letter.attachmentsLabel')}</label>
-                <input className={inputCls} value={fields.attachments} onChange={set('attachments')} placeholder={t('letter.attachmentsPlaceholder')} />
+                {/* ⛔ ห้ามใส่ autoGrow(e.target) ใน onChange — useAutoGrow ทำให้แล้ว 1 ครั้งต่อ render */}
+                <textarea
+                  ref={attachmentsRef}
+                  className={`${inputCls} resize-none overflow-hidden`}
+                  value={fields.attachments}
+                  onChange={set('attachments')}
+                  placeholder={t('letter.attachmentsPlaceholder')}
+                />
               </div>
 
               <div>

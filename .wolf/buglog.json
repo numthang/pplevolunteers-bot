@@ -5009,6 +5009,71 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-01T13:40:42.045633Z"
+    },
+    {
+      "id": "bug-274",
+      "timestamp": "2026-09-01T14:32:13.910Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "Had ',\n          attachments:     d.draft.attachments ",
+      "fix": "Changed to ',\n          reference:       d.draft.reference ||",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T14:32:13.910Z"
+    },
+    {
+      "id": "bug-275",
+      "timestamp": "2026-09-01T14:33:12.505Z",
+      "error_message": "Significant refactor of generateComplaintLetter.js",
+      "file": "web/lib/generateComplaintLetter.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 11→15 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T14:33:12.505Z"
+    },
+    {
+      "id": "bug-276",
+      "timestamp": "2026-09-01T14:34:06.320Z",
+      "error_message": "Significant refactor of letterLogo.js",
+      "file": "web/lib/letterLogo.js",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 10→12 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T14:34:06.320Z"
+    },
+    {
+      "id": "bug-20260901-letter-undefined-nullgetter",
+      "timestamp": "2026-09-01T14:37:43.000Z",
+      "error_message": "docxtemplater renders literal \"undefined\" text for any template tag missing from render() data",
+      "file": "web/lib/generateComplaintLetter.js",
+      "root_cause": "Docxtemplater default nullGetter stringifies missing tag values instead of blanking them; generateComplaintLetter.js never set nullGetter (worked by luck because template.docx tags always matched render() keys exactly — a mismatch, e.g. mid-migration to template-v2.docx with unfixed tag names, prints literal \"undefined\" into the actual PDF letter)",
+      "fix": "Added nullGetter: () => '' to the Docxtemplater constructor options, matching the existing pattern in web/lib/generatePdf.js",
+      "tags": [
+        "docxtemplater",
+        "complaint-letter",
+        "template",
+        "gotcha"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T14:37:43.000Z"
     }
   ]
 }

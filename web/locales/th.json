@@ -542,6 +542,8 @@
       "recipientTitleLabel": "ตำแหน่งผู้รับ (เรียน)",
       "recipientTitlePlaceholder": "เช่น ผู้อำนวยการ",
       "recipientNameLabel": "ชื่อผู้รับ / หน่วยงาน",
+      "referenceLabel": "อ้างถึง (ถ้ามี)",
+      "referencePlaceholder": "เลขที่หนังสือ/เรื่องเดิมที่เคยติดต่อ",
       "attachmentsLabel": "สิ่งที่แนบมา",
       "attachmentsPlaceholder": "- เอกสาร...",
       "bodyLabel": "เนื้อหาหนังสือ",

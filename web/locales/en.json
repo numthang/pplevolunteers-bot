@@ -542,6 +542,8 @@
       "recipientTitleLabel": "Recipient title (Attn.)",
       "recipientTitlePlaceholder": "e.g. Director",
       "recipientNameLabel": "Recipient name / organization",
+      "referenceLabel": "Reference (if any)",
+      "referencePlaceholder": "Document no. / prior correspondence",
       "attachmentsLabel": "Attachments",
       "attachmentsPlaceholder": "- Document...",
       "bodyLabel": "Letter body",
