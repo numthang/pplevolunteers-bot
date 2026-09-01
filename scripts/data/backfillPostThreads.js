@@ -357,6 +357,7 @@ async function alreadyImported(threadId) {
           // ⭐ ป้ายว่า "ของเก่านำเข้าย้อนหลัง" — ทำให้ listPosts ตัดออกจากฟีดหลักและแท็บจากดิสฯ
           //    ไม่งั้น 500+ ใบจะทับงานจริงที่ทีมกำลังทำอยู่ (limit 200 เรียงตามแก้ล่าสุด)
           createdVia: 'backfill',
+          createdAt: createdAtOf(t.id), // วันที่ตั้งกระทู้จริง ไม่ใช่เวลาที่รันสคริปต์นี้
         });
 
         if (!NO_IMAGES) {

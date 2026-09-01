@@ -108,6 +108,7 @@ async function handlePostImportModal(interaction) {
       title: ai.title,
       body: ai.body,
       sourceIdea: text,
+      createdAt: thread.createdAt || null, // นำเข้ากระทู้เก่า → ใช้วันที่ตั้งกระทู้จริง ไม่ใช่เวลาที่กดนำเข้า
     });
     if (images.length) await attachImages(post.id, interaction.user.id, images);
   } catch (e) {

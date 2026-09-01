@@ -24,7 +24,7 @@ const { mirrorEntityCardFromBot } = require('./kanbanCards');
  *        แยกเพราะ `channel_id` มีเหมือนกันทั้งคู่ บอกไม่ได้ว่าอันไหนงานที่ยังต้องทำ
  * @returns {object} แถวเต็มของ post_episodes ที่สร้าง (id ใช้ต่อกับ attachImages)
  */
-async function createImportedPost({ guildId, addedByDiscordId, category = null, title, body, sourceIdea, channelId = null, channelName = null, createdVia = 'ai' }) {
+async function createImportedPost({ guildId, addedByDiscordId, category = null, title, body, sourceIdea, channelId = null, channelName = null, createdVia = 'ai', createdAt = null }) {
   const orgId = await orgIdOfGuild(guildId);
   const ownerUserId = await userIdByDiscord(addedByDiscordId);
 
@@ -33,10 +33,10 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO post_episodes
-         (org_id, owner_user_id, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, channel_name, last_edited_by)
-       VALUES ($1, $2, 'org', $3, $4, $5, $6, $10, 'draft', $7, $8, $9, $2)
+         (org_id, owner_user_id, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, channel_name, last_edited_by, created_at)
+       VALUES ($1, $2, 'org', $3, $4, $5, $6, $10, 'draft', $7, $8, $9, $2, COALESCE($11, NOW()))
        RETURNING *`,
-      [orgId, ownerUserId, category, title, body, sourceIdea, guildId, channelId, channelName, createdVia]
+      [orgId, ownerUserId, category, title, body, sourceIdea, guildId, channelId, channelName, createdVia, createdAt]
     );
     const post = rows[0];
 
