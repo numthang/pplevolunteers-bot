@@ -14,6 +14,7 @@ user ทัก: "layout พังๆ เวลาดูบนมือถือ�
    → บนมือถือดึงเกินมา 8px/ข้าง Chrome เลยถ่างจอเป็น 385px แล้วย่อทั้งหน้า
    **แก้: `-mx-3` → `-mx-1`** (ให้ตรงกับ `app/kanban/layout.js:18` ที่ทำถูกอยู่แล้ว) — คำเดียว × 3 ไฟล์
    ⚠️ `sm:-mx-4` ถูกแล้ว อย่าไปแตะ · 3 โซนนี้ไม่มี `data-wide` จึงยังติดกรอบ `max-w-5xl` เหมือนเดิม
+   ✅ **`/posts` แก้แล้ว 2026-09-02** (`app/posts/layout.js`) — ผ่าน mobileAudit · **`/calling` `/docs` ยังไม่แก้**
 
 2. **`/integrations` — ตาราง API docs ล้น 79px**
    `<table className="w-full text-base">` มี 4 คอลัมน์ (Parameter/Type/Required/Description) ไม่มีที่พอที่ 375px

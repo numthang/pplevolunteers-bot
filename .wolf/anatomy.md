@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:34:19.574Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T17:58:42.823Z
 > Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~46604 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~46633 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5796 tok)
 
 ## md/archive/
@@ -2044,7 +2044,7 @@
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9571 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9574 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 

@@ -5252,6 +5252,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T17:21:18.882Z"
+    },
+    {
+      "id": "bug-289",
+      "timestamp": "2026-09-01T17:49:05.617Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Had \"text-sm text-warm-500 dark:text-disc-muted line-c",
+      "fix": "Changed to \"text-sm text-warm-500 dark:text-disc-muted line-c",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:49:05.617Z"
+    },
+    {
+      "id": "bug-290",
+      "timestamp": "2026-09-01T17:51:09.434Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/posts/layout.js",
+      "root_cause": "Had \"-mx-3 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark",
+      "fix": "Changed to \"-mx-1 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T17:51:09.434Z"
     }
   ]
 }

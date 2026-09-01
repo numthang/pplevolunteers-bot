@@ -123,7 +123,7 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
         </div>
 
         {excerpt ? (
-          <p className="text-sm text-warm-500 dark:text-disc-muted line-clamp-1">{excerpt}</p>
+          <p className="text-sm text-warm-500 dark:text-disc-muted line-clamp-1 break-words">{excerpt}</p>
         ) : (
           <p className="text-sm text-warm-400 dark:text-disc-muted italic">ยังไม่มีเนื้อหา</p>
         )}
