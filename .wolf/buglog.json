@@ -4911,6 +4911,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T02:37:15.800Z"
+    },
+    {
+      "id": "bug-268",
+      "timestamp": "2026-09-01T10:50:56.100Z",
+      "error_message": "Missing import: dotenv",
+      "file": "scripts/finance/parse-kbank-statement.js",
+      "root_cause": "Module(s) not imported: dotenv",
+      "fix": "Added import(s) for dotenv",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T10:50:56.100Z"
     }
   ]
 }

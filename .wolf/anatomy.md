@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T02:38:30.008Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T10:51:12.688Z
 > Files: 1083 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -456,7 +456,7 @@
 ## scripts/finance/
 
 - `parse-kbank-statement copy.js` — parse-kbank-statement.js (~2787 tok)
-- `parse-kbank-statement.js` — parse-kbank-statement.js (~2950 tok)
+- `parse-kbank-statement.js` — parse-kbank-statement.js (~3154 tok)
 
 ## scripts/import/
 

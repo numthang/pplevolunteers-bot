@@ -2,20 +2,20 @@
  * parse-kbank-statement.js
  * แปลง KBank statement PDF → Excel + SQL
  *
- * ⚠️ **SQL ที่ script นี้ generate ใช้ไม่ได้แล้ว — ต้องแก้ก่อนใช้ (จด 2026-07-21)**
- *    1. `INSERT IGNORE` = MySQL syntax · Postgres ต้องใช้ `ON CONFLICT ... DO NOTHING`
- *       (พังตั้งแต่ย้าย MySQL → Postgres ไม่เกี่ยวกับ org migration)
- *    2. `guild_id` — `finance_transactions` เป็น org-scope แล้ว ต้องเป็น
- *       `(SELECT org_id FROM dc_guilds WHERE guild_id = ...)` · และ `updated_by`
- *       เป็น `users.id` (INT) แล้ว ไม่ใช่ string 'statement_import'
- *    ส่วน parse PDF → Excel ยังใช้ได้ปกติ (ไม่แตะ DB)
+ * แก้แล้ว 2026-09-01 (เดิมยังพังตามที่เขียนไว้ 2026-07-21 — schema จริงยืนยันแล้ว):
+ *   - `finance_transactions` ไม่มี `guild_id` เลย ใช้ `org_id` (int, NOT NULL, FK → orgs) ตรงๆ
+ *   - `updated_by` เป็น FK → users.id (int) ไม่ใช่ string → ปล่อย NULL, ใช้คอลัมน์ `source` แทนสำหรับ tag ที่มา
+ *   - ไม่มี unique constraint ให้ทำ `ON CONFLICT` ได้ (ref_id ซ้ำได้ตามคอมเมนต์เดิม) →
+ *     กันซ้ำด้วย fromDate/toDate filter แทน (import เฉพาะช่วงที่ขาด ไม่ import ทับของที่มีอยู่แล้ว)
+ *   - เพิ่ม fund_id ใส่ตอน insert ได้เลยถ้าระบุมา
  *
  * Usage:
- *   node scripts/parse-kbank-statement.js <path-to-pdf> [account_id] [guild_id]
+ *   node scripts/finance/parse-kbank-statement.js <path-to-pdf> <account_id> <org_id> [fund_id] [fromDate] [toDate]
+ *   fromDate/toDate เป็น YYYY-MM-DD (inclusive) — ไม่ใส่ = เอาทุกแถวที่ parse ได้
  *
  * Output:
- *   statement.xlsx   — เปิดตรวจสอบก่อน
- *   statement.sql    — INSERT IGNORE statements พร้อม import
+ *   kbank_statement.xlsx — เปิดตรวจสอบก่อนเสมอ
+ *   kbank_statement.sql  — INSERT statements พร้อม import (รันเองหลังตรวจ xlsx แล้วเท่านั้น)
  */
 
 require('dotenv').config()
@@ -27,14 +27,13 @@ const XLSX     = require('xlsx')
 // ── args ────────────────────────────────────────────────────────────────────
 const pdfPath   = process.argv[2]
 const accountId = parseInt(process.argv[3] || '3')
-const guildId   = process.argv[4] || process.env.GUILD_ID
+const orgId     = parseInt(process.argv[4] || '')
+const fundId    = process.argv[5] ? parseInt(process.argv[5]) : null
+const fromDate  = process.argv[6] ? new Date(process.argv[6] + 'T00:00:00') : null
+const toDate    = process.argv[7] ? new Date(process.argv[7] + 'T23:59:59') : null
 
-if (!pdfPath) {
-  console.error('Usage: node scripts/parse-kbank-statement.js <pdf> [account_id] [guild_id]')
-  process.exit(1)
-}
-if (!guildId) {
-  console.error('GUILD_ID not set — pass as arg or in .env')
+if (!pdfPath || !orgId) {
+  console.error('Usage: node scripts/finance/parse-kbank-statement.js <pdf> <account_id> <org_id> [fund_id] [fromDate YYYY-MM-DD] [toDate YYYY-MM-DD]')
   process.exit(1)
 }
 
@@ -202,12 +201,22 @@ function parseRows(text) {
 
   // อ่านจากไฟล์ที่ save ไว้แทน เพื่อให้ newline consistent
   const rawText = fs.readFileSync(debugPath, 'utf8')
-  const rows = parseRows(rawText)
+  let rows = parseRows(rawText)
   console.log(`✅ Parsed rows: ${rows.length}`)
 
   if (rows.length === 0) {
     console.error('❌ ไม่พบ row เลย — ดู kbank_statement_raw.txt แล้วส่งมาให้ดู')
     process.exit(1)
+  }
+
+  if (fromDate || toDate) {
+    const before = rows.length
+    rows = rows.filter(r => (!fromDate || r.txn_at >= fromDate) && (!toDate || r.txn_at <= toDate))
+    console.log(`📅 Filtered by date range: ${before} → ${rows.length} rows`)
+    if (rows.length === 0) {
+      console.error('❌ ไม่มีแถวในช่วงวันที่ระบุ')
+      process.exit(1)
+    }
   }
 
   // ── Excel ──────────────────────────────────────────────────────────────────
