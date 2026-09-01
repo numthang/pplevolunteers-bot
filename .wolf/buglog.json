@@ -5300,6 +5300,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-01T18:04:15.962Z"
+    },
+    {
+      "id": "bug-292",
+      "timestamp": "2026-09-01T18:20:41.371Z",
+      "error_message": "Missing import: fs/promises, path, crypto",
+      "file": "scripts/data/backfillCaseThreads.js",
+      "root_cause": "Module(s) not imported: fs/promises, path, crypto",
+      "fix": "Added import(s) for fs/promises, path, crypto",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-01T18:20:41.371Z"
+    },
+    {
+      "id": "bug-293",
+      "timestamp": "2026-09-01T18:21:28.238Z",
+      "error_message": "Missing error handling in messagesToText()",
+      "file": "scripts/data/backfillCaseThreads.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: if (!NO_IMAGES && msgs.length) {; const images = extractImages(msgs);",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-01T18:22:24.320Z"
+    },
+    {
+      "id": "bug-294",
+      "timestamp": "2026-09-01T18:22:10.977Z",
+      "error_message": "Significant refactor of backfillCaseThreads.js",
+      "file": "scripts/data/backfillCaseThreads.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 41→68 lines (3 removed) | Also: + ` · เจ้าภาพ=${gAssigned} หาเจ้าของไม่ได้=${gNoOw; + ` · เจ้าภาพ=${totalAssigned} หาเจ้าของไม่ได้=${t",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-01T18:22:41.057Z"
     }
   ]
 }

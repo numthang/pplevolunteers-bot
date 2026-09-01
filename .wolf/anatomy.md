@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T18:04:15.902Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T18:23:12.145Z
 > Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -432,7 +432,7 @@
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
 - `backfillCaseCreatedAt.js` — backfillCaseCreatedAt.js — แก้ cases.created_at ของเคสที่มาจาก Discord ให้ตรงวันที่ตั้งกระทู้จริง (~879 tok)
-- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~5990 tok)
+- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~7880 tok)
 - `backfillPostCreatedAt.js` — backfillPostCreatedAt.js — แก้ post_episodes.created_at ของโพสต์ที่มาจาก Discord ให้ตรงวันที่ตั้งกระ (~899 tok)
 - `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5426 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)

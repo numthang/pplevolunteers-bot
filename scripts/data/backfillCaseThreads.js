@@ -18,9 +18,18 @@
  *    ของแพง (เครดิต AI) ต้องสั่งเปิดเอง — เคสนึงยิง 3 ครั้ง (หัวข้อ + สรุป + timeline)
  *    ของจริง 183 กระทู้ = 549 ครั้ง ถ้าติดมากับ default แล้วเผลอสั่ง
  *
+ * ⭐ **ดึงรูปแนบด้วย** (เพิ่ม 2026-09-02 — ก่อนหน้านี้ไม่มีเลย ต่างจาก backfillPostThreads.js)
+ *    ค่าเริ่มต้น: รูปไม่เกิน 4/เคส เก็บลง `case_attachments` + ไฟล์จริงที่ `uploads/cases/<caseId>/`
+ *    (path/allowlist ก็อปจาก web/lib/caseUploads.js — import ตรงไม่ได้เพราะเป็น ESM ผูก alias @/)
+ *    ⚠️ **รองรับเฉพาะ jpg/png/webp** — case attachments ไม่มี gif ในเมนู (ต่างจาก posts)
+ *    ⭐ **เคสที่นำเข้าไปแล้วก่อนหน้านี้ (ไม่มีรูปเลยสักใบ) จะถูกเติมรูปให้ในตัว** ตอนรันซ้ำ
+ *       เช็ค case_attachments ว่ามีแถวหรือยังก่อนเสมอ กันยิง Discord ซ้ำกับเคสที่เติมแล้ว
+ *
  * Options:
  *   --dry-run          นับอย่างเดียว ไม่ยิง AI ไม่เขียน DB  ← รันอันนี้ก่อนเสมอ
  *   --limit <n>        ทำแค่ n กระทู้แรกที่ยังไม่มีเคส (ลองน้ำก่อนเทหมด)
+ *   --no-images        ไม่ดึง/ไม่เติมรูปเลย (ทั้งเคสใหม่และเคสเก่าที่นำเข้าไปแล้ว)
+ *   --max-images <n>   จำกัดจำนวนรูปที่ดึงต่อเคส (ค่าเริ่มต้น 4)
  *   --since <YYYY-MM-DD>  เอาเฉพาะกระทู้ที่ตั้งตั้งแต่วันนั้น
  *   --years <n>        ทางลัดของ --since = วันนี้ลบ n ปี   (ไม่ใส่ = ทุกปี)
  *   --province <ชื่อ>  **บังคับใส่** — จังหวัดของเคสทุกใบที่รอบนี้จะสร้าง
@@ -56,6 +65,9 @@
  *    ดู SQL ใน md/PENDING.md §backfillCaseThreads
  */
 require('dotenv').config();
+const fs = require('fs/promises');
+const path = require('path');
+const crypto = require('crypto');
 const pool = require('../../db/index');
 const caseDb = require('../../db/case');
 const { userIdByDiscord } = require('../../db/org');
@@ -73,6 +85,8 @@ const USE_AI = has('ai');
 const LIMIT = Number(arg('limit', 0)) || 0;
 const GUILD_FILTER = arg('guild', null);
 const FORUM_OVERRIDE = arg('forum', null);
+const NO_IMAGES = has('no-images');
+const MAX_IMAGES = Number(arg('max-images', 4)) || 4;
 
 /**
  * ⭐ จังหวัด = **input ของคำสั่ง ไม่ใช่ค่าที่ไปดูดมาจาก DB** (user เคาะ 2026-08-29)
@@ -103,6 +117,17 @@ const PROVINCE = (() => {
 })();
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+
+// ── รูปแนบ ──────────────────────────────────────────────────────────────────
+// ⭐ ก็อปพาธ/allowlist มาจาก web/lib/caseUploads.js ตรงๆ (import ไม่ได้ — ไฟล์นั้นเป็น ESM
+//    ที่ใช้ alias @/ ผูกกับ Next.js bundler เท่านั้น รันจาก plain node ตรงนี้ไม่ได้)
+//    ⚠️ แก้ allowlist/พาธที่นั่นแล้วต้องแก้ที่นี่ด้วย ไม่งั้นรูปที่นี่หายไปเงียบๆ
+// ⚠️ ต่างจาก posts (extract .gif ได้ด้วย): case attachments **ไม่รองรับ gif** เลย
+const CASE_UPLOAD_DIR = process.env.CASE_UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads', 'cases');
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB — เพดานเดียวกับ web/lib/caseUploads.js
+const EXT_BY_MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const MIME_BY_EXT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const IMAGE_EXT_RE = /\.(png|jpe?g|webp)(?:[?#]|$)/i;
 
 // ── วันที่ตั้งกระทู้ อ่านจาก snowflake (ไม่ต้องยิง API เพิ่ม) ─────────────────
 const DISCORD_EPOCH = 1420070400000n;
@@ -239,6 +264,63 @@ function messagesToText(msgs) {
     .join('\n');
 }
 
+/** รูปจากทุกข้อความในกระทู้ — เก็บ id ของ attachment/message ต้นทางไว้กันซ้ำตอน insert · ลอกจาก backfillPostThreads.js */
+function extractImages(msgs) {
+  const out = [];
+  for (const m of msgs) {
+    for (const a of m.attachments || []) {
+      if (IMAGE_EXT_RE.test(a.filename || a.url)) {
+        out.push({ url: a.url, messageId: m.id, attachmentId: a.id, filename: a.filename, contentType: a.content_type });
+      }
+      if (out.length >= MAX_IMAGES) return out;
+    }
+  }
+  return out;
+}
+
+/** เคสนี้มีไฟล์แนบอยู่แล้วหรือยัง — ใช้กันไม่ให้ยิง Discord ซ้ำทุกรอบที่รันสคริปต์ */
+async function hasAttachments(caseId) {
+  const { rows } = await pool.query(`SELECT 1 FROM case_attachments WHERE case_id = $1 LIMIT 1`, [caseId]);
+  return rows.length > 0;
+}
+
+/**
+ * ดาวน์โหลดรูปจาก Discord CDN แล้วเก็บลง case_attachments — ก็อป logic มาจาก
+ * web/lib/caseUploads.js (saveCaseBuffer) + web/db/cases.js (insertAttachment)
+ * @returns {Promise<number>} จำนวนรูปที่เก็บสำเร็จ
+ */
+async function attachCaseImages(caseId, orgId, images) {
+  const dir = path.join(CASE_UPLOAD_DIR, String(caseId));
+  await fs.mkdir(dir, { recursive: true });
+  let saved = 0;
+  for (const img of images) {
+    const mime = img.contentType?.split(';')[0].trim()
+      || MIME_BY_EXT[(img.filename || '').split('.').pop()?.toLowerCase()];
+    const ext = EXT_BY_MIME[mime];
+    if (!ext) continue; // ชนิดไม่รองรับ — extractImages กรองมาแล้วแต่กันเหนียวไว้
+    try {
+      const res = await fetch(img.url);
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > MAX_FILE_SIZE) continue; // เช็คขนาดจริงซ้ำ ไม่เชื่อ header จาก Discord เฉยๆ
+      const filename = `${crypto.randomUUID()}.${ext}`;
+      await fs.writeFile(path.join(dir, filename), buf);
+      const filePath = path.join(String(caseId), filename);
+      const { rowCount } = await pool.query(
+        `INSERT INTO case_attachments
+           (case_id, org_id, file_path, original_name, mime, discord_attachment_id, discord_message_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (discord_attachment_id) WHERE discord_attachment_id IS NOT NULL DO NOTHING`,
+        [caseId, orgId, filePath, img.filename || null, mime, img.attachmentId || null, img.messageId || null],
+      );
+      if (rowCount) saved++;
+    } catch (e) {
+      console.error(`\n  [img] case ${caseId} attachment ${img.attachmentId}:`, e.message);
+    }
+  }
+  return saved;
+}
+
 /**
  * ชื่อผู้ร้อง = ชื่อในเซิร์ฟเวอร์ของเจ้าของกระทู้ (nickname > global_name > username)
  * สูตรเดียวกับ handlers/caseImportHandler.js ที่ใช้ `member.displayName` — ไม่งั้นเคสที่เกิด
@@ -262,7 +344,8 @@ async function complainantNameOf(guildId, ownerId) {
   console.log(DRY_RUN ? '=== DRY RUN (ไม่เขียน DB ไม่ยิง AI) ===' : '=== backfillCaseThreads ===');
   console.log(`โหมด AI: ${USE_AI ? 'ยิง (3 ครั้ง/กระทู้)' : 'ไม่ยิง — ใช้ชื่อกระทู้ + ข้อความแรก'}`
     + (SINCE ? ` · ตั้งแต่ ${SINCE.toISOString().slice(0, 10)}` : ' · ทุกปี')
-    + (LIMIT ? ` · จำกัด ${LIMIT} กระทู้` : ''));
+    + (LIMIT ? ` · จำกัด ${LIMIT} กระทู้` : '')
+    + ` · ${NO_IMAGES ? 'ไม่โหลดรูป' : `รูปไม่เกิน ${MAX_IMAGES}/เคส (เติมรูปให้เคสที่นำเข้าไปแล้วแต่ยังไม่มีรูปด้วย)`}`);
 
   // โหลด configs (guild → complaint forum)
   let configs;
@@ -291,6 +374,7 @@ async function complainantNameOf(guildId, ownerId) {
   }
 
   let totalNew = 0, totalSkip = 0, totalErr = 0, totalAssigned = 0, totalNoOwner = 0;
+  let totalImg = 0, totalImgBackfilled = 0, totalImgPending = 0;
   const createdCaseIds = [];
 
   for (const { guild_id, forum_channel_id } of configs) {
@@ -305,14 +389,33 @@ async function complainantNameOf(guildId, ownerId) {
     console.log(`Fetched ${fetched} threads${SINCE ? ` → เข้าเกณฑ์วันที่ ${threads.length}` : ''}, checking...`);
 
     let gNew = 0, gSkip = 0, gErr = 0, gAssigned = 0, gNoOwner = 0;
+    let gImg = 0, gImgBackfilled = 0, gImgPending = 0;
     for (let i = 0; i < threads.length; i++) {
       if (LIMIT && gNew >= LIMIT) { console.log(`\n  ครบ --limit ${LIMIT} แล้ว หยุด`); break; }
       const t = threads[i];
-      process.stdout.write(`\r  ${i + 1}/${threads.length} (new:${gNew} skip:${gSkip} err:${gErr})`);
+      process.stdout.write(`\r  ${i + 1}/${threads.length} (new:${gNew} skip:${gSkip} err:${gErr} รูป:${gImg}+${gImgBackfilled})`);
 
       try {
         const existing = await caseDb.getCaseByThreadId(t.id);
-        if (existing) { gSkip++; continue; }
+        if (existing) {
+          gSkip++;
+          // ⭐ เคสที่นำเข้าไปแล้ว (รอบก่อนหน้าไม่มีโค้ดดึงรูปเลย) — เติมรูปให้ด้วยในตัว ไม่ต้องมีสคริปต์แยก
+          //    เช็ค hasAttachments ก่อนเสมอกันยิง Discord ซ้ำทุกครั้งที่รันสคริปต์กับเคสที่เติมแล้ว
+          if (!NO_IMAGES) {
+            const missing = !(await hasAttachments(existing.id));
+            if (missing && DRY_RUN) gImgPending++;
+            if (missing && !DRY_RUN) {
+              try {
+                const oldMsgs = await fetchThreadMessages(t.id);
+                const images = extractImages(oldMsgs);
+                if (images.length) gImgBackfilled += await attachCaseImages(existing.id, existing.org_id, images);
+              } catch (e) {
+                console.error(`\n  [img-backfill] case ${existing.id} (thread ${t.id}):`, e.message);
+              }
+            }
+          }
+          continue;
+        }
 
         if (DRY_RUN) { gNew++; continue; }
 
@@ -322,8 +425,13 @@ async function complainantNameOf(guildId, ownerId) {
         let aiSummary = null;
         let msgs = [];
 
+        // ⚠️ ต้องดึงข้อความทั้งกระทู้เพื่อสแกนหารูป ไม่ใช่แค่ตอน --ai อีกต่อไป
+        //    (เดิมโหมดไม่ใส่ --ai ใช้ fetchStarterText แค่ 1-2 call — ถูกกว่าแต่มองไม่เห็นรูปที่อยู่ลึกในกระทู้)
+        //    ปิดด้วย --no-images ถ้าอยากได้ path เดิมที่ถูกกว่า
+        const needFullFetch = USE_AI || !NO_IMAGES;
+        if (needFullFetch) msgs = await fetchThreadMessages(t.id);
+
         if (USE_AI) {
-          msgs = await fetchThreadMessages(t.id);
           detail = msgs[0]?.content || null;
           lastMsgId = msgs.at(-1)?.id || lastMsgId;
           const text = messagesToText(msgs);
@@ -340,6 +448,9 @@ async function complainantNameOf(guildId, ownerId) {
               console.error(`\n  [ai] thread ${t.id}:`, e.message);
             }
           }
+        } else if (needFullFetch) {
+          // เทียบเท่า fetchStarterText แต่จากลิสต์ที่ดึงมาแล้ว (ไม่ต้องยิง API เพิ่ม)
+          detail = msgs.find(m => m.content?.trim() && !m.author?.bot)?.content || null;
         } else {
           detail = await fetchStarterText(t.id);
         }
@@ -358,6 +469,14 @@ async function complainantNameOf(guildId, ownerId) {
         //    ผลคือปุ่ม "ดึง Discord ใหม่" บนเว็บตอบ "ไม่มีข้อความใหม่" ตลอดกาล = เคสกู้ตัวเองไม่ได้
         //    → เลื่อน **หลังสกัด timeline สำเร็จ** เท่านั้น (ดูท้ายลูป)
         if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary);
+
+        if (!NO_IMAGES && msgs.length) {
+          const images = extractImages(msgs);
+          if (images.length) {
+            try { gImg += await attachCaseImages(row.id, row.org_id, images); }
+            catch (e) { console.error(`\n  [img] case ${row.id}:`, e.message); }
+          }
+        }
 
         // ── เจ้าภาพ = เจ้าของกระทู้ (user เคาะ 2026-08-29) ────────────────────────
         // ⚠️ ความหมายต่างจากฝั่งโพสต์: กระทู้ร้องเรียนคนตั้ง = **ผู้ร้อง** ไม่ใช่คนที่รับผิดชอบแก้
@@ -398,13 +517,21 @@ async function complainantNameOf(guildId, ownerId) {
     }
 
     console.log(`\n  Done guild ${guild_id}: new=${gNew} skip=${gSkip} err=${gErr}`
-      + ` · เจ้าภาพ=${gAssigned} หาเจ้าของไม่ได้=${gNoOwner}`);
+      + ` · เจ้าภาพ=${gAssigned} หาเจ้าของไม่ได้=${gNoOwner}`
+      + (NO_IMAGES ? '' : DRY_RUN
+        ? ` · รูปที่จะเติมให้เคสเก่า=${gImgPending}`
+        : ` · รูป(เคสใหม่)=${gImg} รูป(เติมของเก่า)=${gImgBackfilled}`));
     totalNew += gNew; totalSkip += gSkip; totalErr += gErr;
     totalAssigned += gAssigned; totalNoOwner += gNoOwner;
+    totalImg += gImg; totalImgBackfilled += gImgBackfilled; totalImgPending += gImgPending;
   }
 
   console.log(`\n=== สรุป: new=${totalNew} skip=${totalSkip} err=${totalErr}`
-    + ` · เจ้าภาพ=${totalAssigned} หาเจ้าของไม่ได้=${totalNoOwner} ===`);
+    + ` · เจ้าภาพ=${totalAssigned} หาเจ้าของไม่ได้=${totalNoOwner}`
+    + (NO_IMAGES ? '' : DRY_RUN
+      ? ` · รูปที่จะเติมให้เคสเก่า=${totalImgPending}`
+      : ` · รูป(เคสใหม่)=${totalImg} รูป(เติมของเก่า)=${totalImgBackfilled}`)
+    + ' ===');
 
   // ⚠️ การ์ด kanban ถูกยิงแบบ fire-and-forget ใน createCase() (`.catch(() => {})`)
   //    ปิด pool ทันทีหลังใบสุดท้าย = ใบท้ายๆ อาจยังเขียนการ์ดไม่เสร็จแล้วโดนตัดเงียบๆ
