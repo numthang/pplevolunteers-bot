@@ -65,8 +65,8 @@ export const LINK_JSON_SQL = `(
         'title',         CASE l.entity_type WHEN 'case' THEN cs.title ELSE pe.title END,
         'ref',           CASE l.entity_type WHEN 'case' THEN cs.ref ELSE NULL END,
         'source_status', CASE l.entity_type WHEN 'case' THEN cs.status ELSE pe.status END,
-        -- ⚠️ /complaint/[ref] คือหน้าติดตาม **สาธารณะ** ของผู้ร้อง — คนทำงานต้องไป /case/[ref] (จัดการเคส 2026-08-30)
-        'href',          CASE l.entity_type WHEN 'case' THEN '/case/' || cs.ref
+        -- ⚠️ /complaint/[ref] คือหน้าติดตาม **สาธารณะ** ของผู้ร้อง — คนทำงานต้องไป /cases/[ref] (จัดการเคส 2026-08-30)
+        'href',          CASE l.entity_type WHEN 'case' THEN '/cases/' || cs.ref
                                                         ELSE '/posts/' || pe.id END)
       ${LINK_FROM})`
 

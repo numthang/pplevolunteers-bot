@@ -112,7 +112,7 @@ export async function PATCH(req, { params }) {
     try {
       await sendSms({
         msisdn: caseRow.complainant_phone,
-        message: `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${caseRow.ref}\nติดตามสถานะ: ${baseUrl(req)}/case/${caseRow.ref}`,
+        message: `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${caseRow.ref}\nติดตามสถานะ: ${baseUrl(req)}/cases/${caseRow.ref}`,
       })
     } catch (e) {
       console.error('[PATCH /api/case] sms resend', e.message)
@@ -147,7 +147,7 @@ export async function PATCH(req, { params }) {
     try {
       await sendSms({
         msisdn: updated.complainant_phone,
-        message: `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${updated.ref}\nติดตามสถานะ: ${baseUrl(req)}/case/${updated.ref}`,
+        message: `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${updated.ref}\nติดตามสถานะ: ${baseUrl(req)}/cases/${updated.ref}`,
       })
       smsSent = true
     } catch (e) {

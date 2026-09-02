@@ -93,7 +93,7 @@ const DOCS_LINKS = [
 const CASE_LINKS = [
   { href: '/complaint',     label: 'ศูนย์รับเรื่อง', icon: 'overview', exact: true, public: true },
   { href: '/complaint/new', label: 'แจ้งเรื่อง',     icon: 'pen',      public: true },
-  { href: '/case',          label: 'Cases',          icon: 'logs',     exact: true, feature: 'cases', casesAccess: true },
+  { href: '/cases',         label: 'Cases',          icon: 'logs',     exact: true, feature: 'cases', casesAccess: true },
 ]
 
 const POSTS_LINKS = [
@@ -108,7 +108,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',      label: 'FINANCE',  icon: 'transactions', feature: 'finance' },
   { href: '/calling',      label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
   { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
-  { href: '/case',         label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
+  { href: '/cases',        label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { href: '/posts',        label: 'POSTS',    icon: 'pen',       feature: 'posts' },
   { href: '/kanban',       label: 'KANBAN',   icon: 'pending',   feature: 'kanban' },
 ]
@@ -118,7 +118,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions', feature: 'finance' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
-  { key: 'cases',    label: 'CASES',     href: '/case',           icon: 'logs',      feature: 'cases', casesAccess: true },
+  { key: 'cases',    label: 'CASES',     href: '/cases',          icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
   { key: 'kanban',   label: 'KANBAN',    href: '/kanban',         icon: 'pending',   feature: 'kanban' },
   // TEAM = ผังทีม (ย้ายมาจาก /bot/orgchart 2026-08-17) · อ่านอย่างเดียว เปิดให้ทุกคน

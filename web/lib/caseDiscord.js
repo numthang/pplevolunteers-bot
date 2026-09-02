@@ -105,9 +105,9 @@ export async function fetchThreadMessages(threadId, afterId = null) {
  * คู่แฝดฝั่งบอทคือ `getCaseManageUrl()` ใน `db/case.js` (ที่นั่นอ่าน base จาก guild_config
  * เพราะบอทคุยได้หลาย guild) · ฝั่งเว็บเสิร์ฟจากโดเมนเดียว → ใช้ BASE_URL (NEXTAUTH_URL) พอ
  *
- * ⚠️ ชี้ /case/[ref] (หน้าจัดการของเจ้าหน้าที่) ไม่ใช่ /complaint/[ref] ที่เป็นหน้าติดตามสาธารณะ
+ * ⚠️ ชี้ /cases/[ref] (หน้าจัดการของเจ้าหน้าที่) ไม่ใช่ /complaint/[ref] ที่เป็นหน้าติดตามสาธารณะ
  *    — ข้อความพวกนี้อยู่ในเธรดของทีมงาน ไม่ได้ส่งถึงผู้ร้อง
  */
 export function caseRefLink(ref) {
-  return `[${ref}](${BASE_URL}/case/${ref})`
+  return `[${ref}](${BASE_URL}/cases/${ref})`
 }

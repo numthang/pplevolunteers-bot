@@ -100,7 +100,7 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
           {/* ⛔ `truncate` ต้องอยู่ที่ <a> ไม่ใช่ที่ <h3> — <a> เป็น inline กล่องมันกว้างเท่าข้อความจริง
               แม้พ่อจะ overflow-hidden ให้ (ตาไม่เห็น แต่ mobileAudit จับได้ว่าล้นจอ 800px) */}
           <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text [@media(hover:hover)]:group-hover:text-orange transition">
-            <Link href={`/case/${c.ref}`} className="block truncate after:absolute after:inset-0">
+            <Link href={`/cases/${c.ref}`} className="block truncate after:absolute after:inset-0">
               {c.title || t('manage.noTitle')}
             </Link>
           </h3>

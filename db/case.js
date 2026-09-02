@@ -55,7 +55,7 @@ function randomChunk() {
 async function getCaseManageUrl(guildId, ref) {
   const base = (await getSetting(guildId, 'web_base_url')) || process.env.WEB_BASE_URL;
   if (!base) return null;
-  return `${String(base).replace(/\/$/, '')}/case/${ref}`;
+  return `${String(base).replace(/\/$/, '')}/cases/${ref}`;
 }
 
 // ── config: forum channel ต่อ guild ──

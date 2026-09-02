@@ -35,7 +35,7 @@ export default function CaseFilters({
     if (value) p.set(key, value)
     else p.delete(key)
     const qs = p.toString()
-    router.push(qs ? `/case?${qs}` : '/case')
+    router.push(qs ? `/cases?${qs}` : '/cases')
   }
 
   const dirty = assigned || status || archived || province || category
@@ -87,7 +87,7 @@ export default function CaseFilters({
       {/* ตัวกรองที่ค้างอยู่ใน dropdown มองไม่เห็นเท่าชิป → ต้องมีทางล้างทีเดียวให้เห็นชัด */}
       {dirty && (
         <button
-          onClick={() => router.push('/case')}
+          onClick={() => router.push('/cases')}
           className="text-sm text-warm-500 dark:text-disc-muted underline underline-offset-4 hover:text-orange"
         >
           {t('manage.clearFilters')}

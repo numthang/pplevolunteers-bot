@@ -35,8 +35,8 @@ export default function CaseDeleteButton({
       const d = await res.json().catch(() => ({}))
       if (!res.ok) { setError(d.error || t('actions.genericFailMsg')); return }
       setShow(false)
-      // ลบถาวรแล้วเคสไม่มีอยู่อีก → เด้งกลับ /case ไม่ใช่ refresh หน้าที่ 404 ไปแล้ว
-      if (permanent && redirectOnPurge) router.push('/case')
+      // ลบถาวรแล้วเคสไม่มีอยู่อีก → เด้งกลับ /cases ไม่ใช่ refresh หน้าที่ 404 ไปแล้ว
+      if (permanent && redirectOnPurge) router.push('/cases')
       else router.refresh()
     } catch (e) {
       setError(e.message || t('actions.genericFailMsg'))

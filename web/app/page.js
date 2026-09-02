@@ -367,17 +367,17 @@ export default async function HomePage() {
               รอทำ     = เคสที่ยังไม่มีใครรับ
               กำลังทำ  = {ฉันรับผิดชอบ}/{มีคนรับแล้วทั้งหมด}
               เสร็จสิ้น = ปิดแล้วใน 30 วัน
-            ⭐ ตัวกรอง ?status= และ ?assigned= ที่ /case สร้างขึ้นมาเพื่อ 4 เลขนี้โดยเฉพาะ
-               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /case */}
+            ⭐ ตัวกรอง ?status= และ ?assigned= ที่ /cases สร้างขึ้นมาเพื่อ 4 เลขนี้โดยเฉพาะ
+               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /cases */}
         {casesOn && (
-          <ModuleCard href="/case" icon={ICON.case} title={t('card.cases')}>
-            <StatRow href="/case?status=active&assigned=none" label={t('status.todo')} count={caseStats.unassigned} />
+          <ModuleCard href="/cases" icon={ICON.case} title={t('card.cases')}>
+            <StatRow href="/cases?status=active&assigned=none" label={t('status.todo')} count={caseStats.unassigned} />
             <StatSplitRow
               label={t('status.doing')}
-              left={{ href: '/case?status=active&assigned=me', count: caseStats.mine, title: t('split.mine') }}
-              right={{ href: '/case?status=active&assigned=any', count: caseStats.assigned, title: t('split.assigned') }}
+              left={{ href: '/cases?status=active&assigned=me', count: caseStats.mine, title: t('split.mine') }}
+              right={{ href: '/cases?status=active&assigned=any', count: caseStats.assigned, title: t('split.assigned') }}
             />
-            <StatRow href="/case?status=done" label={t('status.done')} count={caseStats.done} />
+            <StatRow href="/cases?status=done" label={t('status.done')} count={caseStats.done} />
           </ModuleCard>
         )}
 

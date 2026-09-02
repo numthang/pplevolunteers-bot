@@ -46,7 +46,7 @@ export default async function CaseManageDetail({ params }) {
 
   const c = await getCaseByRefFull(orgId, ref)
   if (!c) notFound()
-  if (!canAccessCaseProvince(c.province, access)) redirect('/case')
+  if (!canAccessCaseProvince(c.province, access)) redirect('/cases')
 
   const [assignees, attachments, timeline, threadName] = await Promise.all([
     getAssigneesWithNames(c.id, orgId), getAttachments(c.id), getTimeline(c.id),
