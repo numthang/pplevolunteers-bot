@@ -9,6 +9,7 @@ const pool          = require('../db/index')
 const kbank         = require('./parsers/kbank')
 const kbankSms      = require('./parsers/kbankSms')
 const log           = require('../utils/logger')
+const { getFinanceConfigForAccount } = require('../db/finance')
 
 const POLL_INTERVAL = parseInt(process.env.EMAIL_POLL_INTERVAL || '60000')
 
@@ -247,20 +248,10 @@ async function notifyDiscord(account, type, txn) {
   if (!discordClient) return
 
   try {
-    const { rows: cfg } = await pool.query(
-      // finance_config = Discord artifact คง guild-keyed (bot single-guild = env.GUILD_ID)
-      // account ไม่มี guild_id แล้ว (finance scope เป็น org_id) → ใช้ env.GUILD_ID
-      `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
-      [process.env.GUILD_ID]
-    )
-    const threadId  = cfg[0]?.thread_id
-    if (!threadId) return
+    const cfg = await getFinanceConfigForAccount(account.org_id, account.id)
+    if (!cfg?.thread_id) return
 
-    // ถ้า thread กำหนด account_ids ไว้ → เช็คว่าบัญชีนี้อยู่ในนั้นด้วย
-    const accountIds = cfg[0]?.account_ids ? cfg[0].account_ids.split(',').map(Number) : []
-    if (accountIds.length && !accountIds.includes(account.id)) return
-
-    const channel = await discordClient.channels.fetch(threadId)
+    const channel = await discordClient.channels.fetch(cfg.thread_id)
     if (!channel) return
 
     const sign  = type === 'income' ? '+' : '-'

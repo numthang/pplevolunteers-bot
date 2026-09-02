@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T18:23:12.145Z
-> Files: 1099 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T05:15:01.283Z
+> Files: 1101 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -219,7 +219,7 @@
 - `aiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด (kind='slot') — ประกอบเสร็จพร้อมยิง AI (~504 tok)
 - `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2760 tok)
 - `configResolver.js` — db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority (~716 tok)
-- `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary (~641 tok)
+- `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary, getFinanceConfigForAccount (~890 tok)
 - `forum.js` — pool: getForumConfig, getAllForumConfigs, upsertForumConfig + 7 more (~1254 tok)
 - `gogo.js` — db/gogo.js (~304 tok)
 - `guildRoles.js` — Sync role catalog → dc_guild_roles (SPEC §4 step 6a) (~1591 tok)
@@ -558,9 +558,9 @@
 - `caseTimeline.js` — Generate timeline events from Discord messages (~772 tok)
 - `discordAttachments.js` — ลิงก์ของ Discord ที่มีลายเซ็นหมดอายุ (`?ex=`) เท่านั้นที่ต้องรีเฟรช (~716 tok)
 - `email.js` — services/email.js — ส่งอีเมลจากฝั่งบอท (CommonJS) (~496 tok)
-- `emailPoller.js` — emailPoller.js (~2861 tok)
+- `emailPoller.js` — emailPoller.js (~2731 tok)
 - `fetchMessages.js` — services/fetchMessages.js (~1292 tok)
-- `financeOCR.js` — financeOCR.js (~3129 tok)
+- `financeOCR.js` — financeOCR.js (~3174 tok)
 - `forumCache.js` — shared cache สำหรับ forum feature (~286 tok)
 - `forumIndexer.js` — meili: indexThread, indexMessage, hybridSearch (~740 tok)
 - `i18n.js` — services/i18n.js — ระบบแปลภาษาของ bot (~582 tok)
@@ -575,7 +575,7 @@
 - `ragSearch.js` — MAX_CONTENT_PER_POST: getExcludedChannels, buildRagContext (~232 tok)
 - `serverProvisioner.js` — แทนที่ {{org_name}} ใน string (~5478 tok)
 - `sms.js` — SMS gateway ตั้งค่าครบไหม (~490 tok)
-- `smsWebhook.js` — smsWebhook.js (~2124 tok)
+- `smsWebhook.js` — smsWebhook.js (~2043 tok)
 - `watermarkPaths.js` — guild → org_id · null ถ้า guild ยังไม่ได้ map เข้า org (~828 tok)
 - `xApi.js` — https: getGuildXApp, getXConfig, buildXCreds + 8 more (~4595 tok)
 
@@ -650,7 +650,7 @@
 
 - `globals.css` — Styles: 5 rules, 7 vars (~237 tok)
 - `layout.js` — Next.js layout (~912 tok)
-- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7517 tok)
+- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7519 tok)
 
 ## web/app/admin/logs/
 
@@ -795,7 +795,7 @@
 
 ## web/app/api/case/
 
-- `route.js` — POST /api/case — public intake (ไม่ต้อง login) (~1638 tok)
+- `route.js` — POST /api/case — public intake (ไม่ต้อง login) (~1644 tok)
 
 ## web/app/api/case/[ref]/
 
@@ -1660,6 +1660,14 @@
 
 - `page.js` — Next.js page component (~330 tok)
 
+## web/app/cases/
+
+- `layout.js` — Next.js layout (~272 tok)
+
+## web/app/cases/[ref]/
+
+- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2136 tok)
+
 ## web/app/complaint/[ref]/letter/[draftId]/
 
 - `route.js` — GET /complaint/[ref]/letter/[draftId] — PDF หนังสือร้องเรียน **เปิดได้โดยไม่ต้องล็อกอิน** (~402 tok)
@@ -1948,9 +1956,9 @@
 - `CaseAttachmentGallery.jsx` — CaseAttachmentGallery (~900 tok)
 - `CaseComplainantEditor.jsx` — การ์ดผู้ร้องเรียน (PII) — autosave ทุกช่อง (~1516 tok)
 - `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
-- `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~972 tok)
+- `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~1390 tok)
 - `CaseEditButton.jsx` — inputCls (~1966 tok)
-- `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1332 tok)
+- `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1389 tok)
 - `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~5515 tok)
@@ -1958,7 +1966,7 @@
 - `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
-- `CaseRow.jsx` — การ์ดเคสในรายการ /case — ทรงเดียวกับการ์ดโพสต์ที่ /posts (user สั่งให้เหมือนกัน 2026-09-01) (~2232 tok)
+- `CaseRow.jsx` — การ์ดเคสในรายการ /case — ทรงเดียวกับการ์ดโพสต์ที่ /posts (user สั่งให้เหมือนกัน 2026-09-01) (~2295 tok)
 - `CaseSaveBadge.jsx` — ป้ายสถานะการบันทึกของหน้าเคส — บังคับมีทุกการ์ดที่ autosave (กฎ CLAUDE.md §กฎการบันทึก) (~244 tok)
 - `CaseTimeline.jsx` — fmtDate — renders form (~2334 tok)
 - `LocationButton.jsx` — extractProvince (~722 tok)
@@ -2123,7 +2131,7 @@
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3435 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
-- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1641 tok)
+- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1649 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/
@@ -2157,7 +2165,7 @@
 - `callingStatusColors.js` — Exports CALL_STATUS_COLORS (~193 tok)
 - `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~334 tok)
 - `caseAttachmentSync.js` — นำเข้าไฟล์แนบ (รูป/เสียง) จากเธรด Discord ของเคส → case_attachments (~1149 tok)
-- `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~864 tok)
+- `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~1047 tok)
 - `caseGate.js` — Gate helper สำหรับ caseworker action APIs — รวม auth + permission + scope ไว้ที่เดียว (~547 tok)
 - `caseLetterPdf.js` — ประกอบ PDF หนังสือร้องเรียน 1 ใบ — ใช้ร่วมกัน 2 ทาง: (~528 tok)
 - `caseOptions.js` — Case options (categories / close reasons / status labels) — source of truth (~251 tok)

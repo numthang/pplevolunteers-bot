@@ -5348,6 +5348,248 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-09-01T18:22:41.057Z"
+    },
+    {
+      "id": "bug-295",
+      "timestamp": "2026-09-02T04:40:45.203Z",
+      "error_message": "Missing guard clause",
+      "file": "db/finance.js",
+      "root_cause": "No early return/throw for edge case: matched",
+      "fix": "Added guard clause: if (matched)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:40:45.203Z"
+    },
+    {
+      "id": "bug-296",
+      "timestamp": "2026-09-02T04:40:54.274Z",
+      "error_message": "Missing import: ../db/finance",
+      "file": "services/smsWebhook.js",
+      "root_cause": "Module(s) not imported: ../db/finance",
+      "fix": "Added import(s) for ../db/finance",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:40:54.274Z"
+    },
+    {
+      "id": "bug-297",
+      "timestamp": "2026-09-02T04:41:05.484Z",
+      "error_message": "Significant refactor of smsWebhook.js",
+      "file": "services/smsWebhook.js",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 13→5 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:41:05.484Z"
+    },
+    {
+      "id": "bug-298",
+      "timestamp": "2026-09-02T04:41:17.917Z",
+      "error_message": "Missing import: ../db/finance",
+      "file": "services/emailPoller.js",
+      "root_cause": "Module(s) not imported: ../db/finance",
+      "fix": "Added import(s) for ../db/finance",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:41:17.917Z"
+    },
+    {
+      "id": "bug-299",
+      "timestamp": "2026-09-02T04:41:30.157Z",
+      "error_message": "Significant refactor of emailPoller.js",
+      "file": "services/emailPoller.js",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 15→5 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:41:30.157Z"
+    },
+    {
+      "id": "bug-300",
+      "timestamp": "2026-09-02T04:41:55.903Z",
+      "error_message": "Significant refactor of financeOCR.js",
+      "file": "services/financeOCR.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:41:55.903Z"
+    },
+    {
+      "id": "finance-notify-hardcoded-guild-id-1788324220794",
+      "timestamp": "2026-09-02T04:43:40.794Z",
+      "error_message": "Finance income/expense notify ไม่ขึ้น Discord สำหรับบางบัญชี (multi-guild org) — ธุรกรรมบันทึกปกติแต่ไม่แจ้งเตือน",
+      "file": "services/smsWebhook.js, services/emailPoller.js, services/financeOCR.js",
+      "root_cause": "org-scope migration (commit aaf462f, 2026-07-18) เปลี่ยน notifyDiscord() ให้ query finance_config ด้วย process.env.GUILD_ID ตายตัว แทนที่จะใช้ guild ของ account เอง (เดิมใช้ account.guild_id แต่คอลัมน์นั้นถูกลบตอน migrate เป็น org_id) — org ที่มีหลาย guild (เช่น อาสาประชาชน + ประชาชนราชบุรี share org_id=1) บัญชีของ guild อื่นที่ไม่ใช่ env.GUILD_ID เลยถูกกรองทิ้งเงียบๆ ทุกครั้งเพราะ finance_config.account_ids ของ guild หลักไม่มี id นั้น. financeOCR.js เจอบั๊กเดียวกันในเส้นทาง manual slip-photo (handleSlipMessage ใช้ GUILD_ID const แทน message.guild.id)",
+      "fix": "เพิ่ม db/finance.js: getFinanceConfigForAccount(orgId, accountId) — join finance_config กับ dc_guilds ผ่าน org_id แล้วเลือกแถวที่ account_ids ระบุ id นี้จริง (fallback แถวเปิดกว้างถ้ามีแถวเดียว). smsWebhook.js/emailPoller.js notifyDiscord() เปลี่ยนมาเรียกฟังก์ชันนี้แทน hardcode env.GUILD_ID. financeOCR.js handleSlipMessage/processSlipImage/matchAccount เปลี่ยนมาใช้ message.guild.id แทน GUILD_ID const ตลอดสาย (thread check, orgIdOfGuild, matchAccount)",
+      "tags": [
+        "finance",
+        "notify-discord",
+        "multi-guild-org",
+        "hardcoded-guild-id",
+        "silent-failure"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T04:43:40.795Z"
+    },
+    {
+      "id": "bug-302",
+      "timestamp": "2026-09-02T04:57:36.365Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/Nav.jsx",
+      "root_cause": "Had '/case'",
+      "fix": "Changed to '/cases'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-02T04:57:55.920Z"
+    },
+    {
+      "id": "bug-303",
+      "timestamp": "2026-09-02T05:08:44.348Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/cases/[ref]/page.js",
+      "root_cause": "Had '/case'",
+      "fix": "Changed to '/cases'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:08:44.348Z"
+    },
+    {
+      "id": "bug-304",
+      "timestamp": "2026-09-02T05:09:24.792Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseFilters.jsx",
+      "root_cause": "Had `/case?${qs}`",
+      "fix": "Changed to `/cases?${qs}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T05:09:34.465Z"
+    },
+    {
+      "id": "bug-305",
+      "timestamp": "2026-09-02T05:12:44.534Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseDeleteButton.jsx",
+      "root_cause": "Had '/case'",
+      "fix": "Changed to '/cases'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:12:44.534Z"
+    },
+    {
+      "id": "bug-306",
+      "timestamp": "2026-09-02T05:13:10.502Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseRow.jsx",
+      "root_cause": "Had `/case/${c.ref}`",
+      "fix": "Changed to `/cases/${c.ref}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:13:10.502Z"
+    },
+    {
+      "id": "bug-307",
+      "timestamp": "2026-09-02T05:13:25.250Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/db/kanban/statusSql.js",
+      "root_cause": "Had '/case/'",
+      "fix": "Changed to '/cases/'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:13:25.250Z"
+    },
+    {
+      "id": "bug-308",
+      "timestamp": "2026-09-02T05:13:38.721Z",
+      "error_message": "Incorrect value in code",
+      "file": "db/case.js",
+      "root_cause": "Had ')}/case/${ref}`",
+      "fix": "Changed to ')}/cases/${ref}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:13:38.721Z"
+    },
+    {
+      "id": "bug-309",
+      "timestamp": "2026-09-02T05:15:01.330Z",
+      "error_message": "Wrong reference: case should be cases",
+      "file": "web/app/api/case/route.js",
+      "root_cause": "Used \"case\" instead of \"cases\"",
+      "fix": "Changed case → cases",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T05:15:01.330Z"
     }
   ]
 }

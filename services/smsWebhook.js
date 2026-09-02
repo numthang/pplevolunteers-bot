@@ -7,6 +7,7 @@ const http   = require('http')
 const pool   = require('../db/index')
 const kbankSms = require('./parsers/kbankSms')
 const log    = require('../utils/logger')
+const { getFinanceConfigForAccount } = require('../db/finance')
 
 const PORT   = parseInt(process.env.SMS_WEBHOOK_PORT || '3099')
 const SECRET = process.env.SMS_WEBHOOK_SECRET
@@ -233,18 +234,10 @@ async function notifyDiscord(account, txn) {
 	if (!discordClient) return
 
 	try {
-		const { rows: cfg } = await pool.query(
-			// finance_config = Discord artifact คง guild-keyed (bot single-guild = env.GUILD_ID)
-			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
-			[process.env.GUILD_ID]
-		)
-		const threadId = cfg[0]?.thread_id
-		if (!threadId) return
+		const cfg = await getFinanceConfigForAccount(account.org_id, account.id)
+		if (!cfg?.thread_id) return
 
-		const accountIds = cfg[0]?.account_ids ? cfg[0].account_ids.split(',').map(Number) : []
-		if (accountIds.length && !accountIds.includes(account.id)) return
-
-		const channel = await discordClient.channels.fetch(threadId)
+		const channel = await discordClient.channels.fetch(cfg.thread_id)
 		if (!channel) return
 
 		await channel.send({ content: txn.raw })

@@ -51,4 +51,24 @@ async function getAccountsSummary(guildId, accountIds = []) {
   return rows
 }
 
-module.exports = { getFinanceConfig, upsertFinanceConfig, getAccountsSummary }
+// คืน finance_config ที่ตรงกับ account นี้ — org เดียวอาจมีหลาย guild แต่ละอันมี finance_config
+// (thread/channel แจ้งเตือน) ของตัวเอง แยกกัน (multi-guild org, เจอบั๊ก 2026-09-02: ราชบุรี share
+// org กับอาสาประชาชนแต่ notify ไปหา env.GUILD_ID ตัวเดียวเสมอ)
+// เลือกแถวที่ account_ids ระบุ id นี้ไว้ชัดเจนก่อน · ถ้าไม่มีแถวไหนระบุเลย ใช้แถวเดียวที่เปิดกว้าง (ไม่กำกวม)
+async function getFinanceConfigForAccount(orgId, accountId) {
+  const { rows } = await pool.query(
+    `SELECT fc.* FROM finance_config fc
+     JOIN dc_guilds g ON g.guild_id = fc.guild_id
+     WHERE g.org_id = $1`,
+    [orgId]
+  )
+
+  const matched = rows.find(r => r.account_ids
+    && r.account_ids.split(',').map(Number).includes(accountId))
+  if (matched) return matched
+
+  const open = rows.filter(r => !r.account_ids)
+  return open.length === 1 ? open[0] : null
+}
+
+module.exports = { getFinanceConfig, upsertFinanceConfig, getAccountsSummary, getFinanceConfigForAccount }

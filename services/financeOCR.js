@@ -14,7 +14,6 @@ const pool   = require('../db/index')
 const log    = require('../utils/logger')
 const { decodeQR, parseQRPayload, fetchBuffer } = require('./parsers/slipQR')
 
-const GUILD_ID  = process.env.GUILD_ID
 const { orgIdOfGuild, userIdByDiscord } = require('../db/org')
 const SLIP_PARSERS = [require('./parsers/kbankSlip'), require('./parsers/scbSlip')]
 
@@ -57,9 +56,9 @@ async function preprocessForOCR(imageUrl) {
 async function handleSlipMessage(message) {
   if (!message.guild || message.author.bot) return
 
-  // เช็คว่าอยู่ใน finance thread
+  // เช็คว่าอยู่ใน finance thread (ของ guild ที่ message มาจริง — org เดียวอาจมีหลาย guild คนละ thread)
   const { rows: cfgRows } = await pool.query(
-    `SELECT thread_id FROM finance_config WHERE guild_id = $1`, [GUILD_ID]
+    `SELECT thread_id FROM finance_config WHERE guild_id = $1`, [message.guild.id]
   )
   const threadId = cfgRows[0]?.thread_id
   if (!threadId || message.channel.id !== threadId) return
@@ -136,9 +135,9 @@ async function processSlipImage(imageUrl, message) {
 
     const evidenceUrl = await downloadEvidence(imageUrl)
 
-    const accounts = await matchAccount(slip)
     // finance scope เป็น org_id + person-ref เป็น users.id แล้ว (ไม่ใช่ guild_id / discord snowflake)
-    const orgId = await orgIdOfGuild(GUILD_ID)
+    const orgId = await orgIdOfGuild(message.guild.id)
+    const accounts = await matchAccount(slip, orgId)
     const authorUserId = await userIdByDiscord(message.author.id)
     log.info(`[financeOCR] matchAccount from_digits=${slip.from_digits} to_digits=${slip.to_digits} matched=${accounts.map(a=>a.name+'('+a._matchType+')').join(', ')||'none'}`)
     if (!accounts.length) {
@@ -263,9 +262,9 @@ async function enrichSlipFromOCR(imageUrl, qrData) {
   }
 }
 
-async function matchAccount(slip) {
+async function matchAccount(slip, orgId) {
   const { rows: accounts } = await pool.query(
-    `SELECT * FROM finance_accounts WHERE org_id = $1`, [await orgIdOfGuild(GUILD_ID)]
+    `SELECT * FROM finance_accounts WHERE org_id = $1`, [orgId]
   )
 
   const matches = []
