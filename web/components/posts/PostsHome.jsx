@@ -206,6 +206,8 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
   const [sourceCounts, setSourceCounts] = useState({})
+  const [statusCounts, setStatusCounts] = useState({})
+  const [stateCounts, setStateCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
@@ -282,9 +284,13 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const json = await res.json().catch(() => ({}))
       setCategories(res.ok && json.success ? json.data : [])
       setSourceCounts(res.ok && json.success ? (json.sourceCounts || {}) : {})
+      setStatusCounts(res.ok && json.success ? (json.statusCounts || {}) : {})
+      setStateCounts(res.ok && json.success ? (json.stateCounts || {}) : {})
     } catch {
       setCategories([])
       setSourceCounts({})
+      setStatusCounts({})
+      setStateCounts({})
     }
   }, [filter, reloadNonce])
 
@@ -527,20 +533,20 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         </select>
 
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
-          <option value="">ทุกสถานะ</option>
+          <option value="">ทุกสถานะ ({statusCounts.total ?? 0})</option>
           {Object.entries(STATUS_LABELS).map(([v, label]) => (
-            <option key={v} value={v}>{label}</option>
+            <option key={v} value={v}>{label} ({statusCounts[v] ?? 0})</option>
           ))}
         </select>
 
         <select value={postState} onChange={(e) => setPostState(e.target.value)} className={selectCls}>
-          <option value="pending">ยังไม่โพสต์</option>
-          <option value="posted">✅ โพสต์แล้ว</option>
-          <option value="archived">🗄️ ในกรุ</option>
+          <option value="pending">ยังไม่โพสต์ ({stateCounts.pending ?? 0})</option>
+          <option value="posted">✅ โพสต์แล้ว ({stateCounts.posted ?? 0})</option>
+          <option value="archived">🗄️ ในกรุ ({stateCounts.archived ?? 0})</option>
         </select>
 
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
-          <option value="">ทุกหมวด</option>
+          <option value="">ทุกหมวด ({statusCounts.total ?? 0})</option>
           <option value="__none__">ยังไม่จัดหมวด</option>
           {categories.map((c) => (
             <option key={c.category} value={c.category}>{c.category} ({c.post_count})</option>

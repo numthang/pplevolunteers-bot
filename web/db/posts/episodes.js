@@ -146,6 +146,53 @@ export async function countPostsBySource(orgId, userId, { includeAllPersonal = f
   }
 }
 
+/** จำนวนโพสต์แยกตามสถานะ (draft/review/approved) — scope เดียวกับ listCategories (visibility/source
+ *  ที่เลือกอยู่, ไม่รวม archived) ใช้โชว์ตัวเลขบน option ของตัวกรอง "สถานะ" */
+export async function countPostsByStatus(orgId, userId, { includeAllPersonal = false, visibility = null, source = null } = {}) {
+  const params = [orgId, userId]
+  let extra = ''
+  if (visibility) { params.push(visibility); extra = ` AND e.visibility = $${params.length}` }
+  const { rows } = await pool.query(
+    `SELECT e.status, COUNT(*)::int AS count
+       FROM post_episodes e
+      WHERE e.org_id = $1 AND e.archived_at IS NULL
+        AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
+        AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
+      GROUP BY e.status`,
+    params
+  )
+  const counts = { draft: 0, review: 0, approved: 0 }
+  let total = 0
+  for (const r of rows) { counts[r.status] = r.count; total += r.count }
+  return { ...counts, total }
+}
+
+/** จำนวนโพสต์แยกตามระยะ pending/posted/archived — สูตรตรงกับ includePosted/includeArchived +
+ *  isFullyPosted() ที่ PostsHome.jsx ใช้กรองจริง (ดู loadPosts) ห้ามแก้สองที่ไม่พร้อมกัน ไม่งั้นตัวเลขบน
+ *  option ไม่ตรงกับที่กดแล้วเจอจริง */
+export async function countPostsByState(orgId, userId, { includeAllPersonal = false, visibility = null, source = null } = {}) {
+  const params = [orgId, userId]
+  let extra = ''
+  if (visibility) { params.push(visibility); extra = ` AND e.visibility = $${params.length}` }
+  const fullyPosted = `(
+    EXISTS (SELECT 1 FROM post_social_history h WHERE h.episode_id = e.id AND h.status = 'done')
+    AND NOT EXISTS (SELECT 1 FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running'))
+  )`
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE e.archived_at IS NULL AND NOT ${fullyPosted})::int AS pending_count,
+       COUNT(*) FILTER (WHERE ${fullyPosted})::int AS posted_count,
+       COUNT(*) FILTER (WHERE e.archived_at IS NOT NULL)::int AS archived_count
+     FROM post_episodes e
+     WHERE e.org_id = $1
+       AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
+       AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}`,
+    params
+  )
+  const r = rows[0]
+  return { pending: r.pending_count, posted: r.posted_count, archived: r.archived_count }
+}
+
 export async function getPost(id) {
   const { rows } = await pool.query(
     // org_name — ชื่อองค์กรเจ้าของโพสต์ ใช้เป็นตัวเลือกชื่อผู้พูดในการ์ดคำคม

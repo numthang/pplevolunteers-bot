@@ -20,9 +20,13 @@ export async function GET(req) {
     const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility, source })
     // sourceCounts: ไม่ขึ้นกับ filter ปัจจุบัน — ใช้โชว์ตัวเลขบน option ตัวกรองแหล่งทั้ง 5 ปุ่มเสมอ
     const sourceCounts = await postDB.countPostsBySource(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access) })
+    // statusCounts/stateCounts: scope ตาม visibility/source เดียวกับ data (categories) — ใช้โชว์ตัวเลขบน
+    // option ของตัวกรอง "สถานะ" / "ระยะ" (ยังไม่โพสต์/โพสต์แล้ว/ในกรุ)
+    const statusCounts = await postDB.countPostsByStatus(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility, source })
+    const stateCounts = await postDB.countPostsByState(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility, source })
     // canManage: หน้า list ไม่มี per-post `can` ให้เช็ค (ไม่ผูกกับโพสต์ใดโพสต์หนึ่ง) — ส่งสิทธิ์เปลี่ยนชื่อหมวดมาด้วยเลย
     // ให้ UI ซ่อนปุ่มได้ตรงกับ pattern เดิม (can.approve/can.promote) แทนที่จะโชว์ปุ่มให้ทุกคนแล้วรอ 403 (/scrutinize 2026-08-01)
-    return Response.json({ success: true, data, sourceCounts, canManage: canApprove(ctx.access) })
+    return Response.json({ success: true, data, sourceCounts, statusCounts, stateCounts, canManage: canApprove(ctx.access) })
   } catch (error) {
     console.error('[GET /api/posts/categories]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
