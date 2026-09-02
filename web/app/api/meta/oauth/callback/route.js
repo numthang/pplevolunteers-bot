@@ -34,7 +34,33 @@ async function fbGetAll(url, maxPages = 20) {
 
 // scope = org ที่เริ่ม OAuth (guild เป็น metadata · null ได้ถ้า org ไม่มี Discord)
 // owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
+//
+// ⚠️ ห้ามเอา guild_id มาเป็นเงื่อนไข "หาแถวเดิม" — หน้า /org/settings/social (org-level) ไม่ส่ง
+//    guild_id มาแล้ว แต่แถวที่ต่อไว้ก่อนย้ายมา org-native มี guild_id ติดมา → คีย์ไม่ตรงกัน
+//    = reconnect ได้แถวใหม่ซ้อนแถวเดิมแทนที่จะทับ แล้ว listPublishGroups หยิบ "id น้อยสุด"
+//    ซึ่งเป็นแถวเก่าที่ token ตายแล้ว → กด reconnect เท่าไหร่ก็ยังโพสต์ไม่ได้
+//    (เคสจริง 2026-09-02: เปลี่ยนรหัสผ่าน FB → token ตายยกชุด → reconnect แล้วยังไม่หาย)
+//    ล้างแถวเก่าทิ้งก็ไม่ได้ — post_social_history อ้าง id ค้างไว้ (FK)
+//
+// → หาแถวเดิมด้วย (org, เจ้าของ, platform, social_id) แล้วอัดโทเคนใหม่ให้ **ทุกแถวที่ซ้ำกัน**
+//   แถวซ้ำที่มีอยู่แล้วจึงไม่มีพิษ (หยิบแถวไหนก็ได้โทเคนใหม่เหมือนกัน) ไม่ต้องตามผ่าตัด DB
+//   guild_id ของแถวเดิมไม่แตะ · public (owner=null) กับ private (owner=id) ยังแยกกันด้วย owner_user_id
 async function upsertSocialRow(ctx, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
+  const ownerUserId = visibility === 'private' ? ctx.ownerUserId : null
+
+  const updated = await pool.query(
+    `UPDATE dc_social_accounts SET
+       name = $5, access_token = $6, user_token = $7,
+       user_token_expires_at = $8, visibility = $9
+     WHERE COALESCE(org_id, 0) = COALESCE($1::int, 0)
+       AND COALESCE(owner_user_id, 0) = COALESCE($2::int, 0)
+       AND platform = $3 AND social_id = $4`,
+    [ctx.orgId, ownerUserId, platform, socialId,
+     name, accessToken, userToken, userTokenExpiresAt, visibility]
+  )
+  if (updated.rowCount) return
+
+  // ไม่เคยต่อบัญชีนี้มาก่อน → แถวใหม่ (ON CONFLICT เหลือไว้กัน race ตอนกดพร้อมกัน 2 แท็บ)
   await pool.query(
     `INSERT INTO dc_social_accounts (org_id, owner_user_id, guild_id, user_discord_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -42,7 +68,7 @@ async function upsertSocialRow(ctx, name, platform, socialId, accessToken, userT
        name = EXCLUDED.name, access_token = EXCLUDED.access_token,
        user_token = EXCLUDED.user_token, user_token_expires_at = EXCLUDED.user_token_expires_at,
        visibility = EXCLUDED.visibility`,
-    [ctx.orgId, visibility === 'private' ? ctx.ownerUserId : null, ctx.guildId, ctx.userDiscordId,
+    [ctx.orgId, ownerUserId, ctx.guildId, ctx.userDiscordId,
      name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility]
   )
 }

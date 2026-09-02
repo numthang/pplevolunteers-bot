@@ -104,7 +104,7 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate">{acc.name}</p>
-          <p className="text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{acc.social_id}</p>
+          <p className="text-xs text-gray-400 dark:text-disc-muted font-mono truncate">#{acc.id} · {acc.social_id}</p>
           {/* threads เก็บ token ที่ access_token (ไม่ใช่ user_token) แต่ใช้ user_token_expires_at
               เป็นที่จดวันหมดอายุร่วมกัน — เดิมช่องนี้โชว์แค่ ig เลยไม่มีใครเห็นว่า Threads ตาย (2026-08-08) */}
           {['ig', 'threads'].includes(acc.platform) && <TokenExpiry expiresAt={acc.user_token_expires_at} t={t} />}
