@@ -99,6 +99,36 @@ export async function DELETE(req, { params }) {
     }
   }
 
-  await pool.query(`DELETE FROM dc_social_accounts WHERE id = $1`, [id])
+  // ประวัติโพสต์อ้าง id นี้อยู่ (post_social_history_social_account_id_fkey) → DELETE ตรงๆ พัง 500
+  // เคสจริง 2026-09-02: reconnect หลังเปลี่ยนรหัส FB ได้แถวซ้ำ แล้วกดถังขยะลบตัวเก่าไม่ออก
+  //
+  // มีแถวฝาแฝด (บัญชีเดียวกันจริง — social_id/platform/เจ้าของ ตรงกัน) → ย้ายประวัติไปผูกตัวนั้น
+  // ไม่มีฝาแฝด → ปล่อย social_account_id เป็น NULL · ประวัติยังอยู่ครบ (platform/กลุ่ม/แคปชั่น/ผล)
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows: twin } = await client.query(
+      `SELECT b.id
+         FROM dc_social_accounts b, dc_social_accounts me
+        WHERE me.id = $1 AND b.id <> me.id
+          AND b.platform = me.platform AND b.social_id = me.social_id
+          AND COALESCE(b.org_id, 0)        = COALESCE(me.org_id, 0)
+          AND COALESCE(b.owner_user_id, 0) = COALESCE(me.owner_user_id, 0)
+        ORDER BY b.id DESC
+        LIMIT 1`,
+      [id]
+    )
+    await client.query(
+      `UPDATE post_social_history SET social_account_id = $2 WHERE social_account_id = $1`,
+      [id, twin[0]?.id ?? null]
+    )
+    await client.query(`DELETE FROM dc_social_accounts WHERE id = $1`, [id])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK')
+    return Response.json({ error: `ลบไม่สำเร็จ: ${err.message}` }, { status: 500 })
+  } finally {
+    client.release()
+  }
   return Response.json({ ok: true })
 }
