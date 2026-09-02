@@ -2,6 +2,40 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🔗 ประวัติโพสต์ควรผูกกับ `social_id` ไม่ใช่เลขแถว (user เสนอ 2026-09-02 · ยังไม่ทำ)
+
+**ที่มา:** เปลี่ยนรหัสผ่าน FB → token ตายยกชุด → reconnect ได้แถวซ้ำใน `dc_social_accounts`
+พอจะลบแถวเก่าก็ลบไม่ได้ เพราะ `post_social_history.social_account_id` อ้างอยู่ (FK ชน พัง 500)
+แก้เฉพาะหน้าไปแล้ว 2 ก้อน (`1549dad` reconnect ทับแถวเดิม · `034adbf` ปุ่มลบย้ายประวัติก่อนลบ)
+
+**ปัญหาเชิงโครงสร้างที่ยังอยู่:** ประวัติผูกกับ **เลขแถวของเราเอง** ซึ่งงอกใหม่ได้
+แต่ตัวตนจริงของเพจคือ `social_id` ฝั่ง Meta ที่ไม่มีวันเปลี่ยน — ผูกผิดตัวตั้งแต่แรก
+(`post_social_history` เป็นตารางบันทึกเหตุการณ์อยู่แล้ว — ก๊อป `platform`/`group_name`/`guild_id`/
+`caption`/`media` เก็บในตัวเองหมด · `social_id` ควรอยู่ในชุดนั้นตามแพทเทิร์นเดิม)
+
+**สิ่งที่ต้องทำ (2 อย่างคู่กัน):**
+1. `ALTER TABLE post_social_history ADD COLUMN social_id varchar(50)` + เขียนค่าตอนสร้างงาน
+   (`createJobs` — `web/db/posts/jobs.js`) · backfill ของเก่าจาก `dc_social_accounts` ได้ตรงๆ
+2. เปลี่ยน FK เป็น `ON DELETE SET NULL` → ลบบัญชีแล้ว DB เคลียร์เอง
+   **แล้วถอด logic ย้ายประวัติใน `web/app/api/social/accounts/[id]/route.js` (DELETE) ออกได้เลย**
+
+⚠️ `social_id` เดี่ยวๆ ไม่ unique — FB โปรไฟล์เดียวกันเป็นคนละแถวคนละเจ้าของได้
+(เจอจริง: `104111329139400` อยู่ทั้งกลุ่ม "UNNOP SRI" และ "Somseed") → อ่านคู่กับ `org_id` + `platform` เสมอ
+
+## 🔑 Meta token: ย้ายไป System User (คุยกัน 2026-09-02 · ยังไม่ทำ)
+
+token ทุกเพจตอนนี้ derive จาก **login ส่วนตัวของแอดมิน** → แอดมินเปลี่ยนรหัสผ่านเมื่อไหร่
+Meta kill session = **ตายพร้อมกันทุกเพจทุก org** ต้องไล่ reconnect ใหม่หมด (เกิดจริง 2026-09-02)
+
+**ทางแก้ถาวร:** สร้าง System User ใน Meta Business Suite → ให้สิทธิ์แอดมินเพจ → Generate Token
+= token ไม่ผูกกับ session ของคน ไม่หมดอายุ · ต้องทำใน Business Settings (ไม่ใช่แก้โค้ด)
+ทางแปะ token เข้าระบบโดยไม่ผ่าน OAuth **มีอยู่แล้ว**: `POST web/app/api/social/accounts/route.js`
+(รับ `platform`/`social_id`/`access_token`/`user_token` ตรงๆ) — ยังไม่มี UI ให้กด ต้องเพิ่ม
+
+⚠️ POST ตัวนี้มีบั๊กเดียวกับที่เพิ่งแก้ใน OAuth callback — `ON CONFLICT` ยังมี `COALESCE(guild_id,'')`
+อยู่ในคีย์ (บรรทัด ~90) → แปะ token ทับบัญชีเดิมที่มี `guild_id` ติดมาจะได้แถวซ้ำอีก
+ต้องแก้แบบเดียวกับ `1549dad` (หาแถวเดิมด้วย org+เจ้าของ+platform+social_id) ก่อนใช้ทางนี้จริง
+
 ## 📱 Mobile layout — ผลสแกนทุกโซนที่ 375px (2026-08-31 · แก้แล้วเฉพาะ /kanban)
 
 user ทัก: "layout พังๆ เวลาดูบนมือถือที่มันแหกจากเกินหน้าจอ ผมต้องมาเจอเองแล้วต้องบอกให้คุณไล่แก้หมดเลย เหนื่อยอ่ะ"
