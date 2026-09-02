@@ -71,7 +71,7 @@ async function handleCaseImportModal(interaction) {
   // กันซ้ำ: กระทู้นี้ถูกนำเข้าแล้วหรือยัง
   const existing = await caseDb.getCaseByThreadId(threadId);
   if (existing) {
-    return interaction.editReply({ content: `⚠️ กระทู้นี้ถูกนำเข้าเป็นเคส ${await refLink(interaction.guildId, existing.ref)} แล้ว` });
+    return interaction.editReply({ content: `⚠️ กระทู้นี้ถูกนำเข้าเป็นเคส ${await refLink(interaction.guildId, existing.ref)} แล้ว`, flags: MessageFlags.SuppressEmbeds });
   }
 
   // complainant = เจ้าของกระทู้ (ถ้าดึงได้)
@@ -110,10 +110,13 @@ async function handleCaseImportModal(interaction) {
   // โพสต์ยืนยันในเธรด
   try {
     const refLabel = await refLink(interaction.guildId, row.ref);
-    await thread.send(`📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}${category ? ` · ${category}` : ''}`);
+    await thread.send({
+      content: `📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}${category ? ` · ${category}` : ''}`,
+      flags: MessageFlags.SuppressEmbeds,
+    });
   } catch { /* best-effort */ }
 
-  return interaction.editReply({ content: `✅ สร้างเคส ${await refLink(interaction.guildId, row.ref)} จากกระทู้นี้แล้ว` });
+  return interaction.editReply({ content: `✅ สร้างเคส ${await refLink(interaction.guildId, row.ref)} จากกระทู้นี้แล้ว`, flags: MessageFlags.SuppressEmbeds });
 }
 
 /**
@@ -168,7 +171,10 @@ async function handleThreadCreate(thread) {
     } catch (e) { console.error('[caseImport] threadCreate timeline', e.message); }
 
     const refLabel = await refLink(thread.guildId, row.ref);
-    await thread.send(`📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}`).catch(() => {});
+    await thread.send({
+      content: `📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}`,
+      flags: MessageFlags.SuppressEmbeds,
+    }).catch(() => {});
   } catch (err) {
     console.error('[caseImport] handleThreadCreate:', err.message);
   }

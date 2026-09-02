@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Calendar, CheckSquare, ChevronDown, Eye, GripVertical, Hash, Link2,
+  Calendar, CheckSquare, ChevronDown, ExternalLink, Eye, GripVertical, Hash, Link2,
   List, ListChecks, Loader2, Plus, Tags, Trash2, Type,
 } from 'lucide-react'
 import { FIELD_TYPES } from '@/lib/kanbanFieldValue.js'
@@ -97,7 +97,7 @@ const TYPE_ICON = {
   select: List, multi_select: Tags, checklist: ListChecks,
 }
 
-function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
+function ScalarInput({ field, value, readOnly, onCommit, emptyLabel, t }) {
   const [local, setLocal] = useState(value ?? '')
   const cancelled = useRef(false)   // ESC สั่งยกเลิก → onBlur ที่ตามมาต้องไม่บันทึก (เหตุผลเดียวกับ FieldNameInput)
   useEffect(() => { setLocal(value ?? '') }, [value])
@@ -129,16 +129,48 @@ function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
     if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setLocal(value ?? ''); e.currentTarget.blur() }
   }
 
+  if (field.type === 'url') {
+    const trimmed = local.trim()
+    // ยอมรับ "example.com" ไม่ต้องพิมพ์ https:// เอง — แต่ href ต้องมี scheme ไม่งั้นเบราว์เซอร์ตีความเป็น path สัมพัทธ์ของเว็บเรา
+    const href = trimmed && !/^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? `https://${trimmed}` : trimmed
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={local}
+          disabled={readOnly}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={onKeyDown}
+          placeholder="https://…"
+          className={`${inputClass} flex-1`}
+        />
+        {trimmed && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t('modal.openLink')}
+            aria-label={t('modal.openLink')}
+            className="p-2 rounded-lg text-warm-400 dark:text-disc-muted hover:text-teal hover:bg-warm-50 dark:hover:bg-disc-hover shrink-0 transition"
+          >
+            <ExternalLink size={16} />
+          </a>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <input
-        type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text'}
+        type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
         value={local}
         disabled={readOnly}
         onChange={(e) => setLocal(e.target.value)}
         onBlur={commit}
         onKeyDown={onKeyDown}
-        placeholder={field.type === 'url' ? 'https://…' : emptyLabel}
+        placeholder={emptyLabel}
         className={inputClass}
       />
     </div>
@@ -566,7 +598,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
             )
           }
           return row(
-            <ScalarInput field={f} value={f.value} readOnly={readOnly} emptyLabel={t('modal.fieldEmpty')} onCommit={(v) => commit(f.field_id, v)} />
+            <ScalarInput field={f} value={f.value} readOnly={readOnly} emptyLabel={t('modal.fieldEmpty')} onCommit={(v) => commit(f.field_id, v)} t={t} />
           )
         })}
       </div>

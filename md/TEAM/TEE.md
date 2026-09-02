@@ -2,8 +2,7 @@ My Tasks and bug issue
 - เอา งานกองทุนเข้า kanban ของปีนี้
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
-- ทำไมมีแค่ปี 69 วันที่แสดงคือวันที่อะไร
-http://localhost:3000/posts?filter=backfill ตอนนีี้แสดงได้สูงสุด 200 posts ใช่ไหม อยากดูโพสต์เก่าๆ ด้วยทำไงดี แล้วก็ช่วยทำ mobileaudit หน้านี้ด้วยนะ
+- ระบบแบ่งกองเงินช่วงเปิดบริจาค ทำให้มันเข้ากองเงินใหม่ๆ อัตโนมัติตามช่วงเวลา
 
 # PLATFOR{m}.ORG
 - platfor.org
@@ -18,6 +17,11 @@ http://localhost:3000/posts?filter=backfill ตอนนีี้แสดงไ
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
 - ลิงก์ google calendar แสดง deadline 
 - แต่ละ card มีกล่องให้แสดง comment ด้วยอ่ะ เห็นมีใน notion เป็น fix field
+
+# Session Design
+- session design คือ ตารางบอกว่าใคร ทำอะไร ใช้เวลาเท่าไร
+- pain point ตอนนี้ทำบน excel กระจัดกระจาย หลาย format มาก แล้วก็หาไม่เจออยากทำระบบรวมไว้ตรงนี้อีกส่วน หน้าตาเป็นแบบนี้ จะเหลือ field ไหนบ้างสำคัญมาคุยกันอีกที
+
 
 # Posts
 

@@ -9,6 +9,7 @@ import { BASE_URL } from './baseUrl.js'
 
 const API = 'https://discord.com/api/v10'
 const TOKEN = process.env.DISCORD_BOT_TOKEN
+const SUPPRESS_EMBEDS = 1 << 2 // ข้อความมี caseRefLink() เสมอ → กัน Discord unfurl embed ของหน้าเว็บ (รกไม่มีประโยชน์)
 
 function headers() {
   return { Authorization: `Bot ${TOKEN}`, 'Content-Type': 'application/json' }
@@ -27,7 +28,7 @@ export async function createForumThread(forumChannelId, { name, content }) {
       headers: headers(),
       body: JSON.stringify({
         name: name.slice(0, 100),
-        message: { content: content.slice(0, 2000) },
+        message: { content: content.slice(0, 2000), flags: SUPPRESS_EMBEDS },
       }),
     })
     if (!res.ok) {
@@ -49,7 +50,7 @@ export async function postToThread(threadId, content) {
     const res = await fetch(`${API}/channels/${threadId}/messages`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ content: content.slice(0, 2000) }),
+      body: JSON.stringify({ content: content.slice(0, 2000), flags: SUPPRESS_EMBEDS }),
     })
     if (!res.ok) {
       console.error('[caseDiscord.postToThread]', res.status, await res.text().catch(() => ''))

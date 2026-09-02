@@ -29,6 +29,13 @@ export const ROUTES = [
   { path: '/calling' },
   { path: '/finance' },
   { path: '/posts' },
+  {
+    path: '/posts/42',
+    steps: [
+      { wait: 1200 },
+      { click: 'img[alt^="สื่อ"]', label: 'เปิดกล่องแก้ไขรูป' },
+    ],
+  },
   { path: '/docs' },
   { path: '/team' },
   { path: '/org' },

@@ -10,9 +10,10 @@ import { useTranslations } from 'next-intl'
  * ⭐ ทุกตัว**อิสระต่อกัน ผสมกันได้** และเก็บใน URL query string ทั้งหมด
  *    → ลิงก์บนการ์ดหน้าแรก (`/case?status=active&assigned=none`) ยังใช้ได้เหมือนเดิม
  *    → กด back จากหน้าเคสแล้วได้ตัวกรองเดิมคืน
- * ⛔ ห้ามเอา "จำนวน" ของแต่ละตัวเลือกมาแปะเป็น (n) ในตัวที่ผสมกับตัวอื่นได้ — เลขจะโกหกทันที
- *    ที่ตั้งอีกตัว (เช่น "ยังไม่มีเจ้าภาพ (12)" นับเฉพาะเคสที่ยังไม่ปิด) · เลขจริงอยู่บรรทัด "พบ N เรื่อง"
- *    ที่นับจากผลลัพธ์ที่เห็นตรงหน้าเสมอ · จังหวัด/ประเภทแปะเลขได้ เพราะนับฝั่งเดียวกับที่กำลังดู
+ * ⭐ ทุก dropdown มีเลข (n) ต่อท้ายตัวเลือก (user เคาะ 2026-09-02) — คำนวณฝั่ง server ใน
+ *    `listCaseFacets()` (db/cases.js) แบบ faceted-search: นับโดยใส่ตัวกรอง**อื่นทั้งหมด**ที่เลือกอยู่
+ *    ยกเว้นตัวของ dropdown นั้นเอง จึงไม่โกหกแม้ผสมหลายตัวกรองพร้อมกัน · ตัวเลือก "ทุก.../ทุกผู้รับผิดชอบ"
+ *    (wildcard ไม่กรอง) ไม่ใส่เลข เพราะไม่ใช่ bucket ที่นับได้ — เลขรวมจริงอยู่บรรทัด "พบ N เรื่อง"
  */
 
 // มือถือ: 2 ตัวต่อแถวและ**เต็มความกว้างเสมอ** (mobileAudit อาการ E) · จอกว้าง: กว้างตามเนื้อหาเหมือน /posts
@@ -22,7 +23,7 @@ const selectCls =
 export default function CaseFilters({
   assigned = '', status = '', archived = false, province = '', category = '',
   statuses = [],        // [{ value, label }] — มาจาก server (lib/caseOptions.js อ่านไฟล์ด้วย fs)
-  facets = { provinces: [], categories: [], archived: 0 },
+  facets = { provinces: [], categories: [], live: 0, archived: 0, statusCounts: {}, assignedCounts: { none: 0, me: 0, any: 0 } },
   noCategoryValue = '__none__',
   resultCount = 0,
 }) {
@@ -44,23 +45,23 @@ export default function CaseFilters({
     <div className="flex flex-wrap items-center gap-2">
       <select value={assigned} onChange={e => set('assigned', e.target.value)} className={selectCls} aria-label={t('manage.filterAssigneeLabel')}>
         <option value="">{t('manage.filterAnyAssignee')}</option>
-        <option value="none">{t('manage.filterUnassigned')}</option>
-        <option value="me">{t('manage.filterMine')}</option>
-        <option value="any">{t('manage.filterAssigned')}</option>
+        <option value="none">{t('manage.filterUnassigned')} ({facets.assignedCounts.none})</option>
+        <option value="me">{t('manage.filterMine')} ({facets.assignedCounts.me})</option>
+        <option value="any">{t('manage.filterAssigned')} ({facets.assignedCounts.any})</option>
       </select>
 
       {/* 2 ตัวแรกเป็นชุดรวม (ยังไม่ปิด / เสร็จสิ้น) ที่ลิงก์หน้าแรกใช้ · ที่เหลือคือสถานะรายตัว */}
       <select value={status} onChange={e => set('status', e.target.value)} className={selectCls} aria-label={t('manage.filterStatusLabel')}>
         <option value="">{t('manage.filterAllStatus')}</option>
-        <option value="active">{t('manage.filterActive')}</option>
-        <option value="done">{t('manage.filterDone')}</option>
+        <option value="active">{t('manage.filterActive')} ({facets.statusCounts.active || 0})</option>
+        <option value="done">{t('manage.filterDone')} ({facets.statusCounts.done || 0})</option>
         {statuses.map(s => (
-          <option key={s.value} value={s.value}>{s.label}</option>
+          <option key={s.value} value={s.value}>{s.label} ({facets.statusCounts[s.value] || 0})</option>
         ))}
       </select>
 
       <select value={archived ? '1' : ''} onChange={e => set('archived', e.target.value)} className={selectCls} aria-label={t('manage.filterStoreLabel')}>
-        <option value="">{t('manage.filterLive')}</option>
+        <option value="">{t('manage.filterLive')} ({facets.live})</option>
         <option value="1">🗄️ {t('manage.filterArchived')} ({facets.archived})</option>
       </select>
 

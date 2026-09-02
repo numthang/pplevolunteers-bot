@@ -5590,6 +5590,267 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-02T05:15:01.330Z"
+    },
+    {
+      "id": "bug-310",
+      "timestamp": "2026-09-02T05:52:57.246Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/api/case/[ref]/route.js",
+      "root_cause": "Had `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${caseRow.ref}\\",
+      "fix": "Changed to `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${caseRow.ref}\\",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T05:53:08.364Z"
+    },
+    {
+      "id": "bug-311",
+      "timestamp": "2026-09-02T06:07:50.489Z",
+      "error_message": "Missing await",
+      "file": "web/db/posts/episodes.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T06:07:50.489Z"
+    },
+    {
+      "id": "bug-312",
+      "timestamp": "2026-09-02T06:08:44.191Z",
+      "error_message": "Null/undefined access in PostsHome.jsx",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T06:08:44.191Z"
+    },
+    {
+      "id": "bug-313",
+      "timestamp": "2026-09-02T06:09:27.888Z",
+      "error_message": "Significant refactor of cases.js",
+      "file": "web/db/cases.js",
+      "root_cause": "18 lines replaced/restructured",
+      "fix": "Rewrote 28→107 lines (18 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T06:09:27.888Z"
+    },
+    {
+      "id": "bug-314",
+      "timestamp": "2026-09-02T06:09:39.067Z",
+      "error_message": "Null/undefined access in page.js",
+      "file": "web/app/cases/page.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T06:09:39.067Z"
+    },
+    {
+      "id": "bug-315",
+      "timestamp": "2026-09-02T06:10:13.369Z",
+      "error_message": "CSS fix: provinces",
+      "file": "web/components/case/CaseFilters.jsx",
+      "root_cause": "provinces: [], categories: [], archived: 0 → [], categories: [], live: 0, archived: 0, statusCounts: {",
+      "fix": "Changed provinces: [], categories: [], archived: 0 → [], categories: [], live: 0, archived: 0, statusCounts: {",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T06:10:13.369Z"
+    },
+    {
+      "id": "bug-316",
+      "timestamp": "2026-09-02T07:18:20.393Z",
+      "error_message": "CSS fix: https",
+      "file": "web/components/kanban/CardFieldsBox.jsx",
+      "root_cause": "https: //…' : emptyLabel → //…\"",
+      "fix": "Changed https: //…' : emptyLabel → //…\"",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T07:18:20.393Z"
+    },
+    {
+      "id": "bug-317",
+      "timestamp": "2026-09-02T07:18:53.647Z",
+      "error_message": "Null/undefined access in CardModal.jsx",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T07:18:53.647Z"
+    },
+    {
+      "id": "bug-318",
+      "timestamp": "2026-09-02T08:02:21.401Z",
+      "error_message": "Significant refactor of _tmp_imgEditModalCheck.mjs",
+      "file": "scripts/dev/_tmp_imgEditModalCheck.mjs",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→29 lines (4 removed) | Also: console.log('overflow:', JSON.stringify(await cdp.; writeFileSync(join(OUT, `imgedit-modal-${WIDTH}.pn",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T08:02:21.588Z"
+    },
+    {
+      "id": "bug-319",
+      "timestamp": "2026-09-02T08:04:42.504Z",
+      "error_message": "Missing guard clause",
+      "file": "scripts/dev/_tmp_imgEditModalCheck.mjs",
+      "root_cause": "No early return/throw for edge case: !el",
+      "fix": "Added guard clause: if (!el)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T08:04:42.504Z"
+    },
+    {
+      "id": "bug-320",
+      "timestamp": "2026-09-02T10:36:44.257Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/org/OrgSocialAccounts.jsx",
+      "root_cause": "dark: text-disc-muted font-mono truncate\">{acc.social_id → text-disc-muted font-mono truncate\">#{acc.id",
+      "fix": "Changed dark: text-disc-muted font-mono truncate\">{acc.social_id → text-disc-muted font-mono truncate\">#{acc.id",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T10:36:44.257Z"
+    },
+    {
+      "id": "bug-321",
+      "timestamp": "2026-09-02T12:36:09.800Z",
+      "error_message": "Missing guard clause",
+      "file": "web/app/api/meta/oauth/callback/route.js",
+      "root_cause": "No early return/throw for edge case: updated.rowCount",
+      "fix": "Added guard clause: if (updated.rowCount)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T12:36:09.800Z"
+    },
+    {
+      "id": "bug-322",
+      "timestamp": "2026-09-02T12:38:03.111543Z",
+      "error_message": "Error validating access token: The session has been invalidated because the user changed their password — reconnect แล้วยังโพสต์ไม่ได้",
+      "file": "web/app/api/meta/oauth/callback/route.js",
+      "root_cause": "เปลี่ยนรหัสผ่าน FB = Meta kill session ของแอดมิน → page/user token ที่ derive จาก session นั้นตายยกชุดทุกเพจทุก org. พอกด reconnect ที่ /org/settings/social (org-level ไม่ส่ง guild_id) แถวใหม่ได้ guild_id=null แต่แถวเดิมที่ต่อไว้ก่อนย้ายมา org-native มี guild_id ติดมา → คีย์ ON CONFLICT ที่มี COALESCE(guild_id,'') ไม่ตรงกัน = INSERT แถวใหม่ซ้อนแทนที่จะ UPDATE ทับ. จากนั้น listPublishGroups (web/lib/publishTargets.js:53) หยิบ 'id น้อยสุด' ต่อ platform ซึ่งเป็นแถวเก่าที่ token ตายแล้ว → reconnect กี่ครั้งก็ยังโพสต์ไม่ได้. ลบแถวเก่าทิ้งก็ไม่ได้ เพราะ post_social_history_social_account_id_fkey อ้าง id ค้างไว้",
+      "fix": "upsertSocialRow: หาแถวเดิมด้วย (org_id, owner_user_id, platform, social_id) โดย 'ไม่' เอา guild_id มาเป็นเงื่อนไข แล้ว UPDATE ทุกแถวที่ match (แถวซ้ำที่มีอยู่แล้วได้โทเคนใหม่ทั้งคู่ = ไม่มีพิษ ไม่ต้องผ่าตัด DB) · rowCount=0 ค่อย INSERT · public/private ยังแยกด้วย owner_user_id · guild_id แถวเดิมไม่แตะ",
+      "tags": [
+        "meta",
+        "oauth",
+        "token",
+        "social",
+        "duplicate-row",
+        "org-migration",
+        "guild_id",
+        "fk-constraint"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T12:38:03.111543Z"
+    },
+    {
+      "id": "bug-323",
+      "timestamp": "2026-09-02T12:42:22.232Z",
+      "error_message": "Wrong return value",
+      "file": "handlers/caseImportHandler.js",
+      "root_cause": "Was returning: interaction.editReply({ content: `⚠️ กระทู้นี้ถูกน",
+      "fix": "Now returns: interaction.editReply({ content: `⚠️ กระทู้นี้ถูกน",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T12:42:34.245Z"
+    },
+    {
+      "id": "bug-324",
+      "timestamp": "2026-09-02T12:45:32.677Z",
+      "error_message": "Significant refactor of postImportHandler.js",
+      "file": "handlers/postImportHandler.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→12 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T12:45:32.677Z"
+    },
+    {
+      "id": "bug-325",
+      "timestamp": "2026-09-02T12:45:57.092Z",
+      "error_message": "Missing error handling in route.js",
+      "file": "web/app/api/social/accounts/[id]/route.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T12:45:57.092Z"
     }
   ]
 }

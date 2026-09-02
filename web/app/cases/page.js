@@ -42,7 +42,15 @@ export default async function CaseManageList({ searchParams }) {
       archived,
       limit: 300,
     }),
-    listCaseFacets(orgId, scope, archived),
+    listCaseFacets(orgId, {
+      provinces: scope,
+      province: selectedProvince || null,
+      category: selectedCategory || null,
+      status: selectedStatus || null,
+      assigned: assigned || null,
+      mineUserId: session?.user?.userId || null,
+      archived,
+    }),
   ])
 
   return (

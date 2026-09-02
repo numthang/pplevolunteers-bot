@@ -410,32 +410,111 @@ export async function countCaseStats(orgId, userId, provinces = null) {
 }
 
 /**
- * ค่าที่เลือกได้จริงใน dropdown ตัวกรองที่ /case + จำนวนต่อค่า (จังหวัด / ประเภท / ในกรุ)
+ * ค่าที่เลือกได้จริงใน dropdown ตัวกรองที่ /case + จำนวนต่อค่า
+ * (จังหวัด / ประเภท / ในกรุ / สถานะ / เจ้าภาพ — user เคาะ 2026-09-02: ทุก dropdown ต้องมีเลข)
  *
  * ⛔ ต้องนับจาก **ทั้ง org ในขอบเขตสิทธิ์** ไม่ใช่จากผลลัพธ์ที่กรองแล้ว — ไม่งั้นเลือกจังหวัดหนึ่ง
  *    แล้วจังหวัดอื่นหายจาก dropdown (ของเดิมทำแบบนั้น: derive จาก rows ที่ query มา)
- * ⚠️ เลขจังหวัด/ประเภทต้องนับฝั่งเดียวกับที่หน้ากำลังดูอยู่ (`archived`) — ไม่งั้นเลือก "ในกรุ"
- *    แล้ว dropdown ยังโชว์เลขของงานที่ยังทำอยู่ = กดแล้วเจอไม่ตรงเลข
+ * ⭐ แต่ละ dropdown นับโดย**ใส่ตัวกรองของ dropdown อื่นทั้งหมดที่เลือกอยู่ ยกเว้นตัวของมันเอง**
+ *    (faceted-search มาตรฐาน) — ถ้านับแบบเดิม (เฉพาะ scope+archived) ตัวเลขจะไม่ตรงกับที่เห็นจริง
+ *    ทันทีที่ผสมตัวกรองมากกว่า 1 ตัว เช่น เลือก status=active แล้วเลข dropdown เจ้าภาพต้องไม่รวมเคสที่ปิดแล้ว
  */
-export async function listCaseFacets(orgId, provinces = null, archived = false) {
-  const params = [orgId]
-  const side = archived ? 'IS NOT NULL' : 'IS NULL'
-  let where = `org_id = $1`
+export async function listCaseFacets(orgId, {
+  provinces = null, province = null, category = null,
+  status = null, assigned = null, mineUserId = null, archived = false,
+} = {}) {
+  const base0 = [orgId]
+  let base = `org_id = $1`
   if (Array.isArray(provinces)) {
-    if (provinces.length === 0) return { provinces: [], categories: [], archived: 0 }
-    params.push(provinces)
-    where += ` AND province = ANY($${params.length})`
+    if (provinces.length === 0) {
+      return { provinces: [], categories: [], live: 0, archived: 0, statusCounts: {}, assignedCounts: { none: 0, me: 0, any: 0 } }
+    }
+    base0.push(provinces)
+    base += ` AND province = ANY($${base0.length})`
   }
-  const [prov, cat, arch] = await Promise.all([
-    pool.query(`SELECT province, COUNT(*)::int AS n FROM cases
-                 WHERE ${where} AND archived_at ${side} AND province IS NOT NULL
-                 GROUP BY province ORDER BY province`, params),
+
+  // ใส่ตัวกรองอื่นๆ ทั้งหมดยกเว้น dimension ที่กำลังนับ (exclude) — mutate params ต่อจาก base0
+  function withOthers(exclude, params) {
+    let where = base
+    if (!exclude.has('province') && province) {
+      params.push(province)
+      where += ` AND province = $${params.length}`
+    }
+    if (!exclude.has('category') && category) {
+      if (category === NO_CATEGORY) where += ` AND (category IS NULL OR category = '')`
+      else { params.push(category); where += ` AND category = $${params.length}` }
+    }
+    if (!exclude.has('status') && status) {
+      if (status === ACTIVE) where += ` AND status = ANY(${setSql(ACTIVE_STATUSES)})`
+      else if (status === DONE) where += ` AND status = ANY(${setSql(DONE_STATUSES)})`
+      else { params.push(status); where += ` AND status = $${params.length}` }
+    }
+    if (!exclude.has('assigned')) {
+      if (assigned === 'me' && mineUserId) {
+        params.push(mineUserId)
+        where += ` AND EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $${params.length})`
+      } else if (assigned === 'any') {
+        where += ` AND EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
+      } else if (assigned === 'none') {
+        where += ` AND NOT EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
+      }
+    }
+    if (!exclude.has('archived')) {
+      where += ` AND archived_at ${archived ? 'IS NOT NULL' : 'IS NULL'}`
+    }
+    return where
+  }
+
+  const provParams = [...base0]
+  const provWhere = withOthers(new Set(['province']), provParams)
+  const catParams = [...base0]
+  const catWhere = withOthers(new Set(['category']), catParams)
+  const arcParams = [...base0]
+  const arcWhere = withOthers(new Set(['archived']), arcParams)
+  const statParams = [...base0]
+  const statWhere = withOthers(new Set(['status']), statParams)
+  const assParams = [...base0]
+  const assWhere = withOthers(new Set(['assigned']), assParams)
+  assParams.push(mineUserId || null)
+  const mineParamIdx = assParams.length
+
+  const [prov, cat, arc, statAgg, statByValue, ass] = await Promise.all([
+    pool.query(`SELECT province, COUNT(*)::int AS n FROM cases c
+                 WHERE ${provWhere} AND province IS NOT NULL
+                 GROUP BY province ORDER BY province`, provParams),
     pool.query(`SELECT COALESCE(NULLIF(category, ''), '${NO_CATEGORY}') AS category, COUNT(*)::int AS n
-                  FROM cases WHERE ${where} AND archived_at ${side}
-                 GROUP BY 1 ORDER BY 1`, params),
-    pool.query(`SELECT COUNT(*)::int AS n FROM cases WHERE ${where} AND archived_at IS NOT NULL`, params),
+                  FROM cases c WHERE ${catWhere}
+                 GROUP BY 1 ORDER BY 1`, catParams),
+    pool.query(`SELECT
+                  COUNT(*) FILTER (WHERE archived_at IS NULL)::int     AS live,
+                  COUNT(*) FILTER (WHERE archived_at IS NOT NULL)::int AS archived
+                 FROM cases c WHERE ${arcWhere}`, arcParams),
+    pool.query(`SELECT
+                  COUNT(*) FILTER (WHERE status = ANY(${setSql(ACTIVE_STATUSES)}))::int AS active,
+                  COUNT(*) FILTER (WHERE status = ANY(${setSql(DONE_STATUSES)}))::int   AS done
+                 FROM cases c WHERE ${statWhere}`, statParams),
+    pool.query(`SELECT status, COUNT(*)::int AS n FROM cases c
+                 WHERE ${statWhere} GROUP BY status`, statParams),
+    pool.query(`SELECT
+                  COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id))::int AS none,
+                  COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id))::int     AS any,
+                  COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id
+                                                    AND a.user_id = $${mineParamIdx}))::int                       AS mine
+                 FROM cases c WHERE ${assWhere}`, assParams),
   ])
-  return { provinces: prov.rows, categories: cat.rows, archived: arch.rows[0]?.n || 0 }
+
+  return {
+    provinces: prov.rows,
+    categories: cat.rows,
+    live: arc.rows[0]?.live || 0,
+    archived: arc.rows[0]?.archived || 0,
+    statusCounts: {
+      active: statAgg.rows[0]?.active || 0,
+      done: statAgg.rows[0]?.done || 0,
+      ...Object.fromEntries(statByValue.rows.map(r => [r.status, r.n])),
+    },
+    assignedCounts: { none: ass.rows[0]?.none || 0, me: ass.rows[0]?.mine || 0, any: ass.rows[0]?.any || 0 },
+  }
 }
 
 /**

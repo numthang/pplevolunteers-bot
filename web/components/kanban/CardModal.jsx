@@ -33,6 +33,14 @@ function autoGrow(el) {
   el.style.height = el.scrollHeight + 'px'
 }
 
+// ขึ้นข้าง KB-xx ในหัวกล่อง — เอาแค่วันที่+เวลาสั้นๆ ไม่เอาวินาที (user สั่ง 2026-09-02: อย่าให้เกะกะข้างล่าง)
+function fmtCreatedAt(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleString('th-TH', {
+    day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+}
+
 export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
@@ -372,8 +380,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
           {/* ⛔ เดิมมี h2 "รายละเอียดการบ้าน" ใต้เลข — ถอดออก 2026-08-28 (user: ไม่บอกอะไรที่คนยังไม่รู้)
               เลข K-xx ขึ้นมาเป็นหัวเรื่องแทน เพราะเป็นสิ่งเดียวในหัวกล่องที่ระบุว่า "ใบไหน"
               (ชื่อการบ้านแก้ได้ในตัวกล่องอยู่แล้ว จึงไม่เอามาซ้ำที่หัว) */}
-          <div className="min-w-0">
+          <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
             <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">{card ? formatRef(card.ref_no) : ''}</h2>
+            {card?.created_at && (
+              <span className="text-xs text-warm-400 dark:text-disc-muted">
+                {t('modal.createdAtLabel')} {fmtCreatedAt(card.created_at)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {/* ป้ายสถานะการเซฟ — แทนปุ่มบันทึกที่ถูกยกเลิกไปตามกฎ 2026-07-30 */}

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T05:15:01.283Z
-> Files: 1101 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T12:51:33.795Z
+> Files: 1105 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -247,7 +247,7 @@
 - `antiSpamHandler.js` — Anti-spam: duplicate ข้ามห้อง + mass-mention + honeypot channel (~1540 tok)
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
 - `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13094 tok)
-- `caseImportHandler.js` — เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01) (~2170 tok)
+- `caseImportHandler.js` — เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01) (~2229 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
 - `forumDashboard.js` — handlers/forumDashboard.js (~764 tok)
@@ -255,14 +255,14 @@
 - `gogoHandler.js` — handlers/gogoHandler.js (~4915 tok)
 - `handraiseHandler.js` — handlers/handraiseHandler.js (~2336 tok)
 - `interestSelect.js` — สร้างปุ่มจาก DB rows [{ roleId, label, emoji }] (~1177 tok)
-- `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~1708 tok)
+- `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~2324 tok)
 - `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~662 tok)
 - `openInterest.js` — handlers/openInterest.js (~511 tok)
 - `openProvince.js` — handlers/openProvince.js (~216 tok)
 - `orgchartPanelHandler.js` — handlers/orgchartPanelHandler.js (~2429 tok)
 - `orgchartProvinceSelect.js` — handlers/orgchartProvinceSelect.js (~48 tok)
 - `orgchartRoleSelect.js` — handlers/orgchartRoleSelect.js (~44 tok)
-- `postImportHandler.js` — เปิด modal ให้กรอกหมวด (ไม่บังคับ) ก่อนนำเข้า — ใช้ได้เฉพาะข้อความในเธรด (~1743 tok)
+- `postImportHandler.js` — เปิด modal ให้กรอกหมวด (ไม่บังคับ) ก่อนนำเข้า — ใช้ได้เฉพาะข้อความในเธรด (~1776 tok)
 - `provinceSelect.js` — handlers/provinceSelect.js (~1569 tok)
 - `rateStars.js` — Handler สำหรับ customId ที่ขึ้นต้นด้วย "rate_stars:" และ "rate_submit:" (~935 tok)
 - `ratingPage.js` — Handler สำหรับ customId: ratings_page:{targetId}:{page} (~239 tok)
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~46633 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~47186 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5796 tok)
 
 ## md/archive/
@@ -446,6 +446,8 @@
 
 ## scripts/dev/
 
+- `_tmp_imgEditModalCheck.mjs` — BASE: mintToken (~2121 tok)
+- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~404 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
 ## scripts/docs/
@@ -607,6 +609,7 @@
 
 ## web/
 
+- `_testcounts2.mjs` — Declares orgId (~140 tok)
 - `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
 - `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
 - `_tmp_cdp_check4.mjs` — PORT: jsonGet, connect, send + 3 more (~1036 tok)
@@ -799,7 +802,7 @@
 
 ## web/app/api/case/[ref]/
 
-- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2785 tok)
+- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2797 tok)
 
 ## web/app/api/case/[ref]/ai/summary/
 
@@ -1243,7 +1246,7 @@
 
 ## web/app/api/meta/oauth/callback/
 
-- `route.js` — ดึง edge แบบ paginated ให้ครบทุกหน้า — คืน { data } หรือ { error } (~1933 tok)
+- `route.js` — ดึง edge แบบ paginated ให้ครบทุกหน้า — คืน { data } หรือ { error } (~2343 tok)
 
 ## web/app/api/meta/oauth/start/
 
@@ -1439,7 +1442,7 @@
 
 ## web/app/api/posts/categories/
 
-- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~683 tok)
+- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~824 tok)
 
 ## web/app/api/posts/jobs/[jobId]/
 
@@ -1491,7 +1494,7 @@
 
 ## web/app/api/social/accounts/[id]/
 
-- `route.js` — POST /api/social/accounts/[id]/token — แปะ Threads token ใหม่จากหน้าเว็บ (~1480 tok)
+- `route.js` — ย้ายบัญชีเข้ากลุ่มแล้วรับ "ค่าระดับกลุ่ม" ที่ว่างอยู่ไปด้วย — เซิร์ฟเวอร์ + ห้องข่าวสาร (~1592 tok)
 
 ## web/app/api/social/groups/
 
@@ -1663,6 +1666,7 @@
 ## web/app/cases/
 
 - `layout.js` — Next.js layout (~272 tok)
+- `page.js` — Next.js page component (~1090 tok)
 
 ## web/app/cases/[ref]/
 
@@ -1958,7 +1962,7 @@
 - `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
 - `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~1390 tok)
 - `CaseEditButton.jsx` — inputCls (~1966 tok)
-- `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1389 tok)
+- `CaseFilters.jsx` — แถวตัวกรองของ /case — dropdown แถวเดียว 5 ตัว ทรงเดียวกับ /posts (user เคาะ 2026-09-01) (~1500 tok)
 - `CaseFilterSelect.jsx` — selectCls (~197 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~5515 tok)
@@ -1999,8 +2003,8 @@
 ## web/components/kanban/
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
-- `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7870 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~8824 tok)
+- `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~8174 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~9252 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
@@ -2030,7 +2034,7 @@
 - `OrgSettings.jsx` — OrgSettings — renders form (~2200 tok)
 - `OrgSettingsNav.jsx` — TAB_HREFS (~912 tok)
 - `OrgShell.jsx` — OrgShell (~1592 tok)
-- `OrgSocialAccounts.jsx` — PLATFORM_LABEL (~7149 tok)
+- `OrgSocialAccounts.jsx` — PLATFORM_LABEL (~8233 tok)
 - `OrgSocialGroups.jsx` — PLATFORM_LABEL (~3107 tok)
 - `PersonalWatermarks.jsx` — PERSONAL_MAX (~2458 tok)
 
@@ -2045,14 +2049,14 @@
 - `BackToPosts.jsx` — BackToPosts (~270 tok)
 - `CategoryPicker.jsx` — NEW_CATEGORY (~890 tok)
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
-- `ImageEditorModal.jsx` — MAX_SIDE (~9822 tok)
+- `ImageEditorModal.jsx` — MAX_SIDE (~9837 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
 - `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12806 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9579 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9717 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
@@ -2073,7 +2077,7 @@
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `botStatus.jsbotStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
 - `caseLetterConfig.js` — หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter (~507 tok)
-- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~6776 tok)
+- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~8592 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
@@ -2139,7 +2143,7 @@
 - `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
-- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~7654 tok)
+- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~8349 tok)
 - `jobs.js` — สร้างงานโพสต์ 1 แถวต่อ 1 แพลตฟอร์ม (batch เดียวกัน) (~1642 tok)
 - `media.js` — หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด (~1904 tok)
 - `series.js` — ซีรีส์ทั้งหมดที่ user คนนี้มีสิทธิ์ "เห็นได้อย่างน้อยระดับ org" (~1633 tok)
@@ -2165,7 +2169,7 @@
 - `callingStatusColors.js` — Exports CALL_STATUS_COLORS (~193 tok)
 - `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~334 tok)
 - `caseAttachmentSync.js` — นำเข้าไฟล์แนบ (รูป/เสียง) จากเธรด Discord ของเคส → case_attachments (~1149 tok)
-- `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~1047 tok)
+- `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~1095 tok)
 - `caseGate.js` — Gate helper สำหรับ caseworker action APIs — รวม auth + permission + scope ไว้ที่เดียว (~547 tok)
 - `caseLetterPdf.js` — ประกอบ PDF หนังสือร้องเรียน 1 ใบ — ใช้ร่วมกัน 2 ทาง: (~528 tok)
 - `caseOptions.js` — Case options (categories / close reasons / status labels) — source of truth (~251 tok)
@@ -2312,8 +2316,8 @@
 
 ## web/locales/
 
-- `en.json` (~26540 tok)
-- `th.json` (~25368 tok)
+- `en.json` (~26546 tok)
+- `th.json` (~25374 tok)
 
 ## web/public/media-temp/
 

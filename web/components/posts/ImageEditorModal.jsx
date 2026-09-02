@@ -699,7 +699,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
             <button
               type="button"
               onClick={tool === 'crop' ? applyCrop : applyMask}
-              className="px-3 py-2 text-sm rounded-lg bg-teal text-white hover:opacity-90 transition"
+              className="whitespace-nowrap px-3 py-2 text-sm rounded-lg bg-teal text-white hover:opacity-90 transition"
             >
               {tool === 'crop' ? t('applyCrop') : t('applyMask')}
             </button>
@@ -709,13 +709,13 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
           <div className="flex items-center gap-2">
           <button
             type="button" onClick={requestClose}
-            className="px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+            className="whitespace-nowrap px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
           >
             {t('cancel')}
           </button>
           <button
             type="button" onClick={save} disabled={saving || !steps || enhancing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
+            className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : null}
             {t('save')}

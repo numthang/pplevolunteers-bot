@@ -118,10 +118,16 @@ async function handlePostImportModal(interaction) {
 
   const webUrl = process.env.WEB_BASE_URL ? `${process.env.WEB_BASE_URL.replace(/\/$/, '')}/posts/${post.id}` : null;
   try {
-    await thread.send(`📝 นำเข้าเป็นโพสต์แล้ว${webUrl ? ` · [แก้ไข](${webUrl})` : ''}`);
+    await thread.send({
+      content: `📝 นำเข้าเป็นโพสต์แล้ว${webUrl ? ` · [แก้ไข](${webUrl})` : ''}`,
+      flags: MessageFlags.SuppressEmbeds,
+    });
   } catch { /* best-effort */ }
 
-  await interaction.editReply({ content: `✅ สร้างโพสต์แล้ว${webUrl ? `\n${webUrl}` : ''}` });
+  await interaction.editReply({
+    content: `✅ สร้างโพสต์แล้ว${webUrl ? `\n${webUrl}` : ''}`,
+    flags: MessageFlags.SuppressEmbeds,
+  });
 
   // โหลดรูปลงดิสก์แบบ fire-and-forget หลัง ack เสมอ — ห้ามให้ interaction รอไฟล์
   if (images.length) {

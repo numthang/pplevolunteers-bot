@@ -133,6 +133,7 @@ async function handleKanbanImportModal(interaction) {
       content: t(assignToSelf ? 'kanban.import.createdMine' : 'kanban.import.createdPool', {
         ref: refLabel, title: card.title,
       }),
+      flags: MessageFlags.SuppressEmbeds,
     });
 
     /**
@@ -158,6 +159,7 @@ async function handleKanbanImportModal(interaction) {
           }),
           reply: { messageReference: sourceMessageId, failIfNotExists: false },
           allowedMentions: { parse: [] },
+          flags: MessageFlags.SuppressEmbeds,
         });
       } catch (e) {
         console.error('kanbanImport: ประกาศในห้องไม่สำเร็จ:', e.message);
