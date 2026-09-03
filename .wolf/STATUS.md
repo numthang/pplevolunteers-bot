@@ -11,68 +11,74 @@ budget_tokens: 1000
 
 ## ✅ Done
 
-**Session นี้ (2026-09-03) — คุยแพลนทั้ง session แล้วลงมือเฟสแรก · working tree สะอาด**
+**เฟส B เสร็จ (2026-09-03) — kanban ยุบ `owner_user_id` ลง `kanban_card_assignees`**
 
-- `3b1bd09` **checkpoint** ของค้าง session ก่อน (ChecklistBar แบ่งท่อน · แท่ง lifecycle เคสเลิกโกหก ·
-  ผู้รับผิดชอบหลายคนของเคสในหน้า /case) — ไม่ได้อ่าน diff ตามกฎ ใช้ `--stat` เขียน message
-- `a901d5b` **เฟส A เสร็จ** — `isMyCard()` เลิกนับงานไร้เจ้าภาพเป็น "ของฉัน" ของทุกคน
-  ([lib/kanbanGrouping.js](../web/lib/kanbanGrouping.js)) · ปุ่มมุมมองบนจอใหญ่โชว์ตัวเลขแล้ว ("ยังไม่มีคนรับ (n)")
-  · แถมแก้บั๊กเก่า **ตัวกรองคนไม่นับเจ้าภาพ** → กรองชื่อคนหนึ่งไม่เจอใบที่เขาเป็นแม่งาน
-  ([KanbanHome.jsx](../web/components/kanban/KanbanHome.jsx)) · test 504 ผ่าน · build ผ่าน
-- **ออกแบบเสร็จทั้งชุด** — 📄 **แพลนเต็มอยู่ที่ `/home/tee/.claude/plans/owner-user-id-wild-hinton.md`**
-  (อ่านที่นั่นก่อนทำต่อ **อย่า re-derive** — คุยกันทั้ง session กว่าจะได้ + มีผล `/scrutinize` ครบ)
+- `dd7bb8f` **เฟส B ตัวหลัก** · `2ecaf2e` กวาดคำบนจอที่ตกค้าง
+- DB (รันบน **dev แล้ว** · prod ยังไม่): `kanban_card_helpers` → `kanban_card_assignees`
+  (`joined_at`→`assigned_at`) · ยกเจ้าภาพลงเป็นแถว (1302 = 1221 + 81) · **DROP `owner_user_id`**
+- CHECK เดิม → **CONSTRAINT TRIGGER 2 ตัว `DEFERRABLE INITIALLY DEFERRED`**
+  `trg_kanban_cards_require_assignee` (ไม่มีคนรับ ห้ามออกจาก backlog → 23514) ·
+  `trg_kanban_assignees_clamp` (ถอดคนสุดท้าย → การ์ดกลับ backlog เอง)
+  → logic clamp ที่เคยก็อป 2 ที่ (เว็บ + บอท) หายทั้งคู่
+- `setCardOwner`/`addHelper`/`removeHelper` → `addAssignee`/`removeAssignee` · `canAssignOwner`→`canAssign`
+  · `/helpers` → `/assignees` · **ลบ `?view=mine` + `listMyCards()`** (user เคาะ — ไม่มี caller)
+  · `createCard` ทั้งเว็บ+บอทเป็น **ทรานแซกชัน** (จำเป็นเพราะ trigger) · UI ยุบเหลือแถวเดียว "คนแรก +N"
+  · URL `?helper=` → `?assignee=` (ยังรับคีย์เก่า)
+- **verify:** build · test 506 · สโมค 3 ชุด · mobileAudit `/kanban` `/` · กดครบวงผ่าน HTTP — ผ่านหมด
+  สโมคใหม่ `scripts/smoke/kanbanCaseSync.mjs` (ตะเข็บ `case_assignees` ↔ การ์ด ทั้งเว็บ+บอท)
+
+**⬜ ยังไม่ได้ทำ — user ยังไม่ได้กดเอง** (dev server ค้างอยู่ที่ `:3100`, `NEXT_DIST_DIR=.next-test`)
+รายการที่ต้องกด อยู่ใน §ให้ user กด ข้างล่าง
 
 **ยังไม่ยืนยันสถานะ prod (ต้องถาม user — ห้ามรายงานจากเอกสาร):**
-- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (`ssh tee@202.183.141.78` · Claude สั่งเองไม่ได้)
+- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (`ssh tee@202.183.141.78`)
 - ⬜ หนังสือร้องเรียนชุดใหม่: ยังไม่ mobile audit · user ยังไม่กดเอง
 
 ---
 
-## 🚀 Next quest — เฟส B: kanban ยุบ `owner_user_id` ลงตาราง
+## 🚀 Next quest — เฟส C: posts ให้เหมือนอีกสองระบบ
 
-**เป้า:** ทุกระบบเหลือรูปเดียว — แถวหลักมีคอลัมน์คนตัวเดียวคือ `created_by` (= คนสร้าง · ให้สิทธิ์ลบ)
-ส่วนผู้รับผิดชอบอยู่ในตาราง `<entity>_assignees` เสมอ (หลายคน ไม่มีหัวหน้า) เขียนผ่าน service ตัวเดียว
-เลิกใช้คำว่า "เจ้าภาพ/ผู้ช่วย" ทั้งโค้ดและจอ เหลือ **"ผู้รับผิดชอบ"**
+📄 **แพลนเต็มอยู่ที่ `/home/tee/.claude/plans/owner-user-id-wild-hinton.md` §เฟส C — อ่านที่นั่น อย่า re-derive**
 
-**เฟส B ทำอะไร:** `kanban_card_helpers` → rename `kanban_card_assignees` (+`joined_at`→`assigned_at`)
-· ยก `kanban_cards.owner_user_id` ลงเป็นแถวหนึ่งแล้ว **DROP คอลัมน์ทิ้ง** · กวาดโค้ดทุกจุดเป็น EXISTS/join
+ย่อ: `post_episodes.owner_user_id` → `created_by` · สร้าง `post_assignees` · `web/lib/postAssign.js`
+ประตูเดียว (ลอก `caseAssign.js`) · `syncPostCardPeople()` · `/api/posts/[id]/assign` ·
+ช่อง "ผู้รับผิดชอบ" ใน `PostMetaPanel.jsx` · **3 กับดักอยู่ในแพลน อ่านก่อนลงมือ**
 
-**ห้ามพลาด 3 ข้อ (ผล `/scrutinize` — อยู่ในแพลนพร้อมหลักฐาน):**
-1. trigger แทน CHECK **ต้องเป็น `CONSTRAINT TRIGGER … DEFERRABLE INITIALLY DEFERRED`** เท่านั้น
-   (`BEFORE`/`AFTER` ธรรมดาพัง 2 ทาง: sync แบบ DELETE-แล้ว-INSERT จะดันการ์ดตกกอง · สร้างการ์ดใหม่ติดด่านตัวเอง)
-2. **บอทมีสำเนา `syncCaseCardPeople` ของตัวเอง** ที่ [db/kanbanCards.js:200](../db/kanbanCards.js) — เว็บ build ผ่าน ≠ บอทรอด
-   · คอลัมน์หายเลย → **deploy เว็บ+บอทพร้อมกัน** · prod ต้อง `pg_dump` ตาราง kanban ก่อน
-3. `GET /api/kanban/cards?view=mine` คืน `{mine, helping}` — grep ทั้งรีโปไม่เจอ caller
-   **ถาม user ก่อนลบ** อย่าดัดให้รอด
+**ของค้างจากเฟส B ที่เฟส C ต้องเก็บ** — ยังก็อป "คนสร้างโพสต์ → ผู้รับผิดชอบการ์ด" อยู่ **4 จุด**
+(มีคอมเมนต์ ⚠️ กำกับทุกจุด): `SOURCE_SQL.post` ใน `web/db/kanban/links.js` ·
+`web/db/posts/episodes.js` ×2 · `db/postsImport.js` · `db/mediaBasket.js` — เฟส C ตัดทิ้งทั้งชุด
+**เฟส D (ท้ายสุด):** แท่ง lifecycle ฝั่งโพสต์ (`KanbanHome.jsx` สาขา `entity_type === 'post'`)
 
-**ทำก่อนเขียนโค้ด:** `/scrutinize` (CLAUDE.md บังคับ) · commit checkpoint
-**ส่ง Sonnet subagent:** B2 กวาด `owner_user_id` + locale เป็น mechanical ล้วน ซอยทีละ 2-3 ไฟล์
-(งานคิด/trigger/ตรวจผล ทำใน main thread)
+---
 
-**เคาะแล้ว ไม่ต้องถามซ้ำ:** ⛔ **ไม่ rename `post_episodes` → `posts`** (`episode` = `post` 1:1 อยู่แล้ว
-เป็นซากจากยุคมี `post_series`) → ตาราง `post_assignees` ใช้คอลัมน์ **`episode_id`** ให้ล้อพี่น้อง 6 ตาราง ·
-ไม่แตะ `dc_social_accounts`/`post_assets.owner_user_id` (ชื่อไม่ได้โกหก) · ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย
+## 🖐️ ให้ user กด (เฟส B — ยังไม่ได้ทำ)
 
-**เฟสถัดไปหลัง B:** C = posts (`owner_user_id`→`created_by` + `post_assignees` + `postAssign.js` + UI) · D = แท่ง lifecycle ฝั่งโพสต์
+เปิด http://localhost:3100/kanban (dev server รันค้างอยู่แล้ว)
+1. มอบหมาย 2 คนในการ์ดใบเดียว → **ทั้งคู่ขึ้นเท่ากัน** บนการ์ด ("คนแรก +1")
+2. กรองด้วยชื่อคนแรก → **ต้องเจอ** (บั๊กเดิม: กรองแล้วไม่เจอใบที่เขาเป็นแม่งาน)
+3. ถอดคนสุดท้ายออก → การ์ด**เด้งกลับกอง "รอทำ" เอง**
+4. **เปิดเคสในดิสฯ ให้บอทสร้างการ์ด 1 ใบ ต้องไม่ 500** (บอทต้องรันด้วย code ใหม่)
 
 ---
 
 ## Context
 
-- Branch `master` · **working tree สะอาด** ล่าสุด `a901d5b` · ยังไม่ push
+- Branch `master` · ล่าสุด `2ecaf2e` · **ยังไม่ push** · `md/TEAM/TEE.md` มีของ user แก้ไว้ ไม่ได้ commit
+- ⚠️ **ขึ้น prod เฟส B:** `pg_dump -t kanban_cards -t kanban_card_helpers` ก่อนรัน migration ·
+  แล้ว **deploy เว็บ + บอทพร้อมกัน** (คอลัมน์หายไปเลย ตัวที่ขึ้นทีหลัง 500 ทันที)
 - prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · wrap `sudo -u www bash -c '...'`
-  · Claude สั่ง `pm2 restart` เองไม่ได้ (classifier บล็อก)
-- `.env` dev ผูกกับบอท **"Tester"** · ห้าม `npm run build` ตอน dev server รันอยู่ (session นี้ไม่มีตัวไหนรัน จึง build ได้)
-  · รันเทสเองใช้ `NEXT_DIST_DIR=.next-test npx next dev -p 3100` · ห้าม `rm -rf web/.next`
-- `md/TEAM/TEE.md` เป็นของ user เอง **อย่าแตะ** · `NOTE.md` ห้ามอ่าน
+  · Claude สั่ง `pm2 restart` เองไม่ได้ · **รัน migration ที่ DROP คอลัมน์เองก็ไม่ได้** (classifier บล็อก)
+- `.env` dev ผูกกับบอท **"Tester"** · ล็อกอินเทสในเบราว์เซอร์: ยัด magic token ลง `org_login_tokens`
+  ตรงๆ ⚠️ เขียน token ลง**ไฟล์** ไม่ใช่ stdout (dotenv พิมพ์แบนเนอร์ปนมา)
 
 ---
 
 ## 🔧 Commands & References
 
 ```bash
-cd web && npm test    ·    npm run build    ·    node scripts/dev/mobileAudit.mjs --routes /kanban
+cd web && npm test    ·    npm run build    ·    node scripts/dev/mobileAudit.mjs --routes /kanban --base http://localhost:3100
+node --import ./scripts/smoke/_envload.mjs scripts/smoke/kanbanCards.mjs     # + kanbanBot.mjs · kanbanCaseSync.mjs
 openwolf find <symbol>    ·    openwolf bug search "<error>"
 ```
 📄 `/home/tee/.claude/plans/owner-user-id-wild-hinton.md` (แพลนตัวจริงของ quest นี้) ·
-`md/PENDING.md` (backlog อื่น) · `md/kanban/KANBAN.md` · `md/WEB.md §จอมือถือ` `§Type scale`
+`md/kanban/KANBAN.md §กติกา "คน"` (กติกาใหม่ทั้งชุด) · `md/PENDING.md` · `md/WEB.md §จอมือถือ`

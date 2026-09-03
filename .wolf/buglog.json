@@ -6155,6 +6155,23 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-02T18:51:30.299Z"
+    },
+    {
+      "id": "bug-345",
+      "timestamp": "2026-09-03T06:11:01.282Z",
+      "error_message": "magic-link login ตอบ 401 ทั้งที่ token ถูกยัดลง org_login_tokens แล้ว",
+      "file": "scripts (ad-hoc) · web/lib/auth-options.js §magic",
+      "root_cause": "ดึง token ออกจาก node -e ผ่าน stdout — dotenv พิมพ์แบนเนอร์ \"[dotenv@…] injecting env…\" ลง stdout ปนมาด้วย token เลยยาว 148 ตัวแทนที่จะเป็น 48 → ไม่แมตช์แถวใน DB",
+      "fix": "ให้ node เขียน token ลงไฟล์แล้ว shell อ่านจากไฟล์ · ห้ามส่งค่ากลับผ่าน stdout ในโปรเจกต์ที่โหลด dotenv",
+      "tags": [
+        "dotenv",
+        "auth",
+        "magic-link",
+        "tooling",
+        "stdout"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T06:11:01.282Z"
     }
   ]
 }
