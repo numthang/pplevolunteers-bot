@@ -12,7 +12,7 @@ export const ORG_FEATURES = [
   { key: 'docs',    label: 'เอกสาร',  desc: 'ใบสำคัญรับเงิน ผู้มีอำนาจลงนาม' },
   { key: 'cases',   label: 'เรื่องร้องเรียน', desc: 'รับเรื่อง ติดตามสถานะ มอบหมายผู้รับผิดชอบ' },
   { key: 'posts',   label: 'งานสื่อ',   desc: 'เขียนคอนเทนต์ซอยเป็นตอน อนุมัติ แล้วเผยแพร่ลงโซเชียล' },
-  { key: 'kanban',  label: 'KANBAN',   desc: 'งานที่ต้องส่ง เจ้าภาพ กำหนดส่ง งานย่อย' },
+  { key: 'kanban',  label: 'KANBAN',   desc: 'งานที่ต้องส่ง ผู้รับผิดชอบ กำหนดส่ง งานย่อย' },
 ]
 
 export const ORG_FEATURE_KEYS = ORG_FEATURES.map(f => f.key)

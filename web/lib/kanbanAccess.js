@@ -175,7 +175,7 @@ export function canChangeStatus(card, access = {}, userId = null) {
   return canEditCard(card, access, userId)
 }
 
-/** เก็บการ์ดเข้ากรุ (soft delete) — คนสร้าง หรือ admin เท่านั้น · เจ้าภาพ/คนช่วยลบไม่ได้ */
+/** เก็บการ์ดเข้ากรุ (soft delete) — คนสร้าง หรือ admin เท่านั้น · ผู้รับผิดชอบลบไม่ได้ */
 export function canArchiveCard(card, access = {}, userId = null) {
   if (!card) return false
   if (isKanbanAdmin(access)) return true

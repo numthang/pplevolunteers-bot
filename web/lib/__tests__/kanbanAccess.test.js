@@ -104,29 +104,29 @@ describe('canClaimCard', () => {
 describe('canArchiveCard', () => {
   it('คนสร้างเก็บเข้ากรุได้',     () => expect(ka.canArchiveCard(card(), acc([]), ALICE)).toBe(true))
   it('Admin เก็บเข้ากรุได้',      () => expect(ka.canArchiveCard(card(), acc(['Admin']), DAVE)).toBe(true))
-  it('เจ้าภาพเก็บเข้ากรุไม่ได้',   () => expect(ka.canArchiveCard(card(), acc([]), BOB)).toBe(false))
-  it('คนช่วยเก็บเข้ากรุไม่ได้',    () => expect(ka.canArchiveCard(card(), acc([]), CAROL)).toBe(false))
+  it('ผู้รับผิดชอบเก็บเข้ากรุไม่ได้', () => expect(ka.canArchiveCard(card(), acc([]), BOB)).toBe(false))
+  it('ผู้รับผิดชอบคนที่สองเก็บเข้ากรุไม่ได้', () => expect(ka.canArchiveCard(card(), acc([]), CAROL)).toBe(false))
   it('คนนอกเก็บเข้ากรุไม่ได้',    () => expect(ka.canArchiveCard(card(), acc([]), DAVE)).toBe(false))
   it('userId null + ไม่มียศ ไม่ได้', () => expect(ka.canArchiveCard(card(), acc([]), null)).toBe(false))
 })
 
 // ---- checkStatusTransition — กติกาที่ไม่ขึ้นกับตัวคน ----
 describe('checkStatusTransition', () => {
-  it('มีเจ้าภาพ → doing ได้',
+  it('มีคนรับ → doing ได้',
     () => expect(ka.checkStatusTransition(card(), 'doing')).toEqual({ ok: true, reason: null }))
-  it('มีเจ้าภาพ → done ได้',
+  it('มีคนรับ → done ได้',
     () => expect(ka.checkStatusTransition(card(), 'done')).toEqual({ ok: true, reason: null }))
-  it('ไม่มีเจ้าภาพ → doing ไม่ได้ + บอกเหตุผล',
+  it('ไม่มีคนรับ → doing ไม่ได้ + บอกเหตุผล',
     () => expect(ka.checkStatusTransition(unassigned(), 'doing')).toEqual({ ok: false, reason: 'needAssignee' }))
-  it('ไม่มีเจ้าภาพ → done ไม่ได้',
+  it('ไม่มีคนรับ → done ไม่ได้',
     () => expect(ka.checkStatusTransition(unassigned(), 'done')).toEqual({ ok: false, reason: 'needAssignee' }))
-  it('ไม่มีเจ้าภาพ → backlog ได้ (อยู่ที่เดิม)',
+  it('ไม่มีคนรับ → backlog ได้ (อยู่ที่เดิม)',
     () => expect(ka.checkStatusTransition(unassigned(), 'backlog')).toEqual({ ok: true, reason: null }))
   // 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น · 2026-08-17) — งานที่ยังไม่มีใครรับก็พักได้
-  // ไม่ต้องบังคับหาเจ้าภาพก่อน (DB CHECK ผ่อนให้แล้วใน migration วันเดียวกัน)
-  it('ไม่มีเจ้าภาพ → กรุ ได้ (ไม่ต้องหาเจ้าภาพก่อนพัก)',
+  // ไม่ต้องบังคับหาคนรับก่อน (invariant ยอมให้ cancelled อยู่แล้ว)
+  it('ไม่มีคนรับ → กรุ ได้ (ไม่ต้องหาคนก่อนพัก)',
     () => expect(ka.checkStatusTransition(unassigned(), 'cancelled')).toEqual({ ok: true, reason: null }))
-  it('มีเจ้าภาพ → กรุ ได้',
+  it('มีคนรับ → กรุ ได้',
     () => expect(ka.checkStatusTransition(card(), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('สถานะที่ระบบไม่รู้จัก → ไม่ได้',
     () => expect(ka.checkStatusTransition(card(), 'blocked')).toEqual({ ok: false, reason: 'unknownStatus' }))
@@ -183,7 +183,7 @@ describe('checkStatusTransition — งานสื่อช่วงร่า�
     () => expect(ka.checkStatusTransition(linked('post'), 'backlog')).toEqual({ ok: true, reason: null }))
   it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "พักไว้" ได้',
     () => expect(ka.checkStatusTransition(linked('post'), 'cancelled')).toEqual({ ok: true, reason: null }))
-  it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีเจ้าภาพ → ไป "กำลังทำ" ไม่ได้ (ต้องรับงานก่อน)',
+  it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีคนรับ → ไป "กำลังทำ" ไม่ได้ (ต้องรับงานก่อน)',
     () => expect(ka.checkStatusTransition(
       linked('post', { status_type: 'backlog', assignee_ids: [] }), 'doing'
     )).toEqual({ ok: false, reason: 'needAssignee' }))

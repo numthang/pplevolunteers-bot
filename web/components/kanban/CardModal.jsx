@@ -68,7 +68,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [actionError, setActionError] = useState('')
   // ⭐ ไม่ใช่ error — server ทำงานสำเร็จแต่ผลไม่ตรงกับที่ผู้ใช้เดา
   //    (เช่น มอบหมายบนการ์ดที่ผูกเคสที่มีคนรับแล้ว → กลายเป็นผู้รับผิดชอบร่วม)
-  //    ถ้าเงียบ = UI โกหก คนกดคิดว่าเปลี่ยนเจ้าภาพสำเร็จ
+  //    ถ้าเงียบ = UI โกหก คนกดคิดว่าเปลี่ยนผู้รับผิดชอบสำเร็จ
   const [actionNotice, setActionNotice] = useState('')
 
   const lockToken = useRef(null)
@@ -203,7 +203,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     onClose()
   }
 
-  /** ค้นคนใน org ให้ combobox ของเจ้าภาพ/คนช่วย — ⚠️ ค้นเท่านั้น ห้าม dump (org มี 7,376 คน) */
+  /** ค้นคนใน org ให้ combobox ผู้รับผิดชอบ — ⚠️ ค้นเท่านั้น ห้าม dump (org มี 7,376 คน) */
   const searchPeople = useCallback(async (q) => {
     if (!q || q.trim().length < 2) return []
     const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
@@ -318,12 +318,12 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   /**
    * "ลงมือด้วย" / "รับงานนี้" — ทางเดียวที่คนนอกเข้ามาร่วมงานเองได้ (user เคาะ 2026-08-27)
    *
-   * ⭐ ปุ่มเดียวทำได้ 2 อย่าง เพราะ **server เป็นคนตัดสิน** จาก `{claim:true}`:
-   *    ยังไม่มีเจ้าภาพ → กลายเป็นเจ้าภาพ · มีเจ้าภาพแล้ว → ต่อท้ายเป็นคนช่วย
-   *    (ดู PATCH ที่ api/kanban/cards/[id]/route.js §claim) — client ห้ามเดาเองว่าจะได้บทไหน
+   * ⭐ เฟส B: เหลือผลลัพธ์เดียว — **เติมตัวเองเข้าลิสต์ผู้รับผิดชอบ** ไม่มีบท "เจ้าภาพ vs คนช่วย" แล้ว
+   *    (ดู PATCH ที่ api/kanban/cards/[id]/route.js §claim) · ป้ายบนปุ่มเปลี่ยนตามว่ามีคนรับอยู่ก่อนไหม
+   *    ซึ่งเป็นแค่คำ ไม่ใช่บท — client ห้ามเอาเงื่อนไขนั้นไปตัดสินอย่างอื่น
    *
    * ⚠️ ต้อง `load()` ไม่ใช่ `setCard()` เฉยๆ — `can` มาจาก GET ครั้งแรกที่เดียว
-   *    กดแล้วกลายเป็นคนช่วย = `can.edit` ต้องพลิกเป็น true ทันที ไม่งั้นเข้ามาแล้วยังแก้อะไรไม่ได้
+   *    กดแล้วกลายเป็นผู้รับผิดชอบ = `can.edit` ต้องพลิกเป็น true ทันที ไม่งั้นเข้ามาแล้วยังแก้อะไรไม่ได้
    *    ปลอดภัยที่จะทับช่องกรอก เพราะคนที่เห็นปุ่มนี้ยังอยู่โหมดอ่านอย่างเดียว ไม่มีอะไรพิมพ์ค้าง
    */
   async function join() {
@@ -365,7 +365,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   const readOnly = !can.edit
   // ⭐ การ์ดที่ผูกเคส/โพสต์: **ชื่อกับสถานะเป็นของต้นทาง** แก้ที่นี่ไม่ได้ (user เคาะ 2026-08-24)
-  //    ที่เหลือ (รายละเอียด · เจ้าภาพ · กำหนดส่ง · คนช่วย · ป้าย) ยังแก้ได้ตามปกติ — เป็นข้อมูลของ kanban เอง
+  //    ที่เหลือ (รายละเอียด · ผู้รับผิดชอบ · กำหนดส่ง · ป้าย) ยังแก้ได้ตามปกติ — เป็นข้อมูลของ kanban เอง
   //    API ก็ปฏิเสธอยู่แล้ว แต่ต้องปิดที่ UI ด้วย ไม่งั้นพิมพ์ไปทั้งย่อหน้าแล้วค่อยเด้ง error = เสียของ
   const linked = card?.link || null
 
