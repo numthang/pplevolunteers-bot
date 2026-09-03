@@ -209,7 +209,14 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
       return idx === -1 ? null : idx + 1
     }
     if (card.link.entity_type === 'post') {
-      if (['backlog', 'doing'].includes(card.status_type)) return 1
+      // ⭐ เฟส D (2026-09-03) — ขั้นแรกของโพสต์แปลว่า "มีคนลงมือเขียนแล้ว" เหมือนขั้น "รับเรื่องแล้ว"
+      //    ของเคส → ไม่มีผู้รับผิดชอบก็ยังไม่ถึงขั้นนั้น (post_assignees เริ่มจากศูนย์ทุกใบ)
+      //    ⚠️ ต่างจากเคสตรงที่กั้น**เฉพาะขั้นแรก** ไม่ใช่ทั้งแท่ง: ขั้น review/ready/done อ่านมาจาก
+      //       สถานะจริงของ post_episodes ไม่ได้อ่านจาก "ใครรับ" → โพสต์ที่เผยแพร่ไปแล้วแต่ยังไม่มี
+      //       ใครกดรับ (ของเก่าทั้งกองหลัง migration เฟส C) ต้องไม่ถูกลบความคืบหน้าที่เกิดขึ้นจริงทิ้ง
+      if (['backlog', 'doing'].includes(card.status_type)) {
+        return (card.assignee_ids || []).length ? 1 : 0
+      }
       const idx = ['review', 'ready', 'done'].indexOf(card.status_type)
       return idx === -1 ? null : idx + 2
     }
