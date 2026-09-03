@@ -27,12 +27,23 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 /**
  * แท่งความคืบหน้าของเช็คลิสต์ — ใช้ทั้งในกล่องนี้ (คู่กับ %) และบนการ์ดในกระดาน
  * (user สั่ง 2026-08-19: บนการ์ดเอาแท่งแทนตัวเลข x/y) — ห้ามลอก markup ไปเขียนซ้ำ
+ * ⭐ แบ่งเป็นท่อนตาม total ขั้น (user สั่ง 2026-09-03) — เห็นเป็นขั้นๆ ไม่ใช่แท่งไล่ระดับต่อเนื่อง
+ *    total=0 (เช็คลิสต์ว่าง) เหลือท่อนเปล่าท่อนเดียวไว้ (เดิมทำงานแบบนี้อยู่แล้ว)
+ * ⭐ tone แยกสีเช็คลิสต์ (teal — จริงๆ คือส้มแบรนด์ ดู tailwind.config.js) กับแท่ง lifecycle
+ *    เคส/โพสต์ (cyan) — คนละความหมายกัน (user สั่ง 2026-09-03 + ขอสีฟ้า cyan) ห้ามใช้สีเดียวกันทั้งคู่
+ *    ⚠️ ใช้ cyan-500/400 จาก Tailwind default palette ตรงๆ — ไม่ใช่ brand.blue-light (จางเกินไปมองแทบไม่เห็น)
  */
-export function ChecklistBar({ done, total, className = '' }) {
-  const pct = total ? Math.round((done / total) * 100) : 0
+export function ChecklistBar({ done, total, className = '', tone = 'teal' }) {
+  const segments = Math.max(total, 1)
+  const fillClass = tone === 'blue' ? 'bg-cyan-500 dark:bg-cyan-400' : 'bg-teal'
   return (
-    <div className={`h-1.5 rounded-full bg-warm-100 dark:bg-disc-hover overflow-hidden ${className}`}>
-      <div className="h-full bg-teal transition-all" style={{ width: `${pct}%` }} />
+    <div className={`flex items-center gap-0.5 ${className}`}>
+      {Array.from({ length: segments }, (_, i) => (
+        <div
+          key={i}
+          className={`h-1 flex-1 rounded-full ${i < done ? fillClass : 'bg-warm-100 dark:bg-disc-hover'}`}
+        />
+      ))}
     </div>
   )
 }

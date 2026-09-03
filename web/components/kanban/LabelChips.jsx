@@ -11,16 +11,24 @@
 
 import { chipProps, groupCardLabels } from '@/lib/kanbanLabelColors.js'
 
-export default function LabelChips({ labels = [], showGroupName = true, max = 0 }) {
+/**
+ * @param {number} maxTotal จำกัดจำนวนชิปรวม**ข้ามทุกกลุ่ม** (คนละอย่างกับ `max` ที่จำกัดต่อกลุ่ม)
+ *   ใช้บนหน้าการ์ด kanban (เคาะ 2026-09-02) — การ์ดที่มีหลาย field พร้อมกันเคยดันความสูงล้น
+ *   เพราะ `max` เดิมจำกัดแค่ต่อกลุ่ม (3 field ละ 3 ค่า = 9 ชิป) ตัดที่นี่ก่อนจัดกลุ่มเลย
+ *   แล้วโชว์ "+N" ก้อนเดียวท้ายแถวรวม แทนที่จะมี "+N" แยกในแต่ละกลุ่ม
+ */
+export default function LabelChips({ labels = [], showGroupName = true, max = 0, maxTotal = 0 }) {
   if (!labels.length) return null
 
-  const groups = groupCardLabels(labels)
+  const shownLabels = maxTotal > 0 ? labels.slice(0, maxTotal) : labels
+  const totalHidden = maxTotal > 0 ? labels.length - shownLabels.length : 0
+  const groups = groupCardLabels(shownLabels)
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {groups.map(({ group, labels: list }) => {
         const shown = max > 0 ? list.slice(0, max) : list
-        const hidden = list.length - shown.length
+        const hidden = max > 0 ? list.length - shown.length : 0
         return (
           <div key={group || '_'} className="flex flex-wrap items-center gap-1">
             {showGroupName && group && (
@@ -49,6 +57,9 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
           </div>
         )
       })}
+      {totalHidden > 0 && (
+        <span className="text-sm text-warm-400 dark:text-disc-muted">+{totalHidden}</span>
+      )}
     </div>
   )
 }

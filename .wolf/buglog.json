@@ -5851,6 +5851,310 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-02T12:45:57.092Z"
+    },
+    {
+      "id": "bug-326",
+      "timestamp": "2026-09-02T16:46:25.081Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/LabelChips.jsx",
+      "root_cause": "dark: text-disc-muted\">+{hidden → text-disc-muted\">+{totalHidden",
+      "fix": "Changed dark: text-disc-muted\">+{hidden → text-disc-muted\">+{totalHidden",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T16:46:25.081Z"
+    },
+    {
+      "id": "bug-327",
+      "timestamp": "2026-09-02T17:04:10.114Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Had `group bg-card-bg border border-warm-200 dark:bord",
+      "fix": "Changed to `group bg-card-bg border border-warm-200 dark:bord",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T17:07:13.299Z"
+    },
+    {
+      "id": "bug-328",
+      "timestamp": "2026-09-02T17:10:56.698Z",
+      "error_message": "Significant refactor of KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→17 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T17:10:56.698Z"
+    },
+    {
+      "id": "bug-329",
+      "timestamp": "2026-09-02T17:16:48.755Z",
+      "error_message": "CSS fix: hover",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "hover: underline\" → opacity-90 text-white font-medium disabled:opacity-50 transition\"",
+      "fix": "Changed hover: underline\" → opacity-90 text-white font-medium disabled:opacity-50 transition\"",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T17:17:25.812Z"
+    },
+    {
+      "id": "bug-330",
+      "timestamp": "2026-09-02T17:19:24.964Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Had \"flex-1 min-w-0 flex items-baseline gap-1.5\"",
+      "fix": "Changed to \"flex-1 min-w-0 flex items-center gap-1.5\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T17:23:15.916Z"
+    },
+    {
+      "id": "bug-331",
+      "timestamp": "2026-09-02T17:21:54.674Z",
+      "error_message": "Significant refactor of KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "17 lines replaced/restructured",
+      "fix": "Rewrote 34→14 lines (17 removed) | Also: {/* ⭐ ชิปลิงก์ไปเคส/โพสต์ต้นทาง อยู่ใต้แถว title/ป; ตัวอักษรในชิปเป็นรหัสอ้างอิง ไม่ใช่ชื่อประเภท: เคส | Also: ⛔ ห้ามลอกขนาดนี้ไปใช้นอกการ์ด kanban — ที่อื่นยังเ; (ปุ่ม \"รับงานนี้\" ย้ายขึ้นไปอยู่แถว title แล้ว — ด",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-02T17:29:15.615Z"
+    },
+    {
+      "id": "bug-332",
+      "timestamp": "2026-09-02T17:25:43.053Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "dark: text-disc-text line-clamp-2\">{card.title → text-disc-text line-clamp-2\">",
+      "fix": "Changed dark: text-disc-text line-clamp-2\">{card.title → text-disc-text line-clamp-2\">",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-02T17:31:14.883Z"
+    },
+    {
+      "id": "bug-333",
+      "timestamp": "2026-09-02T17:44:57.315Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Had \"flex items-center gap-0.5 shrink-0 opacity-0 grou",
+      "fix": "Changed to \"flex flex-col items-center gap-0.5 shrink-0 opaci",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-09-02T17:52:02.379Z"
+    },
+    {
+      "id": "bug-334",
+      "timestamp": "2026-09-02T17:51:50.059Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "dark: border-disc-border rounded-lg p-2.5 flex flex-col gap-1 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${ → border-disc-border rounded-lg p-2.5 flex flex-col gap-1 cursor-pointer hover:border-teal hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${",
+      "fix": "Changed dark: border-disc-border rounded-lg p-2.5 flex flex-col gap-1 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${ → border-disc-border rounded-lg p-2.5 flex flex-col gap-1 cursor-pointer hover:border-teal hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T17:51:50.059Z"
+    },
+    {
+      "id": "bug-335",
+      "timestamp": "2026-09-02T18:02:09.494Z",
+      "error_message": "Null/undefined access in KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: {/* แท่ง lifecycle ของเคส/โพสต์ที่ผูกไว้ — คนละแท่งกับเช็คลิ; ซ่อนตอน draft/สถานะที่ยังหาขั้นไม่ได้ (linkStage=null) แทนโช",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-02T18:02:49.585Z"
+    },
+    {
+      "id": "bug-336",
+      "timestamp": "2026-09-02T18:02:29.881Z",
+      "error_message": "Missing guard clause",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "No early return/throw for edge case: !card.link",
+      "fix": "Added guard clause: if (!card.link)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:02:29.881Z"
+    },
+    {
+      "id": "bug-337",
+      "timestamp": "2026-09-02T18:08:09.111Z",
+      "error_message": "Significant refactor of route.js",
+      "file": "web/app/api/case/[ref]/assign/route.js",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 47→55 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:08:09.111Z"
+    },
+    {
+      "id": "bug-338",
+      "timestamp": "2026-09-02T18:09:20.843Z",
+      "error_message": "Missing error handling in function()",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:09:20.843Z"
+    },
+    {
+      "id": "bug-339",
+      "timestamp": "2026-09-02T18:17:12.156Z",
+      "error_message": "Significant refactor of .tmp-test-assignee2.mjs",
+      "file": "scripts/dev/.tmp-test-assignee2.mjs",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 9→13 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:17:12.156Z"
+    },
+    {
+      "id": "bug-340",
+      "timestamp": "2026-09-02T18:23:51.322Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "dark: text-disc-muted\">{t('edit.provinceMoveWarning') → text-disc-muted'",
+      "fix": "Changed dark: text-disc-muted\">{t('edit.provinceMoveWarning') → text-disc-muted'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:23:51.323Z"
+    },
+    {
+      "id": "bug-341",
+      "timestamp": "2026-09-02T18:45:33.162Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/ChecklistFieldBox.jsx",
+      "root_cause": "dark: bg-disc-hover overflow-hidden ${className → bg-disc-hover'",
+      "fix": "Changed dark: bg-disc-hover overflow-hidden ${className → bg-disc-hover'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:45:33.163Z"
+    },
+    {
+      "id": "bug-342",
+      "timestamp": "2026-09-02T18:46:05.790Z",
+      "error_message": "Significant refactor of ChecklistFieldBox.jsx",
+      "file": "web/components/kanban/ChecklistFieldBox.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→15 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:46:05.790Z"
+    },
+    {
+      "id": "bug-343",
+      "timestamp": "2026-09-02T18:47:03.352Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Had \"orange\"",
+      "fix": "Changed to \"blue\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:47:03.352Z"
+    },
+    {
+      "id": "bug-344",
+      "timestamp": "2026-09-02T18:51:30.299Z",
+      "error_message": "Significant refactor of ChecklistFieldBox.jsx",
+      "file": "web/components/kanban/ChecklistFieldBox.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-02T18:51:30.299Z"
     }
   ]
 }

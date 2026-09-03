@@ -13,12 +13,14 @@
 //
 // ⚠️ คืน NULL เมื่อแถวต้นทางหายไป (LEFT JOIN ไม่เจอ) — ให้ COALESCE ข้างนอกตกไปใช้ค่า cache
 //    ไม่งั้นการ์ดกำพร้าจะเด้งไปกอง "รอทำ" พร้อมกันทั้งหมดโดยไม่มีใครสั่ง
+// ⭐ 'rejected' → 'done' (แก้ 2026-09-02, เดิม 'cancelled'/พักไว้) — user เคาะ: เคสที่ปฏิเสธคือ
+//    งานที่จบแล้ว ไม่ใช่งานที่ "ยังจะทำแต่ไม่ใช่ตอนนี้" ตรงตามที่ KANBAN.md §ประเภทสถานะ เคยตั้งธงไว้ล่วงหน้า
 const CASE_STATUS = `CASE cs.status
         WHEN 'open'        THEN 'backlog'
         WHEN 'in_progress' THEN 'doing'
         WHEN 'resolved'    THEN 'done'
         WHEN 'closed'      THEN 'done'
-        WHEN 'rejected'    THEN 'cancelled'
+        WHEN 'rejected'    THEN 'done'
         ELSE NULL END`
 
 // โพสต์ไม่มีสถานะ "เผยแพร่แล้ว" ในตารางตัวเอง — ดูจากประวัติการส่งขึ้นโซเชียลว่ามีใบที่ posted_at แล้วไหม

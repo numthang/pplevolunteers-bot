@@ -191,6 +191,29 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
   const checklistFields = (card.fields || []).filter((f) => f.type === 'checklist')
   const total = checklistFields.reduce((sum, f) => sum + (f.value || []).length, 0)
   const done = checklistFields.reduce((sum, f) => sum + (f.value || []).filter((i) => i.done).length, 0)
+  // แท่งความคืบหน้า lifecycle ของเคส/โพสต์ที่ผูกไว้ (user สั่ง 2026-09-03) — คนละอันกับเช็คลิสต์ข้างบน
+  // ใช้ card.status_type ที่คำนวณสดจากต้นทางอยู่แล้ว (LIVE_STATUS_SQL) ไม่ต้องต่อ SQL เพิ่ม
+  // เคสมีแค่ 3 ขั้นจริง (open/in_progress/ปิด) ส่วนโพสต์ backlog กับ doing ก่อนส่งตรวจนับเป็นขั้นเดียวกัน
+  // (draft คืน NULL จากต้นทางเสมอ ตำแหน่งกองตอน draft เป็นการลากมือ ไม่ใช่สถานะจริงที่แยกได้)
+  const linkStage = (() => {
+    if (!card.link) return null
+    if (card.link.entity_type === 'case') {
+      // ⭐ ขั้น "รับเรื่องแล้ว" ต้องมีคนรับผิดชอบจริง ไม่ใช่แค่ status='open' (user ทัก 2026-09-03):
+      //    assign ไม่ได้เปลี่ยน cases.status (ดู lib/caseAssign.js) เคส open ที่ยังไม่มีใครรับ
+      //    จึงเข้าเงื่อนไข status_type='backlog' เหมือนกัน ถ้านับเป็นขั้น 1 ทันทีจะโกหกว่ามีคนรับแล้ว
+      //    owner_user_id sync มาจาก assignee คนแรกอยู่แล้ว (db/kanban/links.js) ใช้เช็คแทนได้เลย
+      if (!card.owner_user_id) return 0
+      const idx = ['backlog', 'doing', 'done'].indexOf(card.status_type)
+      return idx === -1 ? null : idx + 1
+    }
+    if (card.link.entity_type === 'post') {
+      if (['backlog', 'doing'].includes(card.status_type)) return 1
+      const idx = ['review', 'ready', 'done'].indexOf(card.status_type)
+      return idx === -1 ? null : idx + 2
+    }
+    return null
+  })()
+  const linkStageTotal = card.link?.entity_type === 'case' ? 3 : 4
 
   return (
     <div
@@ -201,33 +224,54 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
-      className={`group bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${
+      className={`group bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-2.5 flex flex-col gap-1 cursor-pointer hover:border-teal hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${
         dragging ? 'opacity-40' : ''
       }`}
     >
       {/* ไม่มีรหัส K-42 บนหน้าการ์ด — ดูที่หัว CardModal (ยังใช้อ้างถึงการบ้านในดิสฯ อยู่) */}
-      <div className="flex items-start gap-1">
-        {renaming ? (
-          <input
-            autoFocus
-            value={draftTitle}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            onKeyDown={(e) => {
-              e.stopPropagation()
-              if (e.key === 'Enter') { e.preventDefault(); commitRename() }
-              if (e.key === 'Escape') { setDraftTitle(card.title); setRenaming(false) }
-            }}
-            onBlur={commitRename}
-            maxLength={200}
-            className="flex-1 min-w-0 text-base font-semibold rounded border border-teal bg-card-bg px-1 text-warm-900 dark:text-disc-text focus:outline-none"
-          />
-        ) : (
-          <h3 className="flex-1 min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
-        )}
+      <div className="relative flex items-start gap-1">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
+          {renaming ? (
+            <input
+              autoFocus
+              value={draftTitle}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+                if (e.key === 'Escape') { setDraftTitle(card.title); setRenaming(false) }
+              }}
+              onBlur={commitRename}
+              maxLength={200}
+              className="flex-1 min-w-0 text-base font-semibold rounded border border-teal bg-card-bg px-1 text-warm-900 dark:text-disc-text focus:outline-none"
+            />
+          ) : (
+            /* ⭐ รหัสอ้างอิงพิมพ์ต่อกับ title เป็นข้อความเดียวกันเลย ไม่ใช่ badge/pill แยก (เคาะ 2026-09-03)
+                ตัวอย่างที่ user ให้: "00-69-7308 ท่าผา ขอให้ช่วยประสานซ่อมถนน"
+                เคสใช้ ref จริง (เช่น RB-26-A1F3) · โพสต์ยังไม่มี ref — ใช้ entity_id ทำเลข 4 หลักแทน (เช่น 0042)
+                รหัสยังคลิกได้ (target="_blank" ตามแบบ CardModal.jsx บรรทัด 445-452) ส่วนชื่อประเภทเต็มๆ
+                อยู่ใน title ตอน hover กันงงว่ารหัสนี้เป็นของเคสหรือโพสต์ */
+            <h3 className="flex-1 min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">
+              {card.link && (
+                <a
+                  href={card.link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`${t(`linked.kind.${card.link.entity_type}`)} · ${t('linked.open')}`}
+                  className="text-teal hover:underline"
+                >
+                  {card.link.entity_type === 'case' ? card.link.ref : String(card.link.entity_id).padStart(4, '0')}
+                </a>
+              )}
+              {card.link ? ' ' : ''}{card.title}
+            </h3>
+          )}
+        </div>
 
         {!card.archived_at && !renaming && !card.link && (
-          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          <div className="absolute top-0 right-0 flex items-center gap-0.5 bg-warm-50 dark:bg-disc-hover pl-1.5 rounded opacity-0 group-hover:opacity-100 focus-within:opacity-100">
             <button
               onClick={(e) => { e.stopPropagation(); setDraftTitle(card.title); setRenaming(true) }}
               aria-label={t('actions.renameTitle')}
@@ -269,16 +313,11 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         )}
       </div>
 
-      {/* การ์ดนี้มาจากของจริงไหม — ให้รู้ตั้งแต่บนบอร์ดว่าใบไหนแตะสถานะไม่ได้ ไม่ต้องเปิดเข้าไปลอง */}
-      {card.link && (
-        <span className="self-start flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-teal/10 text-teal">
-          <Link2 size={12} /> {t(`linked.kind.${card.link.entity_type}`)}
-        </span>
-      )}
-
       {/* ชิปมาจากค่าใน custom field แล้ว (ยุบป้ายเข้า field 2026-08-19) — cardTags คือจุดแปลงจุดเดียว
-          ชื่อกลุ่มไม่ต้องขึ้น การ์ดในคอลัมน์แคบเกิน (ชื่อ field เต็มอยู่ใน tooltip ของชิป) */}
-      <LabelChips labels={cardTags(card)} showGroupName={false} max={3} />
+          ชื่อกลุ่มไม่ต้องขึ้น การ์ดในคอลัมน์แคบเกิน (ชื่อ field เต็มอยู่ใน tooltip ของชิป)
+          ⭐ จำกัดรวมทุก field เหลือ 2 ชิปแรก + "+N" (ย่อการ์ด 2026-09-02) — เดิม max=3 ต่อ field
+          หลาย field พร้อมกันเคยดันการ์ดสูงจนล้น ดู maxTotal ใน LabelChips.jsx */}
+      <LabelChips labels={cardTags(card)} showGroupName={false} maxTotal={2} />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-warm-500 dark:text-disc-muted">
         {card.due_at && (
@@ -297,6 +336,15 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         )}
       </div>
 
+      {/* แท่ง lifecycle ของเคส/โพสต์ที่ผูกไว้ — คนละแท่งกับเช็คลิสต์ข้างล่าง (การ์ดผูกก็มีเช็คลิสต์ของตัวเองได้)
+          ซ่อนตอน draft/สถานะที่ยังหาขั้นไม่ได้ (linkStage=null) แทนโชว์แท่งว่างที่อ่านไม่ออกว่าคืออะไร */}
+      {linkStage != null && (
+        <div className="flex items-center gap-1.5 text-warm-500 dark:text-disc-muted" title={t('linked.statusHint', { kind: t(`linked.kind.${card.link.entity_type}`) })}>
+          <CircleDot size={16} className="shrink-0" />
+          <ChecklistBar done={linkStage} total={linkStageTotal} className="flex-1" tone="blue" />
+        </div>
+      )}
+
       {/* ความคืบหน้าเช็คลิสต์เป็น **แท่ง** ไม่ใช่ตัวเลข x/y (user สั่ง 2026-08-19)
           อยู่บรรทัดของตัวเอง — ยัดในแถว meta แล้วแท่งแคบจนอ่านไม่ออกบนคอลัมน์แคบ
           ตัวเลขจริงย้ายไป title ให้เอาเมาส์ชี้ดูได้ ไม่ได้หายไปเฉยๆ */}
@@ -307,15 +355,19 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         </div>
       )}
 
-      {/* อยู่ในกรุ = เอาออก · และ (admin เท่านั้น) ลบถาวร — ที่เดียวในระบบที่ลบการ์ดจริงได้ */}
+      {/* อยู่ในกรุ = เอาออก · และ (admin เท่านั้น) ลบถาวร — ที่เดียวในระบบที่ลบการ์ดจริงได้
+          ⭐ ปุ่มการ์ด kanban (รับงาน/เอากลับ/ลบถาวร) เป็น **ข้อยกเว้นเดียว** ของ §Type scale
+          (เคาะ 2026-09-02): px-3 py-1.5 text-sm แทนมาตรฐาน px-4 py-2 text-base ทั้งโปรเจกต์ —
+          พื้นที่การ์ดแคบ การ์ดเดียวมีปุ่มได้หลายอัน ปุ่มมาตรฐานดันการ์ดสูงเกินไป
+          ⛔ ห้ามลอกขนาดนี้ไปใช้นอกการ์ด kanban — ที่อื่นยังเป็น px-4 py-2 text-base ตามเดิม */}
       {card.archived_at ? (
         <div className="self-start flex flex-wrap items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); onRestore(card) }}
             disabled={restoring}
-            className="flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
           >
-            <ArchiveRestore size={16} />
+            <ArchiveRestore size={14} />
             {restoring ? t('actions.restoring') : t('actions.restore')}
           </button>
           {/* คนที่ไม่ใช่ admin ไม่เห็นปุ่มนี้เลย — ไม่ใช่กดแล้วเด้ง 403 */}
@@ -323,9 +375,9 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
             <button
               onClick={(e) => { e.stopPropagation(); onPurge(card) }}
               disabled={purging}
-              className="flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-red-300 dark:border-red-500/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium disabled:opacity-50 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-red-300 dark:border-red-500/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium disabled:opacity-50 transition"
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
               {purging ? t('actions.purging') : t('actions.purge')}
             </button>
           )}
@@ -336,7 +388,7 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         <button
           onClick={(e) => { e.stopPropagation(); onClaim(card) }}
           disabled={claiming}
-          className="self-start px-4 py-2 text-base rounded-lg bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50 transition"
+          className="self-start px-3 py-1.5 text-sm rounded-lg bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50 transition"
         >
           {claiming ? t('actions.claiming') : t('actions.claim')}
         </button>

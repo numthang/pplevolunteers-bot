@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import useCaseAutosave from './useCaseAutosave.js'
 import CaseSaveBadge from './CaseSaveBadge.jsx'
+// ⭐ ผู้รับผิดชอบหลายคน (user สั่ง 2026-09-03) — ลอก picker ตัวเดียวกับ "คนช่วย" ในการ์ด kanban
+//    (CardModal.jsx) แทนเขียน combobox ใหม่ · ค้นคนใน org ผ่าน /api/kanban/people ตัวเดิม
+//    t ของกล่องนี้ต้องมาจาก namespace 'kanban' เพราะ string ภายใน (searchPeopleHint ฯลฯ) อยู่ที่นั่น
+import TagCombobox from '@/components/kanban/TagCombobox.jsx'
 
 const selectCls = 'w-full rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange'
 
@@ -22,6 +26,7 @@ export default function CaseMetaEditor({
   province, sourceLabel, receivedAt, threadUrl, threadName, assignees = [],
 }) {
   const t = useTranslations('case')
+  const tk = useTranslations('kanban')   // string ภายใน TagCombobox (ผู้รับผิดชอบ) อยู่ namespace นี้
   const router = useRouter()
   const { values, set, saveState, error } = useCaseAutosave({
     refId, canEdit,
@@ -30,6 +35,50 @@ export default function CaseMetaEditor({
 
   const [moveState, setMoveState] = useState('idle')   // idle | saving
   const [moveError, setMoveError] = useState('')
+  const [assignError, setAssignError] = useState('')
+
+  /** ค้นคนใน org ให้ picker ผู้รับผิดชอบ — endpoint เดิมที่ CardModal ใช้กับเจ้าภาพ/คนช่วย */
+  const searchPeople = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) return []
+    const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.people || []).map((p) => ({
+      id: String(p.userId), name: p.name, sub: p.username ? `@${p.username}` : null,
+    }))
+  }, [])
+
+  /**
+   * ผู้รับผิดชอบหลายคน — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
+   * (ทรงเดียวกับ commitHelpers ใน CardModal.jsx) ยิงผ่าน /api/case/[ref]/assign ตัวเดียวกับ
+   * ปุ่ม "รับเรื่อง" ในการ์ดข้างๆ — sync การ์ด kanban + ping Discord + audit ให้แล้วที่ lib/caseAssign.js
+   */
+  async function commitAssignees(ids) {
+    setAssignError('')
+    const before = new Set(assignees.map((a) => String(a.user_id)))
+    const after = new Set(ids.map(String))
+    const added = [...after].filter((id) => !before.has(id))
+    const removed = [...before].filter((id) => !after.has(id))
+    try {
+      for (const id of added) {
+        const res = await fetch(`/api/case/${refId}/assign`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: Number(id) }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); setAssignError(d.error || t('actions.genericFailMsg')); return }
+      }
+      for (const id of removed) {
+        const res = await fetch(`/api/case/${refId}/assign`, {
+          method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: Number(id) }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); setAssignError(d.error || t('actions.genericFailMsg')); return }
+      }
+      router.refresh()
+    } catch {
+      setAssignError(t('actions.genericFailMsg'))
+    }
+  }
 
   async function move(next) {
     if (!next || next === province) return
@@ -104,18 +153,31 @@ export default function CaseMetaEditor({
             เป็นแถวใน dl เดียวกับข้อเท็จจริงอื่น ไม่ใช่ label ก้อนใหญ่แล้วค่าตกบรรทัด
             (user ทักซ้ำจุดเดิมกับจังหวัด — ชื่อต้องอยู่บรรทัดเดียวกับหัวข้อ) */}
         <dt className="text-gray-400 dark:text-disc-muted">{t('manage.assigneesHeading')}</dt>
-        <dd className={assignees.length === 0 ? 'text-gray-400 dark:text-disc-muted' : 'text-gray-900 dark:text-disc-text'}>
-          {assignees.length === 0 ? t('manage.noAssignees') : assignees.map(a => a.name).join(', ')}
+        <dd>
+          {canEdit ? (
+            <TagCombobox
+              type="multi_select"
+              numericIds={false}
+              source={{ mode: 'search', search: searchPeople }}
+              placeholder={t('manage.noAssignees')}
+              value={assignees.map((a) => ({ id: String(a.user_id), name: a.name }))}
+              onCommit={commitAssignees}
+              onError={setAssignError}
+              t={tk}
+            />
+          ) : (
+            <span className={assignees.length === 0 ? 'text-gray-400 dark:text-disc-muted' : 'text-gray-900 dark:text-disc-text'}>
+              {assignees.length === 0 ? t('manage.noAssignees') : assignees.map(a => a.name).join(', ')}
+            </span>
+          )}
         </dd>
       </dl>
+      {assignError && <p className="text-sm text-red-500">{assignError}</p>}
 
       {canEdit && (moveState === 'saving' || moveError) && (
         <p className={`text-sm ${moveError ? 'text-red-500' : 'text-gray-500 dark:text-disc-muted'}`}>
           {moveError || t('edit.provinceMoving')}
         </p>
-      )}
-      {canEdit && !moveError && moveState !== 'saving' && (
-        <p className="text-sm text-gray-500 dark:text-disc-muted">{t('edit.provinceMoveWarning')}</p>
       )}
 
       {threadUrl && (

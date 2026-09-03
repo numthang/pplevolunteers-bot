@@ -756,7 +756,6 @@
       "smsSent": "ส่ง SMS แล้ว",
       "smsFailed": "ส่ง SMS ไม่สำเร็จ",
       "provinceMoving": "กำลังย้าย…",
-      "provinceMoveWarning": "เลือกจังหวัดแล้วย้ายทันที · เลขอ้างอิงเดิมไม่เปลี่ยนตาม",
       "provinceMoveFailed": "ย้ายจังหวัดไม่สำเร็จ"
     },
     "archive": {

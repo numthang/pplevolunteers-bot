@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T12:51:33.795Z
-> Files: 1105 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T19:31:35.465Z
+> Files: 1109 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -291,8 +291,8 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~47186 tok)
-- `WEB.md` — Web App — Next.js Frontend (~5796 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~48709 tok)
+- `WEB.md` — Web App — Next.js Frontend (~6698 tok)
 
 ## md/archive/
 
@@ -344,7 +344,7 @@
 ## md/kanban/
 
 - `CUSTOM-FIELDS.md` — Kanban — ช่องข้อมูลตั้งเอง (custom fields) (~3612 tok)
-- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~8990 tok)
+- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~9207 tok)
 - `NEXT-SESSION.md` — Kanban — จุดรับช่วง session หน้า (เขียนใหม่ 2026-08-19 เช้ามืด) (~3532 tok)
 
 ## md/posts/
@@ -447,6 +447,9 @@
 ## scripts/dev/
 
 - `_tmp_imgEditModalCheck.mjs` — BASE: mintToken (~2121 tok)
+- `.tmp-cleanup-assignees.mjs` — CHROME: launchChrome (~1442 tok)
+- `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
+- `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
 - `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~404 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
@@ -609,6 +612,7 @@
 
 ## web/
 
+- `_chk_tmp.mjs` — ชั่วคราว — assignee ที่มาจาก backfill แยกออกจากที่คนกดเองได้ไหม (ลบทิ้งหลังรัน) (~222 tok)
 - `_testcounts2.mjs` — Declares orgId (~140 tok)
 - `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
 - `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
@@ -810,7 +814,7 @@
 
 ## web/app/api/case/[ref]/assign/
 
-- `route.js` — POST /api/case/[ref]/assign — รับเรื่อง (default = ตัวเอง) หรือ assign คนอื่น { discordId } (~631 tok)
+- `route.js` — ⛔ ห้ามเรียก addAssignee/removeAssignee จาก db/cases.js ตรงๆ ที่นี่ (~676 tok)
 
 ## web/app/api/case/[ref]/attachments/[attId]/
 
@@ -1967,7 +1971,7 @@
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~5515 tok)
 - `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ (~1850 tok)
-- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
+- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~2529 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
 - `CaseRow.jsx` — การ์ดเคสในรายการ /case — ทรงเดียวกับการ์ดโพสต์ที่ /posts (user สั่งให้เหมือนกัน 2026-09-01) (~2295 tok)
@@ -2005,12 +2009,12 @@
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~8174 tok)
 - `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~9252 tok)
-- `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
+- `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6915 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~24619 tok)
-- `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~26236 tok)
+- `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~809 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
 
@@ -2135,7 +2139,7 @@
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3435 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
-- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1649 tok)
+- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1707 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/
@@ -2316,8 +2320,8 @@
 
 ## web/locales/
 
-- `en.json` (~26546 tok)
-- `th.json` (~25374 tok)
+- `en.json` (~26513 tok)
+- `th.json` (~25344 tok)
 
 ## web/public/media-temp/
 

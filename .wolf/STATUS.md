@@ -5,61 +5,75 @@ budget_tokens: 1000
 # STATUS — pple-volunteers
 
 > อ่านไฟล์นี้ก่อนเสมอเมื่อเริ่ม session ใหม่ · อัปเดตทุกครั้งที่จบก้อนงาน
-> Last updated: 2026-09-01 (ดึกมาก)
+> Last updated: 2026-09-03
 
 ---
 
-## ✅ Done (สรุปย่อ — รายละเอียดดู git log)
+## ✅ Done
 
-- **cases.created_at บั๊ก: แก้เสร็จ + backfill dev/prod แล้ว (commit `b08009e`, push แล้ว)**
-  - สาเหตุ: `createCase()` ทั้งฝั่งบอท (`db/case.js`) ไม่เคยรับ `created_at` override → insert ใช้ `NOW()` เสมอ
-    เคสที่ "นำเข้ากระทู้เก่า" (`handlers/caseImportHandler.js` manual import) เลยได้วันที่ = เวลากดนำเข้า ไม่ใช่วันตั้งกระทู้จริง
-  - แก้: `db/case.js` `createCase()` รับ `created_at` param แล้ว (`COALESCE($15, NOW())`) · `caseImportHandler.js` ส่ง `thread.createdAt` เข้าไป
-  - Backfill เก่า: `scripts/data/backfillCaseCreatedAt.js` (ถอดวันที่จาก `discord_thread_id` snowflake ตรงๆ ไม่ยิง Discord API) — รันแล้วทั้ง dev (179 ใบ) และ prod (180 ใบ) 0 errors
-  - ⬜ **prod bot `pple-dcbot` ยังไม่ restart** — code ใหม่ pull ลงเครื่องแล้ว (`git pull` ผ่าน `sudo -u www`) แต่ process ยังรันโค้ดเก่าค้างอยู่ใน memory · permission classifier บล็อกไม่ให้ Claude สั่ง `pm2 restart` เอง → **user ต้องรันเอง**: `ssh tee@202.183.141.78 "sudo -u www pm2 restart pple-dcbot"`
-- หนังสือร้องเรียน รื้อทั้งชุด (session ก่อนหน้า, commit `5f63f60`..`d809f4a`) — push แล้ว แต่ยังค้าง:
-  - ⬜ ยังไม่ได้รัน mobile audit ของช่อง reference/attachments ใหม่
-  - ⬜ ยังไม่ได้เทสผ่าน route จริง (authed preview + public link)
-  - ⬜ user ยังไม่ได้กดเองในแอป
+**Session นี้ (2026-09-03) — แท่ง progress บนการ์ด kanban** · ยังไม่ commit
+- `ChecklistBar` ([web/components/kanban/ChecklistFieldBox.jsx](../web/components/kanban/ChecklistFieldBox.jsx)) —
+  แบ่งเป็น **ท่อนตามจำนวนขั้น** (เดิมเป็นแท่งไล่ระดับต่อเนื่อง) + บางลงเป็น `h-1` + รับ prop `tone`
+- แท่ง lifecycle เคส/โพสต์ใช้ **cyan** แยกจากเช็คลิสต์ที่ยังเป็น `bg-teal`
+  (⚠️ `teal` ใน tailwind.config.js จริงๆ คือ `var(--brand-orange)` — ชื่อคลาสหลอก)
+- **แท่ง lifecycle ของเคสเลิกโกหก** ([KanbanHome.jsx](../web/components/kanban/KanbanHome.jsx) `linkStage`) —
+  เดิม `status='open'` = ขึ้นขั้น "รับเรื่องแล้ว" ทันทีที่เคสเกิด ทั้งที่ยังไม่มีใครรับ
+  (assign ไม่แตะ `cases.status` เลย) → ตอนนี้ `!card.owner_user_id` = แท่งว่าง (0 ท่อน)
+- **ยังไม่ได้ทำฝั่ง post** ของ `linkStage` โดยตั้งใจ — รอทำพร้อมงาน `post_assignees` (ดู Next quest)
+
+**ค้างจาก session ก่อน (ยังไม่ยืนยันสถานะ prod — ต้องถาม user):**
+- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (โค้ด `created_at` fix pull ลงเครื่องแล้ว)
+  `ssh tee@202.183.141.78 "sudo -u www pm2 restart pple-dcbot"` — Claude สั่งเองไม่ได้
+- ⬜ หนังสือร้องเรียนชุดใหม่: ยังไม่ mobile audit · ยังไม่เทส route จริง · user ยังไม่กดเอง
 
 ---
 
 ## 🚀 Next quest
 
-**Goal:** แก้บั๊กเดียวกัน (created_at ผิดตอนนำเข้ากระทู้เก่า) ในโมดูล **posts**
+**Posts — ผู้รับผิดชอบหลายคน ให้ consistent กับ cases** · แพลนเต็ม + เหตุผลอยู่หัว `md/PENDING.md`
+(อ่านที่นั่นก่อน อย่า re-derive — ใช้เวลาคุยกันทั้ง session)
 
-**จุดที่ต้องแก้ (สำรวจแล้ว แต่ยังไม่ได้ลงมือ):**
-1. `db/postsImport.js` → `createImportedPost()` (บรรทัด 27-40): INSERT `post_episodes` ไม่รับ `created_at` เลย ใช้ `NOW()` เสมอ — เพิ่ม param แบบเดียวกับที่ทำใน `db/case.js`
-2. `scripts/data/backfillPostThreads.js` — ตัวกวาดกระทู้เก่า ใช้ `createdVia: 'backfill'` อยู่แล้ว แต่ยังไม่ส่ง `created_at` → ต้องส่ง `thread.createdAt` เข้าไป
-3. `handlers/postImportHandler.js` — เช็คว่ามี manual-import path (กด context menu นำเข้ากระทู้ที่ตั้งมานานแล้ว) เหมือน `caseImportHandler.js` หรือไม่ ถ้ามีต้องส่ง `created_at` ด้วยเช่นกัน
-4. เขียน backfill script คล้าย `scripts/data/backfillCaseCreatedAt.js` — ถอดวันที่จาก snowflake ของ `channel_id` (หรือ field ที่เก็บ thread id ของ post_episodes ที่ `created_via='backfill'`) แล้ว UPDATE ย้อนหลัง
-5. **dry-run ก่อนเสมอ** แล้วรันทั้ง dev และ prod ตามลำดับเดียวกับที่ทำกับ cases วันนี้ (commit → push → ssh prod git pull → dry-run prod → confirm → run จริง)
+**แก่นของปัญหา:** `owner_user_id` แปลคนละเรื่องใน 2 ตาราง — `kanban_cards` = **เจ้าภาพ**,
+`post_episodes` = **เจ้าของร่าง/คนสร้าง** แล้ว `SOURCE_SQL.post` ([web/db/kanban/links.js](../web/db/kanban/links.js))
+ก็อปข้ามความหมายกัน = "คนนำเข้า" กลายเป็น "ผู้รับผิดชอบ" ทุกใบเงียบๆ
+3 บทบาทที่ห้ามยุบรวม: **ผู้สร้าง** (`created_by`) · **เจ้าของสิทธิ์** · **ผู้รับผิดชอบ**
 
-**ข้อควรระวังที่ต่างจาก cases:** posts มี `created_via` แยก 'ai' vs 'backfill' อยู่แล้ว (backfill ถูกซ่อนจากฟีดหลัก) — เช็คว่า field เก็บ thread/channel id ของ `post_episodes` ชื่ออะไรแน่ (`channel_id`?) ก่อนเขียน snowflake decode
+**ลำดับงาน:** `post_assignees` (migration) → `web/lib/postAssign.js` (ทางเข้าเดียว) →
+`syncPostCardPeople()` → `/api/posts/[id]/assign` → ดัก `postOfCard()` ใน
+`/api/kanban/cards/[id]/route.js` → ช่องผู้รับผิดชอบใน `PostMetaPanel.jsx` → ค่อยแก้ `linkStage` ฝั่ง post
+
+**เคาะแล้ว ไม่ต้องถามซ้ำ:** ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย ("ก็มันร่างส่วนตัว") →
+**ไม่ต้องแตะ `lib/postsAccess.js` และ `visibleLinkSql`** · ping เธรดดิสฯ ตอนมอบหมาย = เอา ·
+`post_episodes.owner_user_id` คงความหมายเดิมทุกอย่าง
+**ก่อนเขียนโค้ด:** CLAUDE.md บังคับรัน `/scrutinize` ก่อนทุกฟีเจอร์ใหม่
+
+**อีก 2 quest ที่จดไว้แล้ว อย่าลืม (อยู่ `md/PENDING.md`):**
+- 🧺 `isMyCard()` นับงานไม่มีเจ้าภาพเป็น "ของฉัน" ของทุกคน = รากของเจ้าภาพปลอม — ควรทำ**ก่อน**
+  งานที่จะสร้างการ์ดไร้เจ้าภาพเพิ่มทีละเยอะ · ⛔ อย่าเสนอล้าง assignee 176 ใบอีก (user จัดการเองบน prod แล้ว)
+- 📅 `created_at` ผิดตอนนำเข้ากระทู้เก่า **ฝั่ง posts** (แบบเดียวกับที่แก้ให้ cases ไปแล้ว) —
+  `db/postsImport.js` · `scripts/data/backfillPostThreads.js` · เขียน backfill ถอด snowflake
 
 ---
 
 ## Context
 
-- Branch `master` · sync กับ origin แล้ว (ไม่มี commit ค้าง push)
-- Uncommitted: `.wolf/anatomy.md` (auto), `md/TEAM/TEE.md` (ของ user เอง ไม่ใช่ของ session ไหน — อย่าแตะ)
-- prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · ทุกคำสั่งต้อง `sudo -u www` (ไม่งั้น `.env` ไม่โหลด) · git มี "dubious ownership" ถ้ารันด้วย `tee` ตรงๆ ต้อง wrap `sudo -u www bash -c '...'` เท่านั้น
-- **Claude สั่ง `pm2 restart` บน prod เองไม่ได้** (permission classifier บล็อก) — ต้องขอ user รันเอง หรือถามอนุญาตแบบเจาะจงก่อน
-- ห้ามรายงานสถานะ prod จากเอกสาร (`md/PENDING.md` เป็นบันทึก ไม่ใช่สถานะสด) → ถาม/เช็คสดเสมอ
+- Branch `master` · ไม่มี commit ค้าง push แต่ **working tree มีของค้างเยอะกว่างาน session นี้**
+  (`CaseMetaEditor.jsx`, `statusSql.js`, locales, `LabelChips.jsx`, `md/*` — งานผู้รับผิดชอบหลายคน
+  ของเคสที่ทำก่อนหน้า) · `md/TEAM/TEE.md` เป็นของ user เอง **อย่าแตะ**
+- prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · ทุกคำสั่ง wrap `sudo -u www bash -c '...'`
+  · Claude สั่ง `pm2 restart` เองไม่ได้ (classifier บล็อก) · ห้ามรายงานสถานะ prod จากเอกสาร — ถามสดเสมอ
 - `.env` dev ผูกกับบอท **"Tester"** · user เปิด dev server ค้างที่ `:3000` → รันเองใช้
-  `NEXT_DIST_DIR=.next-test npx next dev -p 3100` · **ห้าม `rm -rf web/.next`**
+  `NEXT_DIST_DIR=.next-test npx next dev -p 3100` · **ห้าม `rm -rf web/.next`** · ห้าม `npm run build` ตอน dev รันอยู่
+- ต่อ DB จากสคริปต์ชั่วคราว: อ่านเฉพาะคีย์ `DB_*` จาก `.env` เองในไฟล์ `.mjs` แล้ว import
+  `web/db/index.js` (อย่าใช้ `--env-file` — hook บล็อกกันซีเคร็ตหลุด)
 
 ---
 
-## 🔧 Commands
+## 🔧 Commands & References
 
 ```bash
-node scripts/data/backfillCaseCreatedAt.js --dry-run   # ตัวอย่างแพทเทิร์นที่ posts จะลอกไปทำ
-node scripts/dev/mobileAudit.mjs --routes /หน้า         # ก่อนปิดงาน UI ทุกครั้ง
-cd web && npm test                                      # vitest 504 tests
-openwolf find <symbol>   ·   openwolf bug search "<error>"
+node scripts/dev/mobileAudit.mjs --routes /หน้า   # ก่อนปิดงาน UI ทุกครั้ง
+cd web && npm test    ·    openwolf find <symbol>    ·    openwolf bug search "<error>"
 ```
-
-## 📚 References
-`md/PENDING.md` (backlog ตัวจริง · `NOTE.md` ห้ามแตะ) · `md/case/CASE.md` · `md/WEB.md §จอมือถือ` `§Type scale` ·
-`.wolf/cerebrum.md` (Do-Not-Repeat) · `.wolf/buglog.json` (281 bugs)
+`md/PENDING.md` (backlog ตัวจริง — 3 quest ข้างบนอยู่ที่นั่นหมด · `NOTE.md` ห้ามแตะ) ·
+`md/kanban/KANBAN.md` · `md/WEB.md §จอมือถือ` `§Type scale` · `.wolf/cerebrum.md` (Do-Not-Repeat)
