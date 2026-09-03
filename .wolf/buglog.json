@@ -6172,6 +6172,38 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-03T06:11:01.282Z"
+    },
+    {
+      "id": "bug-346",
+      "timestamp": "2026-09-03T06:14:49.365Z",
+      "error_message": "Wrong condition in logic",
+      "file": "services/newsShare.js",
+      "root_cause": "Condition was: if (!channel)",
+      "fix": "Changed to: if (cut < max * 0.5)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T06:14:49.365Z"
+    },
+    {
+      "id": "bug-347",
+      "timestamp": "2026-09-03T06:16:13.468Z",
+      "error_message": "Null/undefined access in metaApi.js",
+      "file": "services/metaApi.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: // permalink อาจยังไม่พร้อมทันทีด้วยเหตุเดียวกับ waitPostVis; // ห้าม throw ตรงนี้เด็ดขาด: โพสต์ออกไปแล้ว ย้อนไม่ได้ · ไม่",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-03T06:16:28.826Z"
     }
   ]
 }

@@ -7,8 +7,6 @@ My Tasks and bug issue
 และ helpers มองเป็น ผู้รับผิดชอบ cases
 create_by กับ owner_user_id ต่างกันไงนะ created_by คือ เจ้าภาพใช่ไหม
 
-ควร handoff ก่อน code ไหม อย่าลืมใช้ sonnet ช่วยงาน, อย่าลืม commit ก่อน refactor ส่วนนี้
-
 # PLATFOR{m}.ORG
 - platfor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง

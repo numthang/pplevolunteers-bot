@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T05:54:27.151Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T06:16:28.795Z
 > Files: 1110 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -572,8 +572,8 @@
 - `i18n.js` — services/i18n.js — ระบบแปลภาษาของ bot (~582 tok)
 - `linkToComment.js` — แยกลิงก์ออกจาก caption (~987 tok)
 - `meilisearch.js` — INDEX_NAME: getClient, initMeilisearch, isReady + 5 more (~1182 tok)
-- `metaApi.js` — ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห (~10542 tok)
-- `newsShare.js` — ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js) (~1803 tok)
+- `metaApi.js` — ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห (~11868 tok)
+- `newsShare.js` — ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js) (~2180 tok)
 - `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~3582 tok)
 - `postsRetention.js` — services/postsRetention.js — เก็บกวาดไฟล์สื่อของ posts/ตะกร้าที่ "หมดหน้าที่แล้ว" (~831 tok)
 - `publishPipeline.js` — สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้ (~4055 tok)
