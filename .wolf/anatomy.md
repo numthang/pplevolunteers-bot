@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T06:16:28.795Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T06:35:43.302Z
 > Files: 1110 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -1251,7 +1251,7 @@
 
 ## web/app/api/meta/oauth/callback/
 
-- `route.js` — ดึง edge แบบ paginated ให้ครบทุกหน้า — คืน { data } หรือ { error } (~2343 tok)
+- `route.js` — ดึง edge แบบ paginated ให้ครบทุกหน้า — คืน { data } หรือ { error } (~3294 tok)
 
 ## web/app/api/meta/oauth/start/
 

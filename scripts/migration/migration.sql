@@ -1637,7 +1637,6 @@ ALTER TABLE case_letter_config ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255);
 DELETE FROM org_ai_prompts WHERE value = 'case.letter_draft' AND kind = 'slot';
 
 
--- production ทำถึงตรงนี้
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -1747,3 +1746,5 @@ CREATE CONSTRAINT TRIGGER trg_kanban_assignees_clamp
   EXECUTE FUNCTION kanban_card_clamp_unassigned();
 
 COMMIT;
+
+-- production ทำถึงตรงนี้
