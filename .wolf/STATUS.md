@@ -11,69 +11,68 @@ budget_tokens: 1000
 
 ## ✅ Done
 
-**Session นี้ (2026-09-03) — แท่ง progress บนการ์ด kanban** · ยังไม่ commit
-- `ChecklistBar` ([web/components/kanban/ChecklistFieldBox.jsx](../web/components/kanban/ChecklistFieldBox.jsx)) —
-  แบ่งเป็น **ท่อนตามจำนวนขั้น** (เดิมเป็นแท่งไล่ระดับต่อเนื่อง) + บางลงเป็น `h-1` + รับ prop `tone`
-- แท่ง lifecycle เคส/โพสต์ใช้ **cyan** แยกจากเช็คลิสต์ที่ยังเป็น `bg-teal`
-  (⚠️ `teal` ใน tailwind.config.js จริงๆ คือ `var(--brand-orange)` — ชื่อคลาสหลอก)
-- **แท่ง lifecycle ของเคสเลิกโกหก** ([KanbanHome.jsx](../web/components/kanban/KanbanHome.jsx) `linkStage`) —
-  เดิม `status='open'` = ขึ้นขั้น "รับเรื่องแล้ว" ทันทีที่เคสเกิด ทั้งที่ยังไม่มีใครรับ
-  (assign ไม่แตะ `cases.status` เลย) → ตอนนี้ `!card.owner_user_id` = แท่งว่าง (0 ท่อน)
-- **ยังไม่ได้ทำฝั่ง post** ของ `linkStage` โดยตั้งใจ — รอทำพร้อมงาน `post_assignees` (ดู Next quest)
+**Session นี้ (2026-09-03) — คุยแพลนทั้ง session แล้วลงมือเฟสแรก · working tree สะอาด**
 
-**ค้างจาก session ก่อน (ยังไม่ยืนยันสถานะ prod — ต้องถาม user):**
-- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (โค้ด `created_at` fix pull ลงเครื่องแล้ว)
-  `ssh tee@202.183.141.78 "sudo -u www pm2 restart pple-dcbot"` — Claude สั่งเองไม่ได้
-- ⬜ หนังสือร้องเรียนชุดใหม่: ยังไม่ mobile audit · ยังไม่เทส route จริง · user ยังไม่กดเอง
+- `3b1bd09` **checkpoint** ของค้าง session ก่อน (ChecklistBar แบ่งท่อน · แท่ง lifecycle เคสเลิกโกหก ·
+  ผู้รับผิดชอบหลายคนของเคสในหน้า /case) — ไม่ได้อ่าน diff ตามกฎ ใช้ `--stat` เขียน message
+- `a901d5b` **เฟส A เสร็จ** — `isMyCard()` เลิกนับงานไร้เจ้าภาพเป็น "ของฉัน" ของทุกคน
+  ([lib/kanbanGrouping.js](../web/lib/kanbanGrouping.js)) · ปุ่มมุมมองบนจอใหญ่โชว์ตัวเลขแล้ว ("ยังไม่มีคนรับ (n)")
+  · แถมแก้บั๊กเก่า **ตัวกรองคนไม่นับเจ้าภาพ** → กรองชื่อคนหนึ่งไม่เจอใบที่เขาเป็นแม่งาน
+  ([KanbanHome.jsx](../web/components/kanban/KanbanHome.jsx)) · test 504 ผ่าน · build ผ่าน
+- **ออกแบบเสร็จทั้งชุด** — 📄 **แพลนเต็มอยู่ที่ `/home/tee/.claude/plans/owner-user-id-wild-hinton.md`**
+  (อ่านที่นั่นก่อนทำต่อ **อย่า re-derive** — คุยกันทั้ง session กว่าจะได้ + มีผล `/scrutinize` ครบ)
+
+**ยังไม่ยืนยันสถานะ prod (ต้องถาม user — ห้ามรายงานจากเอกสาร):**
+- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (`ssh tee@202.183.141.78` · Claude สั่งเองไม่ได้)
+- ⬜ หนังสือร้องเรียนชุดใหม่: ยังไม่ mobile audit · user ยังไม่กดเอง
 
 ---
 
-## 🚀 Next quest
+## 🚀 Next quest — เฟส B: kanban ยุบ `owner_user_id` ลงตาราง
 
-**Posts — ผู้รับผิดชอบหลายคน ให้ consistent กับ cases** · แพลนเต็ม + เหตุผลอยู่หัว `md/PENDING.md`
-(อ่านที่นั่นก่อน อย่า re-derive — ใช้เวลาคุยกันทั้ง session)
+**เป้า:** ทุกระบบเหลือรูปเดียว — แถวหลักมีคอลัมน์คนตัวเดียวคือ `created_by` (= คนสร้าง · ให้สิทธิ์ลบ)
+ส่วนผู้รับผิดชอบอยู่ในตาราง `<entity>_assignees` เสมอ (หลายคน ไม่มีหัวหน้า) เขียนผ่าน service ตัวเดียว
+เลิกใช้คำว่า "เจ้าภาพ/ผู้ช่วย" ทั้งโค้ดและจอ เหลือ **"ผู้รับผิดชอบ"**
 
-**แก่นของปัญหา:** `owner_user_id` แปลคนละเรื่องใน 2 ตาราง — `kanban_cards` = **เจ้าภาพ**,
-`post_episodes` = **เจ้าของร่าง/คนสร้าง** แล้ว `SOURCE_SQL.post` ([web/db/kanban/links.js](../web/db/kanban/links.js))
-ก็อปข้ามความหมายกัน = "คนนำเข้า" กลายเป็น "ผู้รับผิดชอบ" ทุกใบเงียบๆ
-3 บทบาทที่ห้ามยุบรวม: **ผู้สร้าง** (`created_by`) · **เจ้าของสิทธิ์** · **ผู้รับผิดชอบ**
+**เฟส B ทำอะไร:** `kanban_card_helpers` → rename `kanban_card_assignees` (+`joined_at`→`assigned_at`)
+· ยก `kanban_cards.owner_user_id` ลงเป็นแถวหนึ่งแล้ว **DROP คอลัมน์ทิ้ง** · กวาดโค้ดทุกจุดเป็น EXISTS/join
 
-**ลำดับงาน:** `post_assignees` (migration) → `web/lib/postAssign.js` (ทางเข้าเดียว) →
-`syncPostCardPeople()` → `/api/posts/[id]/assign` → ดัก `postOfCard()` ใน
-`/api/kanban/cards/[id]/route.js` → ช่องผู้รับผิดชอบใน `PostMetaPanel.jsx` → ค่อยแก้ `linkStage` ฝั่ง post
+**ห้ามพลาด 3 ข้อ (ผล `/scrutinize` — อยู่ในแพลนพร้อมหลักฐาน):**
+1. trigger แทน CHECK **ต้องเป็น `CONSTRAINT TRIGGER … DEFERRABLE INITIALLY DEFERRED`** เท่านั้น
+   (`BEFORE`/`AFTER` ธรรมดาพัง 2 ทาง: sync แบบ DELETE-แล้ว-INSERT จะดันการ์ดตกกอง · สร้างการ์ดใหม่ติดด่านตัวเอง)
+2. **บอทมีสำเนา `syncCaseCardPeople` ของตัวเอง** ที่ [db/kanbanCards.js:200](../db/kanbanCards.js) — เว็บ build ผ่าน ≠ บอทรอด
+   · คอลัมน์หายเลย → **deploy เว็บ+บอทพร้อมกัน** · prod ต้อง `pg_dump` ตาราง kanban ก่อน
+3. `GET /api/kanban/cards?view=mine` คืน `{mine, helping}` — grep ทั้งรีโปไม่เจอ caller
+   **ถาม user ก่อนลบ** อย่าดัดให้รอด
 
-**เคาะแล้ว ไม่ต้องถามซ้ำ:** ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย ("ก็มันร่างส่วนตัว") →
-**ไม่ต้องแตะ `lib/postsAccess.js` และ `visibleLinkSql`** · ping เธรดดิสฯ ตอนมอบหมาย = เอา ·
-`post_episodes.owner_user_id` คงความหมายเดิมทุกอย่าง
-**ก่อนเขียนโค้ด:** CLAUDE.md บังคับรัน `/scrutinize` ก่อนทุกฟีเจอร์ใหม่
+**ทำก่อนเขียนโค้ด:** `/scrutinize` (CLAUDE.md บังคับ) · commit checkpoint
+**ส่ง Sonnet subagent:** B2 กวาด `owner_user_id` + locale เป็น mechanical ล้วน ซอยทีละ 2-3 ไฟล์
+(งานคิด/trigger/ตรวจผล ทำใน main thread)
 
-**อีก 2 quest ที่จดไว้แล้ว อย่าลืม (อยู่ `md/PENDING.md`):**
-- 🧺 `isMyCard()` นับงานไม่มีเจ้าภาพเป็น "ของฉัน" ของทุกคน = รากของเจ้าภาพปลอม — ควรทำ**ก่อน**
-  งานที่จะสร้างการ์ดไร้เจ้าภาพเพิ่มทีละเยอะ · ⛔ อย่าเสนอล้าง assignee 176 ใบอีก (user จัดการเองบน prod แล้ว)
-- 📅 `created_at` ผิดตอนนำเข้ากระทู้เก่า **ฝั่ง posts** (แบบเดียวกับที่แก้ให้ cases ไปแล้ว) —
-  `db/postsImport.js` · `scripts/data/backfillPostThreads.js` · เขียน backfill ถอด snowflake
+**เคาะแล้ว ไม่ต้องถามซ้ำ:** ⛔ **ไม่ rename `post_episodes` → `posts`** (`episode` = `post` 1:1 อยู่แล้ว
+เป็นซากจากยุคมี `post_series`) → ตาราง `post_assignees` ใช้คอลัมน์ **`episode_id`** ให้ล้อพี่น้อง 6 ตาราง ·
+ไม่แตะ `dc_social_accounts`/`post_assets.owner_user_id` (ชื่อไม่ได้โกหก) · ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย
+
+**เฟสถัดไปหลัง B:** C = posts (`owner_user_id`→`created_by` + `post_assignees` + `postAssign.js` + UI) · D = แท่ง lifecycle ฝั่งโพสต์
 
 ---
 
 ## Context
 
-- Branch `master` · ไม่มี commit ค้าง push แต่ **working tree มีของค้างเยอะกว่างาน session นี้**
-  (`CaseMetaEditor.jsx`, `statusSql.js`, locales, `LabelChips.jsx`, `md/*` — งานผู้รับผิดชอบหลายคน
-  ของเคสที่ทำก่อนหน้า) · `md/TEAM/TEE.md` เป็นของ user เอง **อย่าแตะ**
-- prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · ทุกคำสั่ง wrap `sudo -u www bash -c '...'`
-  · Claude สั่ง `pm2 restart` เองไม่ได้ (classifier บล็อก) · ห้ามรายงานสถานะ prod จากเอกสาร — ถามสดเสมอ
-- `.env` dev ผูกกับบอท **"Tester"** · user เปิด dev server ค้างที่ `:3000` → รันเองใช้
-  `NEXT_DIST_DIR=.next-test npx next dev -p 3100` · **ห้าม `rm -rf web/.next`** · ห้าม `npm run build` ตอน dev รันอยู่
-- ต่อ DB จากสคริปต์ชั่วคราว: อ่านเฉพาะคีย์ `DB_*` จาก `.env` เองในไฟล์ `.mjs` แล้ว import
-  `web/db/index.js` (อย่าใช้ `--env-file` — hook บล็อกกันซีเคร็ตหลุด)
+- Branch `master` · **working tree สะอาด** ล่าสุด `a901d5b` · ยังไม่ push
+- prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · wrap `sudo -u www bash -c '...'`
+  · Claude สั่ง `pm2 restart` เองไม่ได้ (classifier บล็อก)
+- `.env` dev ผูกกับบอท **"Tester"** · ห้าม `npm run build` ตอน dev server รันอยู่ (session นี้ไม่มีตัวไหนรัน จึง build ได้)
+  · รันเทสเองใช้ `NEXT_DIST_DIR=.next-test npx next dev -p 3100` · ห้าม `rm -rf web/.next`
+- `md/TEAM/TEE.md` เป็นของ user เอง **อย่าแตะ** · `NOTE.md` ห้ามอ่าน
 
 ---
 
 ## 🔧 Commands & References
 
 ```bash
-node scripts/dev/mobileAudit.mjs --routes /หน้า   # ก่อนปิดงาน UI ทุกครั้ง
-cd web && npm test    ·    openwolf find <symbol>    ·    openwolf bug search "<error>"
+cd web && npm test    ·    npm run build    ·    node scripts/dev/mobileAudit.mjs --routes /kanban
+openwolf find <symbol>    ·    openwolf bug search "<error>"
 ```
-`md/PENDING.md` (backlog ตัวจริง — 3 quest ข้างบนอยู่ที่นั่นหมด · `NOTE.md` ห้ามแตะ) ·
-`md/kanban/KANBAN.md` · `md/WEB.md §จอมือถือ` `§Type scale` · `.wolf/cerebrum.md` (Do-Not-Repeat)
+📄 `/home/tee/.claude/plans/owner-user-id-wild-hinton.md` (แพลนตัวจริงของ quest นี้) ·
+`md/PENDING.md` (backlog อื่น) · `md/kanban/KANBAN.md` · `md/WEB.md §จอมือถือ` `§Type scale`
