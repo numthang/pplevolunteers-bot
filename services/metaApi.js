@@ -721,11 +721,28 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     return false;   // หมดเวลาแล้วก็ยังลองยิงต่อ — error จริงจาก Threads มีประโยชน์กว่าเดาเอง
   }
 
+  // โพสต์หลักออกไปแล้ว "ย้อนไม่ได้" — ถ้าท่อนต่อๆ ไปล้ม ห้ามโยน error ให้ทั้งงานกลายเป็นล้มเหลว
+  // ไม่งั้นผู้ใช้กด "ลองใหม่" = ยิงโพสต์หลักซ้ำอีกใบ (เคสจริง 2026-09-03: caption 2719 ตัว →
+  // 8 ท่อน ยิงรวดใน 17 วินาที · reply ใบหนึ่งโดนตีกลับ → ทั้งงาน failed → user กดลองใหม่ 2 ครั้ง
+  // → โพสต์หลักออกจริง 2 ใบบนเพจ) · ข้อความไม่ครบแก้มือได้ โพสต์ซ้ำบนเพจสาธารณะแก้ยากกว่า
+  async function postReplyChainSafe(firstPostId) {
+    try {
+      await postReplyChain(firstPostId);
+      return null;
+    } catch (err) {
+      console.error('[Threads] reply chain ไม่ครบ (โพสต์หลักออกแล้ว):', err.message);
+      if (onProgress) onProgress(`⚠️ Threads: โพสต์หลักออกแล้ว แต่ข้อความส่วนต่อไม่ครบ — ${err.message}`);
+      return err.message;
+    }
+  }
+
   async function postReplyChain(firstPostId) {
     if (!extraChunks.length) return;
     let replyToId = firstPostId;
     for (let i = 0; i < extraChunks.length; i++) {
       if (onProgress) onProgress(`📤 @ Threads: โพสต์ thread ${i + 2}/${chunks.length}...`);
+      // เว้นจังหวะระหว่างท่อน — ยิงรัวเกินคือต้นเหตุที่ Threads ตีกลับกลางสาย
+      if (i > 0) await new Promise(r => setTimeout(r, 3000));
       await waitPostVisible(replyToId);
       const { id: containerId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
         media_type: 'TEXT', text: extraChunks[i], reply_to_id: replyToId, access_token: cfg.token,
@@ -749,8 +766,8 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
       s => onProgress && onProgress(`📤 @ Threads: กำลัง process... (${s}s)`)
     );
     const result = await publishContainer(id);
-    await postReplyChain(result.id);
-    return result;
+    const warning = await postReplyChainSafe(result.id);
+    return { ...result, warning };
   }
 
   // single image
@@ -762,8 +779,8 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
       s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป... (${s}s)`)
     );
     const result = await publishContainer(id);
-    await postReplyChain(result.id);
-    return result;
+    const warning = await postReplyChainSafe(result.id);
+    return { ...result, warning };
   }
 
   // carousel — Threads carousel max is 20 images
@@ -792,8 +809,8 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     s => onProgress && onProgress(`📤 @ Threads: กำลัง publish carousel... (${s}s)`)
   );
   const result = await publishContainer(carouselId);
-  await postReplyChain(result.id);
-  return result;
+  const warning = await postReplyChainSafe(result.id);
+  return { ...result, warning };
 }
 
 // POST ไปยัง URL ใดก็ได้ (ใช้สำหรับ upload ไปยัง host นอกจาก graph.facebook.com)

@@ -174,6 +174,8 @@ async function publishOne({
     let url = null;
     // ข้อความคอมเมนต์ที่รอคนเอาไปแปะ (FB เท่านั้น · null = โพสต์นี้ไม่มีลิงก์ให้ย้าย)
     let linkComment = null;
+    // Threads: โพสต์หลักออกแล้วแต่ท่อนต่อไม่ครบ — ยังนับว่าสำเร็จ (กดซ้ำ = โพสต์ซ้ำ) แต่ต้องไม่เงียบ
+    let warning = null;
 
     if (platform === 'fb') {
       if (isVideo) {
@@ -196,6 +198,7 @@ async function publishOne({
         ? await postReelsToThreads(guildId, userDiscordId, videoUrl, caption, onProgress, group, accountId)
         : await postToThreads(guildId, userDiscordId, images, caption, onProgress, group, accountId);
       url = res?.permalink || null;
+      warning = res?.warning || null;
     } else if (platform === 'x') {
       const res = isVideo
         ? await postVideoToX(guildId, userDiscordId, videoUrl, caption, group, accountId, orgId)
@@ -243,9 +246,10 @@ async function publishOne({
       throw new Error(`ไม่รู้จักแพลตฟอร์ม ${platform}`);
     }
 
-    return { platform, label, ok: true, url, error: null, linkComment };
+    if (warning) console.warn(`[publishPipeline] ${platform} สำเร็จแต่ไม่ครบ:`, warning);
+    return { platform, label, ok: true, url, error: null, linkComment, warning };
   } catch (err) {
-    return { platform, label, ok: false, url: null, error: err.message, linkComment: null };
+    return { platform, label, ok: false, url: null, error: err.message, linkComment: null, warning: null };
   }
 }
 
