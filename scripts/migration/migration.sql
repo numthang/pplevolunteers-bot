@@ -1747,7 +1747,6 @@ CREATE CONSTRAINT TRIGGER trg_kanban_assignees_clamp
 
 COMMIT;
 
--- production ทำถึงตรงนี้
 
 
 -- 2026-09-03 (รอบสอง) · ตรึง search_path ของ 2 ฟังก์ชัน trigger ที่เพิ่งสร้างข้างบน
@@ -1851,3 +1850,4 @@ DELETE FROM kanban_card_assignees a
                     WHERE pa.episode_id = p.id AND pa.user_id = a.user_id);
 
 COMMIT;
+-- production ทำถึงตรงนี้
