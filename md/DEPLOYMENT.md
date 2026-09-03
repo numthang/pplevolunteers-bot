@@ -484,6 +484,40 @@ WEB_BASE_URL=https://pplevolunteers.org   # ใช้สร้าง public URL 
 
 ---
 
+## SMS Forwarder (Tasker → smsWebhook)
+
+รายรับ KBank เข้าระบบทาง SMS เท่านั้น (ไม่มี email แจ้งเงินเข้า) — มือถือรัน Tasker forward SMS → HTTP POST เข้า [smsWebhook.js](../services/smsWebhook.js) พอร์ต `3099`
+
+### ตั้งค่า Tasker (Android)
+
+**1. Profile:** `+ → Event → Phone → Received Text`
+
+**2. Task → + → Net → HTTP Request:**
+
+| ช่อง | ค่า |
+|---|---|
+| Method | `POST` |
+| URL | `http://<VPS_IP>:3099` |
+| Headers | `Content-Type: application/json` |
+| Body | `{"from":"KBANK","message":"%evtprm3","token":"<SMS_WEBHOOK_SECRET>"}` |
+
+- `%evtprm3` = "3. Content" ในหน้า Variable Select ของ event Received Text (ลำดับ 1=Type, 2=Sender, 3=Content, 4=SIM Card, 5=MMS Body) — **ต้องแทรกด้วยปุ่ม variable-select icon เท่านั้น ห้ามพิมพ์เอง** พิมพ์เองมือถือมักแก้ตัวอักษรเพี้ยน ทำให้ Tasker ส่ง literal string `"%evtprm3"` ไปตรงๆ แทนเนื้อ SMS จริง (log จะขึ้น `SMS ไม่ใช่รายการที่รองรับ: %evtprm3` ทุกครั้งไม่ว่า SMS จะเป็นอะไร)
+- `token` ต้องตรงกับ `SMS_WEBHOOK_SECRET` ใน `.env` — เช็คด้วย `sudo -u www bash -c "grep SMS_WEBHOOK_SECRET /www/wwwroot/pple-volunteers/.env"`
+- ทดสอบ: long-press ที่ตัว **Profile** (ไม่ใช่ Task) → Run — Run ที่ Task ตรงๆ จะไม่มี event context ให้ `%evtprm3`
+
+### Troubleshooting
+
+| อาการ | สาเหตุที่เจอมาแล้ว |
+|---|---|
+| SMS หายเงียบ เป็นบางวัน ไม่ต่อเนื่อง | สัญญาณ/WiFi อ่อน → Tasker POST fail แบบ fire-and-forget ไม่มี retry |
+| SMS หายยาวต่อเนื่องหลายวัน (ไม่กระเตื้อง) | Tasker "Trial Over — Unlicensed" — เช็ค notification ของ Tasker เอง |
+| SMS ไม่เข้าอัตโนมัติ ต้องเปิดแอพ/กด Run เองถึงเข้า | Android เตะ Tasker background service ทิ้ง (พบแม้ตั้ง battery = Unrestricted แล้ว) — เช็ค Settings → Apps → Tasker → "ลบสิทธิ์แอปที่ไม่ได้ใช้ (App Hibernation)" ต้องปิด, OEM บางยี่ห้อ (Xiaomi/Oppo/Vivo) ต้องเปิด Autostart แยกด้วย |
+| log ขึ้น `SMS ไม่ใช่รายการที่รองรับ: %evtprm3` | Body field พิมพ์ `%evtprm3` เองแทนที่จะแทรกผ่านปุ่ม variable-select — ลบ Body ทิ้งแล้วแทรกใหม่ด้วยปุ่ม |
+
+**Diagnostic:** query `finance_incoming_log` เทียบ `source='sms'` vs `source='email'` — ถ้า email เข้าปกติแต่ sms หายยาว แปลว่า server/webhook ไม่พัง ปัญหาอยู่ฝั่งมือถือ/Tasker
+
+---
+
 ## Git Workflow
 
 ```bash
