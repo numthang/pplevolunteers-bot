@@ -13,8 +13,13 @@ budget_tokens: 1000
 
 **เฟส B เสร็จ (2026-09-03) — kanban ยุบ `owner_user_id` ลง `kanban_card_assignees`**
 
-- `dd7bb8f` **เฟส B ตัวหลัก** · `2ecaf2e` กวาดคำบนจอที่ตกค้าง
-- DB (รันบน **dev แล้ว** · prod ยังไม่): `kanban_card_helpers` → `kanban_card_assignees`
+- `dd7bb8f` เฟส B ตัวหลัก · `2ecaf2e` กวาดคำบนจอ · `66f4c89` ตรึง search_path ของ trigger
+- ✅ **ขึ้น prod แล้ว** (user รัน migration ใน DBeaver + deploy เว็บ/บอทเอง 2026-09-03)
+  ตรวจแล้ว: `owner_user_id` DROP แล้ว · assignees 1354 แถว · trigger ครบ 2 · การ์ดเดินหน้าไร้คนรับ = 0
+- ✅ **โคลนข้อมูล prod ลง local dev แล้ว** (kanban/cases/posts 24 ตาราง ตรงกันเป๊ะทุกตาราง)
+  สคริปต์อยู่ที่ scratchpad `restore.js` — ท่าที่ใช้: dump data-only → TRUNCATE+โหลดในทรานแซกชันเดียว
+  → remap `users`/`dc_social_accounts` ที่ id ไม่ตรงกัน (80/82 คนตรง อีก 2 คนเป็นคนเดียวกันคนละเลข)
+- DB: `kanban_card_helpers` → `kanban_card_assignees`
   (`joined_at`→`assigned_at`) · ยกเจ้าภาพลงเป็นแถว (1302 = 1221 + 81) · **DROP `owner_user_id`**
 - CHECK เดิม → **CONSTRAINT TRIGGER 2 ตัว `DEFERRABLE INITIALLY DEFERRED`**
   `trg_kanban_cards_require_assignee` (ไม่มีคนรับ ห้ามออกจาก backlog → 23514) ·
@@ -27,12 +32,15 @@ budget_tokens: 1000
 - **verify:** build · test 506 · สโมค 3 ชุด · mobileAudit `/kanban` `/` · กดครบวงผ่าน HTTP — ผ่านหมด
   สโมคใหม่ `scripts/smoke/kanbanCaseSync.mjs` (ตะเข็บ `case_assignees` ↔ การ์ด ทั้งเว็บ+บอท)
 
-**⬜ ยังไม่ได้ทำ — user ยังไม่ได้กดเอง** (dev server ค้างอยู่ที่ `:3100`, `NEXT_DIST_DIR=.next-test`)
-รายการที่ต้องกด อยู่ใน §ให้ user กด ข้างล่าง
+## ⛔ ค้างอยู่ 2 อย่าง ต้องทำก่อนอย่างอื่น
 
-**ยังไม่ยืนยันสถานะ prod (ต้องถาม user — ห้ามรายงานจากเอกสาร):**
-- ⬜ prod bot `pple-dcbot` restart แล้วหรือยัง (`ssh tee@202.183.141.78`)
-- ⬜ หนังสือร้องเรียนชุดใหม่: ยังไม่ mobile audit · user ยังไม่กดเอง
+1. **prod ยังไม่ได้ตรึง search_path** — วางบล็อกท้าย `scripts/migration/migration.sql`
+   (หัวข้อ `2026-09-03 (รอบสอง)`) ใน DBeaver · **Claude เขียน DB prod เองไม่ได้ (classifier บล็อก)**
+   ไม่ทำ = วันที่กู้ prod จาก `pg_dump` backup จะ restore ไม่ขึ้นทั้งก้อน (42P01 ตอน COMMIT)
+2. **user ยังไม่ได้กดทดสอบเฟส B เอง** — รายการอยู่ใน §ให้ user กด ข้างล่าง
+   (ตอนนี้ local มีข้อมูลจริงจาก prod แล้ว กดเทสได้เหมือนของจริง)
+
+**ยังไม่ยืนยัน (ต้องถาม user):** หนังสือร้องเรียนชุดใหม่ — ยังไม่ mobile audit · user ยังไม่กดเอง
 
 ---
 
@@ -57,15 +65,17 @@ budget_tokens: 1000
 1. มอบหมาย 2 คนในการ์ดใบเดียว → **ทั้งคู่ขึ้นเท่ากัน** บนการ์ด ("คนแรก +1")
 2. กรองด้วยชื่อคนแรก → **ต้องเจอ** (บั๊กเดิม: กรองแล้วไม่เจอใบที่เขาเป็นแม่งาน)
 3. ถอดคนสุดท้ายออก → การ์ด**เด้งกลับกอง "รอทำ" เอง**
-4. **เปิดเคสในดิสฯ ให้บอทสร้างการ์ด 1 ใบ ต้องไม่ 500** (บอทต้องรันด้วย code ใหม่)
+4. **เปิดเคสในดิสฯ ให้บอทสร้างการ์ด 1 ใบ ต้องไม่ 500** (บอท prod รันโค้ดใหม่แล้ว)
+⚠️ path หน้าเคสคือ **`/cases`** ไม่ใช่ `/case` (`mobileAudit.routes.mjs` เคยชี้ผิด แก้แล้วใน `66f4c89`)
 
 ---
 
 ## Context
 
-- Branch `master` · ล่าสุด `2ecaf2e` · **ยังไม่ push** · `md/TEAM/TEE.md` มีของ user แก้ไว้ ไม่ได้ commit
-- ⚠️ **ขึ้น prod เฟส B:** `pg_dump -t kanban_cards -t kanban_card_helpers` ก่อนรัน migration ·
-  แล้ว **deploy เว็บ + บอทพร้อมกัน** (คอลัมน์หายไปเลย ตัวที่ขึ้นทีหลัง 500 ทันที)
+- Branch `master` · ล่าสุด `66f4c89` · **ยังไม่ push** (dd7bb8f–989162f push แล้ว)
+  · `md/TEAM/TEE.md` มีของ user แก้ไว้ ไม่ได้ commit
+- **โคลน prod → local ทำซ้ำได้:** สคริปต์ `restore.js` ใน scratchpad ของ session นี้ (ถ้าหายให้เขียนใหม่
+  ตามท่าที่จดไว้ข้างบน) · ⚠️ ข้อมูล `cases` เป็น **PII จริงของผู้ร้อง** อยู่บนเครื่อง dev แล้ว
 - prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · wrap `sudo -u www bash -c '...'`
   · Claude สั่ง `pm2 restart` เองไม่ได้ · **รัน migration ที่ DROP คอลัมน์เองก็ไม่ได้** (classifier บล็อก)
 - `.env` dev ผูกกับบอท **"Tester"** · ล็อกอินเทสในเบราว์เซอร์: ยัด magic token ลง `org_login_tokens`
