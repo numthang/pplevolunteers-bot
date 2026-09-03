@@ -668,8 +668,28 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
       creation_id: containerId, access_token: cfg.token,
     });
-    const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
-    return { id: mediaId, permalink: info.permalink || null };
+    // permalink อาจยังไม่พร้อมทันทีด้วยเหตุเดียวกับ waitPostVisible — ลองซ้ำสั้นๆ ก่อนยอมคืน null
+    // ห้าม throw ตรงนี้เด็ดขาด: โพสต์ออกไปแล้ว ย้อนไม่ได้ · ไม่มีลิงก์ ≠ โพสต์ไม่สำเร็จ
+    let permalink = null;
+    for (let i = 0; i < 4 && !permalink; i++) {
+      const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
+      permalink = info?.permalink || null;
+      if (!permalink) await new Promise(r => setTimeout(r, 1500));
+    }
+    return { id: mediaId, permalink };
+  }
+
+  // Threads ยังไม่ให้อ้างถึงโพสต์ที่เพิ่ง publish ทันที — ถามหาแล้วได้ error 24 "ไม่พบสื่อที่มี ID …"
+  // เคสจริง 2026-09-03: caption ยาว → ตัดเป็น reply chain → ใบที่ 2 ยิง reply_to_id ของใบแรกเร็วไป
+  // → threadsPost โยน error = ทั้งงานขึ้น "ล้มเหลว" ทั้งที่ใบแรกโพสต์ออกไปแล้วจริง
+  async function waitPostVisible(postId, maxWaitMs = 30000) {
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      const info = await threadsGet(`/v1.0/${postId}?fields=id&access_token=${cfg.token}`);
+      if (info?.id) return true;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    return false;   // หมดเวลาแล้วก็ยังลองยิงต่อ — error จริงจาก Threads มีประโยชน์กว่าเดาเอง
   }
 
   async function postReplyChain(firstPostId) {
@@ -677,6 +697,7 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     let replyToId = firstPostId;
     for (let i = 0; i < extraChunks.length; i++) {
       if (onProgress) onProgress(`📤 @ Threads: โพสต์ thread ${i + 2}/${chunks.length}...`);
+      await waitPostVisible(replyToId);
       const { id: containerId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
         media_type: 'TEXT', text: extraChunks[i], reply_to_id: replyToId, access_token: cfg.token,
       });

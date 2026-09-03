@@ -74,9 +74,37 @@ function nextReleaseUnix() {
 // โพสต์ข่าว (ไม่ ping) — คืน Message
 // รับ channel มาตรงๆ เพราะผู้เรียก (publishPipeline) ต้องรู้ channel ก่อนเพื่อคิดเพดานอัปโหลดของเซิร์ฟนั้น
 // → resolve ห้องครั้งเดียวด้วย fetchNewsChannel() แล้วส่งต่อ ไม่ต้อง resolve ซ้ำทุกข้อความ
+// Discord ตีกลับทั้งข้อความถ้า content เกิน 2000 ตัวอักษร (BASE_TYPE_MAX_LENGTH)
+// แคปชั่นโพสต์ยาวเกินได้จริง (เจอ 2026-09-03: ห้องข่าวสารล้มเหลวทั้งงาน ทั้งที่ platform อื่นผ่าน)
+const DISCORD_MAX = 2000;
+
+// ตัดเป็นท่อน ≤2000 — ตัดที่ขึ้นบรรทัดใหม่ก่อน ไม่ได้ค่อยตัดที่เว้นวรรค ไม่ได้จริงๆ ค่อยตัดดิบ
+// **ไม่ตัดทิ้ง** เพราะข้อความในห้องข่าวไม่มีลิงก์กลับไปอ่านต่อ — ตัดทิ้งคือเนื้อหาหายถาวร
+function chunkContent(text, max = DISCORD_MAX) {
+  const out = [];
+  let rest = String(text);
+  while (rest.length > max) {
+    let cut = rest.lastIndexOf('\n', max);
+    if (cut < max * 0.5) cut = rest.lastIndexOf(' ', max);
+    if (cut < max * 0.5) cut = max;
+    out.push(rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+
 async function postNews(channel, { content, files }) {
   if (!channel) throw new Error('ยังไม่ได้ตั้งค่าห้องข่าวสาร');
-  return channel.send({ content: content || undefined, files, allowedMentions: { parse: [] } });
+  const parts = content ? chunkContent(content) : [];
+  // ไฟล์ไปกับข้อความแรกเสมอ · ผู้เรียกใช้ .url ของข้อความแรกเป็นลิงก์ผลลัพธ์ → คืนตัวแรก
+  const first = await channel.send({
+    content: parts[0] || undefined, files, allowedMentions: { parse: [] },
+  });
+  for (const part of parts.slice(1)) {
+    await channel.send({ content: part, allowedMentions: { parse: [] } });
+  }
+  return first;
 }
 
 function buildEventAnnouncement({ name, startUnix, locationText, eventUrl }) {
