@@ -69,6 +69,22 @@ user เคาะเอง: *"ไปดู notion appflowy มันมีกฏ
 "2026-09-03 (รอบ 2)" ที่ท้าย `scripts/migration/migration.sql` (มี DROP TRIGGER — classifier อาจบล็อก
 ให้ user รันเอง) แล้ว restart ทั้ง `pple-web` และ `pple-dcbot` (แก้ทั้งสองฝั่ง)
 
+### 📌 งานสื่อ — ค้างไว้ให้ session หน้า (user ทัก 2026-09-03)
+
+**คำถาม user:** "วันที่สร้างงานสื่อคือวันที่ import เหรอ มันควรเป็นวันที่ตั้งกระทู้ป่ะ"
+**ตรวจแล้ว:** `post_episodes.created_at` = **วันตั้งกระทู้จริง ถูกอยู่แล้ว** (แกะ snowflake ใน
+`backfillPostThreads.js`) และ `PostsHome.jsx:105` โชว์ฟิลด์นั้นตรงๆ · ที่ยังเป็นเวลา import คือ 2 จุด:
+
+| ฟิลด์ | สภาพ | ผล |
+|---|---|---|
+| `post_episodes.updated_at` | 954 ใบกองใน 34 นาที (2026-08-27 19:35–20:09) | `listPosts` เรียง `updated_at DESC` → แท็บของเก่าเรียงตามลำดับที่สคริปต์ดึง ไม่ใช่ไทม์ไลน์ |
+| `kanban_cards.created_at` | วัน mirror ทุกใบ | `sortCards` ใช้เป็นตัวตัดสินสุดท้าย → ลำดับในกอง "เสร็จ" มั่ว |
+
+**ที่เสนอไว้ (ยังไม่ได้ทำ · รอ user เคาะ):**
+1. `UPDATE kanban_cards.created_at = post_episodes.created_at` เฉพาะการ์ด backfill — ไม่มีผลข้างเคียง
+2. ⛔ **ห้ามเขียนทับ `updated_at`** (มันคือ "แก้ล่าสุด" จริง) → แก้ที่ `ORDER BY` ของ `listPosts`
+   ให้ `source=backfill` เรียงด้วย `created_at` แทน (`web/db/posts/episodes.js:94`)
+
 **ค้างไว้คุยต่อ (ยังไม่ทำ):** WIP limit ต่อคน · ป้ายอายุการ์ด ("อยู่กองนี้มา 12 วัน") · `sort_order`
 ให้ลากเรียงคิวเองได้ — 3 อย่างนี้คือของที่ควรมาแทน "กฎ" ที่เพิ่งถอดไป (เตือนคน ไม่ใช่บังคับคน)
 · หน้าแรก `/` ยังใช้คำว่า "กำลังทำ" กับการ์ดที่แค่ *มีคนรับ* (เป็น convention ร่วมกับเคส/เอกสาร/โทร
