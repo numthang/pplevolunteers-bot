@@ -226,6 +226,9 @@ export function checkStatusTransition(card, nextStatus) {
   if (!STATUS_TYPES.includes(nextStatus)) {
     return { ok: false, reason: 'unknownStatus' }
   }
+  // ⚠️ ต้องกันเองตรงนี้ — เดิมการ์ดที่หายไปถูกด่าน needAssignee ปัดตกให้โดยบังเอิญ พอถอดด่านนั้นออก
+  //    ก็ไม่เหลืออะไรกัน (UI เรียกด้วยการ์ดจาก state ซึ่งอาจหายไปแล้วถ้าอีกแท็บลบทิ้ง)
+  if (!card) return { ok: false, reason: 'noCard' }
   // ⛔ การ์ดที่ผูกของจริง: สถานะที่ **ต้นทางเป็นเจ้าของ** ล็อกไว้ ลากไม่ได้ (user เคาะ 2026-08-24)
   //    เลือกทางนี้แทน "เขียนกลับไปเปลี่ยนสถานะต้นทาง" เพราะ write-back ต้องต่อด่านสิทธิ์ + optimistic
   //    lock ของทั้ง 2 ระบบ (เตะคนที่กำลังพิมพ์โพสต์อยู่ให้เซฟไม่ได้ = 409)
@@ -241,12 +244,8 @@ export function checkStatusTransition(card, nextStatus) {
       && POST_DRAFT_PHASE.includes(nextStatus)
     if (!draftPhase) return { ok: false, reason: 'linked' }
   }
-  // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีผู้รับผิดชอบ ออกจาก backlog ไม่ได้
-  // (DB มี trigger `trg_kanban_cards_require_assignee` กันอีกชั้น — ที่นี่คือด่านที่ตอบผู้ใช้เป็นภาษาคน)
-  // ยกเว้น 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่หาคนทำไม่ได้ตอนนี้ · 2026-08-18) — งานที่ยังไม่มีใครรับ
-  // ก็พักได้ ไม่ต้องบังคับหาคนรับก่อนถึงจะเก็บเข้ากรุ
-  if (!(card?.assignee_ids || []).length && nextStatus !== 'backlog' && nextStatus !== 'cancelled') {
-    return { ok: false, reason: 'needAssignee' }
-  }
+  // ⛔ เคยมีด่าน "ไม่มีผู้รับผิดชอบ ออกจาก backlog ไม่ได้" (+ trigger คู่กันใน DB) — **ถอดทิ้งแล้ว 2026-09-03**
+  //    ชื่อคนกับกองเป็นคนละแกน มนุษย์ตัดสินเอง (Notion/AppFlowy/Trello ไม่มีเจ้าไหนผูก 2 อย่างนี้)
+  //    ห้ามเอากลับมาในรูปกล่องเด้ง "รับเองไหม?" ด้วย — นั่นคือกฎเดิมใส่เสื้อใหม่
   return { ok: true, reason: null }
 }

@@ -45,7 +45,8 @@ try {
   })
   made.push(a.id)
   ok('สร้างได้ + ได้เลข ref', a.ref_no > 0, `K-${a.ref_no}`)
-  ok('รับเอง → doing', a.status_type === 'doing', a.status_type)
+  ok('รับเอง → ยังเป็น backlog (⛔ ถอดกฎ 2026-09-03 รับงาน ≠ เริ่มลงมือ)',
+     a.status_type === 'backlog', a.status_type)
   const { rows: mine } = await pool.query(
     `SELECT user_id FROM kanban_card_assignees WHERE card_id = $1`, [a.id])
   ok('รับเอง → มีแถวผู้รับผิดชอบ 1 คน', mine.length === 1, `n=${mine.length}`)

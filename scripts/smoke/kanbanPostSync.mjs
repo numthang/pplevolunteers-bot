@@ -42,25 +42,28 @@ try {
   ok('post_assignees มี 2 คน', (await getPostAssignees(postId, ORG)).length === 2)
   card = await getCard(ORG, cardId)
   ok('สำเนาลงการ์ดครบ 2 คน', card.assignee_ids.length === 2, card.assignee_ids.join(','))
-  ok('มีคนรับแล้ว → การ์ดออกจาก backlog', (await rawStatus(cardId)) !== 'backlog', await rawStatus(cardId))
+  ok('มีคนรับแล้ว → การ์ด **ยังอยู่ backlog** (⛔ ถอด bumpsBacklog 2026-09-03)',
+     (await rawStatus(cardId)) === 'backlog', await rawStatus(cardId))
 
   console.log('\n── สลับชุดคนทั้งชุด (DELETE ก่อน INSERT ในทรานแซกชันเดียว) ──')
+  // ลากไป "กำลังทำ" ด้วยมือก่อน — เพื่อพิสูจน์ว่า sync รายชื่อ **ไม่แตะกอง** ไม่ว่าคนจะเปลี่ยนยังไง
+  await pool.query(`UPDATE kanban_cards SET status_type = 'doing' WHERE id = $1`, [cardId])
   await pool.query(`DELETE FROM post_assignees WHERE episode_id = $1`, [postId])
   await pool.query(
     `INSERT INTO post_assignees (org_id, episode_id, user_id) VALUES ($1, $2, $3)`, [ORG, postId, ALICE])
   await syncPostCardPeople(postId)
   card = await getCard(ORG, cardId)
   const raw = await rawStatus(cardId)
-  ok('คอลัมน์สถานะไม่ถูก clamp ระหว่างสลับชุด', raw !== 'backlog', `คอลัมน์=${raw}`)
+  ok('คอลัมน์สถานะไม่ขยับตอนสลับชุดคน', raw === 'doing', `คอลัมน์=${raw}`)
   ok('เหลือคนใหม่คนเดียว', card.assignee_ids.length === 1 && card.assignee_ids[0] === ALICE)
 
-  console.log('\n── ถอดคนสุดท้าย → การ์ดกลับกอง "รอทำ" เอง (trigger) ──')
+  console.log('\n── ถอดคนสุดท้าย → การ์ด **อยู่กองเดิม** (⛔ ถอด trigger clamp 2026-09-03) ──')
   await unassignPost(ORG, post, ALICE, { actorUserId: ALICE })
   card = await getCard(ORG, cardId)
   ok('ไม่เหลือใครทั้งต้นทางและสำเนา',
     card.assignee_ids.length === 0 && (await getPostAssignees(postId, ORG)).length === 0)
   const raw2 = await rawStatus(cardId)
-  ok('trigger clamp คอลัมน์เป็น backlog', raw2 === 'backlog', raw2)
+  ok('ไม่มีใครรับแล้วแต่การ์ดยังอยู่กองเดิม (ไม่มี clamp)', raw2 === 'doing', raw2)
 
   console.log('\n── ร่างส่วนตัวไม่มีผู้รับผิดชอบ ──')
   await pool.query(`UPDATE post_episodes SET visibility = 'personal' WHERE id = $1`, [postId])

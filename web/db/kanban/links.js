@@ -16,9 +16,6 @@ import pool from '../index.js'
 import { createCard } from './cards.js'
 import { LIVE_STATUS_SQL } from './statusSql.js'
 
-/** "การ์ดใบนี้มีคนรับหรือยัง" — เดิมคือ `c.owner_user_id IS NOT NULL` (คอลัมน์ถูกยุบทิ้งเฟส B) */
-const HAS_ASSIGNEE = `EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = c.id)`
-
 export const ENTITY_TYPES = ['case', 'post']
 
 /**
@@ -82,11 +79,9 @@ export async function linkCard(orgId, cardId, entityType, entityId, { isAuto = f
  * ⚠️ status_type ที่ค้างอยู่ในคอลัมน์คือ cache เก่า อาจไม่ตรงกับที่เพิ่งเห็นบนจอ
  *    → เขียนสถานะสดล่าสุดกลับลงคอลัมน์ก่อนถอด ไม่งั้นการ์ดเด้งกลับไปสถานะเมื่อชาติที่แล้ว
  *
- * ⛔ **การ์ดที่ไม่มีผู้รับผิดชอบเขียนสถานะสดกลับตรงๆ ไม่ได้** — ชน trigger `trg_kanban_cards_require_assignee`
- *    (ไม่มีผู้รับผิดชอบ = อยู่ได้แค่ backlog/cancelled) · เคสจริง: เคสปิดแล้ว การ์ดสถานะสด = done
- *    แต่ไม่เคยมีใครรับ → INSERT พังตอนถอด (เจอตอน smoke test 2026-08-24)
- *    → clamp เป็น `backlog` ซึ่งเป็นความจริงที่ kanban เหลืออยู่จริงๆ หลังถอด: "ไม่มีใครถืองานใบนี้"
- *      (ถอดลิงก์แล้ว kanban ไม่รู้แล้วว่าเคสปิดไปแล้ว — ข้อมูลนั้นอยู่ที่ /case ไม่ใช่ที่นี่)
+ * ⭐ เขียนสถานะสดกลับ **ตรงๆ ทุกใบ** (2026-09-03) — เดิมการ์ดที่ไม่มีผู้รับผิดชอบถูก clamp เป็น
+ *    `backlog` เพราะชน trigger `trg_kanban_cards_require_assignee` · trigger นั้นถูก DROP ทิ้งแล้ว
+ *    → เคสที่ปิดแล้วแต่ไม่เคยมีใครรับ ถอดลิงก์ออกมาแล้วยังเป็น "เสร็จ" ตามความจริง ไม่ตกกองรอทำ
  */
 export async function unlinkCard(orgId, cardId) {
   const client = await pool.connect()
@@ -102,11 +97,8 @@ export async function unlinkCard(orgId, cardId) {
 
     await client.query(
       `UPDATE kanban_cards c
-          SET status_type = CASE
-                WHEN ${HAS_ASSIGNEE}                          THEN ${LIVE_STATUS_SQL}
-                WHEN ${LIVE_STATUS_SQL} = 'cancelled'         THEN 'cancelled'
-                ELSE 'backlog' END,
-              completed_at = CASE WHEN ${HAS_ASSIGNEE} AND ${LIVE_STATUS_SQL} = 'done'
+          SET status_type = ${LIVE_STATUS_SQL},
+              completed_at = CASE WHEN ${LIVE_STATUS_SQL} = 'done'
                                   THEN COALESCE(c.completed_at, now()) ELSE NULL END,
               updated_at = now()
         WHERE c.org_id = $1 AND c.id = $2`,
@@ -147,9 +139,7 @@ export async function deleteCardForEntity(entityType, entityId) {
  *    (ทางเข้าทั้งหมดต้องผ่าน `web/lib/caseAssign.js` / `web/lib/postAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว)
  *
  * ⭐ เฟส B (2026-09-03) ทำให้ตัวนี้ **สั้นลงครึ่งหนึ่ง**: ไม่มีเจ้าภาพให้เลือกแล้ว sync เป็น "ชุด" ตรงๆ
- *    และไม่ต้อง clamp สถานะเอง — trigger `trg_kanban_assignees_clamp` ใน DB ทำให้ตอน COMMIT
- *    (⚠️ นี่คือเหตุผลที่ trigger ต้องเป็น DEFERRABLE INITIALLY DEFERRED: ที่นี่ลบก่อนแล้วค่อยเพิ่ม
- *     ระหว่างทางมีจังหวะที่เหลือ 0 แถว — trigger ธรรมดาจะดันการ์ดตกกอง "รอทำ" เงียบๆ)
+ *    ⛔ และไม่แตะสถานะการ์ดเลย (ถอดกฎ 2026-09-03) — หน้าที่ของตัวนี้คือ**ก็อปรายชื่อ** อย่างเดียว
  * ⚠️ ห้าม throw — แขวนท้าย action ของผู้ใช้ แบบเดียวกับ mirrorEntityCard
  *
  * @returns {Promise<boolean>} false = เคสนี้ไม่มีการ์ด (ยังไม่ถูก mirror) หรือทำไม่สำเร็จ
@@ -164,20 +154,14 @@ export const syncPostCardPeople = (episodeId) => syncEntityCardPeople('post', ep
 
 /**
  * ตัวจริงของทั้งสองตัวข้างบน — เขียนรวมกันเพราะ **ท่าเดียวกันเป๊ะ** ต่างแค่ตารางต้นทาง
- * (เคยเป็นบทเรียนของโมดูลนี้เอง: logic clamp ที่ก็อปไว้ 2 ที่ เพี้ยนกันเงียบๆ จนต้องยกลง DB เฟส B)
- */
-/**
- * `bumpsBacklog` — มีคนรับแล้วให้ดันการ์ดออกจากกอง "รอทำ" เอง
  *
- * ⭐ **จริงเฉพาะฝั่งโพสต์** ไม่ใช่ความไม่สม่ำเสมอ: สถานะการ์ดที่ผูกเคสอ่านสดจาก `cases.status`
- *    เสมอ (CASE_STATUS) คอลัมน์ `status_type` จึงไม่มีผลกับจอเลย · แต่โพสต์ที่ยัง `draft`
- *    ทำให้ POST_STATUS คืน NULL โดยตั้งใจ = **kanban เป็นเจ้าของสถานะช่วงนั้นจริงๆ**
- *    (ดูเหตุผลเต็มที่ statusSql.js §POST_STATUS) → ไม่ดันเอง = มอบหมายคนแล้วการ์ดยังค้าง "รอทำ"
- *    ซึ่งเป็นพฤติกรรมที่ `cards.addAssignee` เคยทำให้อยู่แล้วก่อนเฟส C จะพาโพสต์มาเข้าประตูนี้
+ * ⛔ เคยมีฟิลด์ `bumpsBacklog` ที่ดันการ์ดโพสต์ออกจากกอง "รอทำ" เองพอมีคนรับ — **ถอดทิ้งแล้ว 2026-09-03**
+ *    "รอทำ" = ยังไม่ลงมือ (มีคนรับได้) ไม่ใช่ "ยังไม่มีคนรับ" → มอบหมายแล้วการ์ดค้างในคิวคือสิ่งที่ถูก
+ *    ห้ามเอากลับมา: กองเป็นของมนุษย์ ระบบมีหน้าที่แค่ก็อปรายชื่อให้ตรงกับต้นทาง
  */
 const ASSIGNEE_SOURCE = {
-  case: { table: 'case_assignees',  key: 'case_id',    bumpsBacklog: false },
-  post: { table: 'post_assignees',  key: 'episode_id', bumpsBacklog: true },
+  case: { table: 'case_assignees',  key: 'case_id'    },
+  post: { table: 'post_assignees',  key: 'episode_id' },
 }
 
 async function syncEntityCardPeople(entityType, entityId) {
@@ -205,14 +189,6 @@ async function syncEntityCardPeople(entityType, entityId) {
        ON CONFLICT DO NOTHING`,
       [cardId, entityId]
     )
-    if (src.bumpsBacklog) {
-      await client.query(
-        `UPDATE kanban_cards SET status_type = 'doing', updated_at = now()
-          WHERE id = $1 AND status_type = 'backlog'
-            AND EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = $1)`,
-        [cardId]
-      )
-    }
     await client.query('COMMIT')
     return true
   } catch (e) {

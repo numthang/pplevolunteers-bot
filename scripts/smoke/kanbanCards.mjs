@@ -20,14 +20,15 @@ try {
 
   const b = await db.createCard(ORG, { title: 'สโมค: มีคนรับ', assigneeIds: [BOB], dueAt: '2026-08-20T17:00' }, ALICE)
   made.push(b.id)
-  ok('มีคนรับ → doing อัตโนมัติ', b.status_type === 'doing', b.status_type)
+  ok('มีคนรับ → ยังอยู่ backlog (⛔ ถอดกฎ 2026-09-03 ระบบห้ามเดากองจากชื่อคน)',
+     b.status_type === 'backlog', b.status_type)
   ok('เลข ref เดินหน้าไม่ซ้ำ', b.ref_no === a.ref_no + 1, `${a.ref_no} → ${b.ref_no}`)
   ok('ชื่อผู้รับผิดชอบติดมาด้วย', b.assignees.length === 1 && Boolean(b.assignees[0].name), b.assignees[0]?.name)
 
-  // ⭐ เฟส B: สร้างพร้อมผู้รับผิดชอบหลายคนได้ในทรานแซกชันเดียว (trigger เป็น DEFERRED จึงไม่ติดด่านตัวเอง)
+  // ⭐ เฟส B: สร้างพร้อมผู้รับผิดชอบหลายคนได้ในทรานแซกชันเดียว
   const multi = await db.createCard(ORG, { title: 'สโมค: รับหลายคน', assigneeIds: [BOB, CAROL] }, ALICE)
   made.push(multi.id)
-  ok('สร้างพร้อมผู้รับผิดชอบ 2 คน', multi.assignee_ids.length === 2 && multi.status_type === 'doing',
+  ok('สร้างพร้อมผู้รับผิดชอบ 2 คน', multi.assignee_ids.length === 2 && multi.status_type === 'backlog',
      multi.assignee_ids.join(','))
   ok('เรียงตาม assigned_at (ใครมาก่อนขึ้นก่อน)', multi.assignees[0].user_id === BOB)
 
@@ -53,12 +54,11 @@ try {
   const after = await db.getCard(ORG, b.id)
   ok('เนื้อหาไม่ถูกทับตอน conflict', after.title === 'สโมค: แก้ชื่อแล้ว', after.title)
 
-  console.log('\n── กติกาผู้รับผิดชอบ ──')
-  ok('ไม่มีคนรับ → doing = บล็อกตั้งแต่ชั้น lib',
-    checkStatusTransition(a, 'doing').reason === 'needAssignee')
-  let dbBlocked = false
-  try { await db.setCardStatus(ORG, a.id, 'doing') } catch (e) { dbBlocked = e.code === '23514' }
-  ok('trigger ใน DB เป็นตาข่ายสุดท้ายจริง', dbBlocked)
+  console.log('\n── ⛔ ไม่มีกฎ "ชื่อคนผูกกับกอง" แล้ว (ถอดทั้งชุด 2026-09-03) ──')
+  ok('ไม่มีคนรับ → doing ผ่านชั้น lib', checkStatusTransition(a, 'doing').ok === true)
+  const moved = await db.setCardStatus(ORG, a.id, 'doing')
+  ok('ไม่มีคนรับ → doing ผ่าน DB ด้วย (ไม่มี trigger แล้ว)', moved.status_type === 'doing', moved.status_type)
+  await db.setCardStatus(ORG, a.id, 'backlog')
 
   console.log('\n── สถานะ + คนช่วย + งานย่อย ──')
   const done = await db.setCardStatus(ORG, b.id, 'done')
@@ -74,16 +74,15 @@ try {
   ok('ถอดออกได้', !c.assignee_ids.includes(CAROL))
   ok('ยังเหลือคนอื่น → สถานะไม่ตก', c.status_type === 'doing', c.status_type)
 
-  console.log('\n── ⭐ trigger: ถอดคนสุดท้ายออก → การ์ดกลับกอง "รอทำ" เอง ──')
-  const solo = await db.createCard(ORG, { title: 'สโมค: คนเดียว', assigneeIds: [CAROL] }, ALICE)
+  console.log('\n── ⛔ ถอดคนสุดท้ายออก → การ์ด **อยู่กองเดิม** (ไม่มี clamp แล้ว) ──')
+  const solo = await db.createCard(ORG, { title: 'สโมค: คนเดียว', assigneeIds: [CAROL], statusType: 'doing' }, ALICE)
   made.push(solo.id)
   const empty = await db.removeAssignee(ORG, solo.id, CAROL)
-  ok('ไม่เหลือใคร → clamp เป็น backlog', empty.status_type === 'backlog', empty.status_type)
-  ok('completed_at ถูกล้างด้วย', empty.completed_at === null)
+  ok('ไม่เหลือใครแต่ยังอยู่ doing', empty.status_type === 'doing', empty.status_type)
 
-  console.log('\n── ⭐ trigger ต้อง DEFERRED: สลับตัวคนในทรานแซกชันเดียว ห้ามดันการ์ดตกกอง ──')
+  console.log('\n── สลับตัวคนในทรานแซกชันเดียว ห้ามดันการ์ดตกกอง ──')
   //    (นี่คือท่าที่ syncCaseCardPeople ใช้จริง — DELETE ก่อน INSERT มีจังหวะกลางที่เหลือ 0 แถว)
-  const swap = await db.createCard(ORG, { title: 'สโมค: สลับคน', assigneeIds: [BOB] }, ALICE)
+  const swap = await db.createCard(ORG, { title: 'สโมค: สลับคน', assigneeIds: [BOB], statusType: 'doing' }, ALICE)
   made.push(swap.id)
   const cl = await pool.connect()
   try {
@@ -110,22 +109,24 @@ try {
   const stats = await db.countCardStats(ORG, BOB)
   ok('countCardStats: mine ⊆ assigned', stats.mine <= stats.assigned, `${stats.mine}/${stats.assigned}`)
 
-  console.log('\n── ปล่อยงานคืนกอง (backlog ต้องถอดผู้รับผิดชอบทุกคน) ──')
-  const rel = await db.createCard(ORG, { title: 'สโมค: ปล่อยคืน', assigneeIds: [BOB, CAROL] }, ALICE)
+  console.log('\n── ⛔ ลากกลับ "รอทำ" ต้อง **ไม่แตะ** ผู้รับผิดชอบ (เดิม DELETE ทิ้งทุกคนเงียบๆ) ──')
+  const rel = await db.createCard(ORG, { title: 'สโมค: เข้าคิวใหม่', assigneeIds: [BOB, CAROL], statusType: 'doing' }, ALICE)
   made.push(rel.id)
   ok('เริ่มต้นมีคนรับ 2 คน + doing', rel.assignee_ids.length === 2 && rel.status_type === 'doing')
   const back = await db.setCardStatus(ORG, rel.id, 'backlog')
-  ok('ย้ายมา backlog → ผู้รับผิดชอบหลุดหมด', back.assignee_ids.length === 0, `n=${back.assignee_ids.length}`)
+  ok('ย้ายมา backlog → ชื่อคนยังอยู่ครบ', back.assignee_ids.length === 2, `n=${back.assignee_ids.length}`)
   const { cards: pool2 } = await db.listCards(ORG, { unassigned: true })
-  ok('โผล่ในกอง "ยังไม่มีคนรับ"', pool2.some(r => String(r.id) === String(rel.id)))
+  ok('ไม่โผล่ในกอง "ยังไม่มีคนรับ" (เพราะมีคนรับอยู่)', !pool2.some(r => String(r.id) === String(rel.id)))
   const { cards: bobAfter } = await db.listCards(ORG, { assigneeUserId: BOB })
-  ok('หายจากงานของคนเดิม', !bobAfter.some(r => String(r.id) === String(rel.id)))
+  ok('ยังอยู่ในงานของคนเดิม', bobAfter.some(r => String(r.id) === String(rel.id)))
 
   console.log('\n── กันข้าม org ──')
   ok('org อื่นอ่านการ์ดนี้ไม่เห็น', (await db.getCard(8, b.id)) === null)
   ok('เก็บเข้ากรุข้าม org ไม่ได้', (await db.archiveCard(8, b.id)) === false)
 
   console.log('\n── เก็บเข้ากรุ (archive) ──')
+  // ⚠️ อ่านสถานะสดก่อนเก็บ — ตัวแปร `b` เป็นสแนปช็อตตอนสร้าง ซึ่งเปลี่ยนไปหลายรอบแล้วข้างบน
+  const beforeArchive = (await db.getCard(ORG, b.id)).status_type
   ok('เก็บเข้ากรุได้', (await db.archiveCard(ORG, b.id)) === true)
   ok('เก็บซ้ำคืน false', (await db.archiveCard(ORG, b.id)) === false)
   const { cards: bob2 } = await db.listCards(ORG, { assigneeUserId: BOB })
@@ -136,7 +137,7 @@ try {
   const { cards: inArchive } = await db.listCards(ORG, { onlyArchived: true })
   ok('เห็นในโหมดกรุ', inArchive.some(r => r.id === b.id))
   ok('โหมดกรุไม่ปนการ์ดปกติ', inArchive.every(r => r.archived_at !== null))
-  ok('สถานะเดิมไม่ถูกแตะตอนเข้ากรุ', inArchive.find(r => r.id === b.id)?.status_type === b.status_type)
+  ok('สถานะเดิมไม่ถูกแตะตอนเข้ากรุ', inArchive.find(r => r.id === b.id)?.status_type === beforeArchive)
   ok('เอาออกจากกรุได้', (await db.unarchiveCard(ORG, b.id)) === true)
   ok('เอาออกซ้ำคืน false', (await db.unarchiveCard(ORG, b.id)) === false)
   ok('กลับมาอยู่ในรายการปกติ', (await db.listCards(ORG)).cards.some(r => r.id === b.id))

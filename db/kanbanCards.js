@@ -5,7 +5,7 @@
 //
 // 4 อย่างที่ห้ามพลาด:
 //   1. ref_no จองแบบ MAX()+1 → กันชนด้วย UNIQUE (org_id, ref_no) แล้ว retry ที่นี่
-//   2. ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น (DB มี CHECK kanban_cards_owner_required กันอีกชั้น)
+//   2. ⛔ ห้ามผูก "ชื่อคน" กับ "กอง" อีก (ถอดกฎ + DROP trigger 2026-09-03) — งานใหม่เข้า backlog เสมอ
 //   3. due_at ส่งดิบให้ pg — ห้ามแปลง timezone
 //   4. ⭐ board_id เป็น NOT NULL ตั้งแต่ก้อน 3 (2026-08-24) — **ต้องหากระดานให้ทุกครั้ง**
 //      ไม่งั้น INSERT พังทันทีที่มีคนกด context menu (เว็บกับบอทต้อง deploy พร้อมกัน)
@@ -61,16 +61,17 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
   if (!userId) userId = await upsertUserByDiscord(actorDiscordId, actorProfile);
   if (!userId) throw new Error('สร้างผู้ใช้จาก Discord ไม่สำเร็จ');
 
-  const status = assignToSelf ? 'doing' : 'backlog';
+  // ⛔ ห้ามเดากองจาก "รับเองไหม" (ถอดกฎ 2026-09-03) — งานใหม่เข้าคิว "รอทำ" เสมอ
+  //    ต่อให้กดรับเองก็ยังไม่ได้แปลว่าเริ่มลงมือแล้ว · จะเริ่มเมื่อไหร่ลากบนบอร์ดเอง
+  const status = 'backlog';
 
   // กระดานปลายทาง — เลือกของเซิร์ฟนี้ก่อน (kanban_boards.guild_id เป็นป้ายบอกว่ากระดานเป็นของทีมไหน)
   // ไม่มีกระดานที่ผูกเซิร์ฟนี้ → ตกไปที่กระดานแรกของ org · org ยังไม่มีสักใบ → สร้าง "กระดานหลัก" ให้
   // ⚠️ ต้องตรงกับ ensureDefaultBoard() ใน web/db/kanban/boards.js (ตะเข็บ 2 ฝั่ง แก้คู่กันเสมอ)
   const boardId = await resolveBoardId(orgId, guildId, userId);
 
-  // ⚠️ การ์ด + ผู้รับผิดชอบต้องอยู่ **ทรานแซกชันเดียวกัน** (เฟส B 2026-09-03)
-  //    trigger `trg_kanban_cards_require_assignee` เป็น DEFERRABLE INITIALLY DEFERRED ยิงตอน COMMIT
-  //    → แยกทรานแซกชันเมื่อไหร่ = INSERT การ์ด 'doing' commit ก่อนโดยยังไม่มีแถวคน = ติดด่านตัวเอง
+  // ⚠️ การ์ด + ผู้รับผิดชอบยังอยู่ **ทรานแซกชันเดียวกัน** — ไม่ใช่เพราะ trigger อีกแล้ว (DROP ไปแล้ว)
+  //    แต่เพราะล้มกลางทางแล้วได้การ์ดที่คนกด "รับเอง" ไว้แต่ไม่มีชื่อตัวเองอยู่บนนั้น
   for (let attempt = 0; attempt < 5; attempt++) {
     const client = await pool.connect();
     try {
@@ -145,9 +146,8 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
 
   const boardId = await resolveBoardId(orgId, guildId, by);
   // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดจากต้นทางเสมอ
-  // แต่ต้องไม่ขัด trigger ของ DB (ไม่มีผู้รับผิดชอบ = อยู่ backlog เท่านั้น) → ไม่มีคนรับก็บังคับ backlog
-  // ต่อให้คนเรียกส่ง statusType มา (trg_kanban_cards_require_assignee จะปัดตกทั้งทรานแซกชัน)
-  const status = people.length ? (statusType || 'doing') : 'backlog';
+  // ⛔ ห้ามเดาจากจำนวนคน (ถอดกฎ 2026-09-03) — คนเรียกส่งมาอะไรใช้อันนั้น ไม่ส่ง = "รอทำ"
+  const status = statusType || 'backlog';
   const title = src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ');
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -204,8 +204,8 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
  * ผู้รับผิดชอบของการ์ดที่ผูกเคสเป็น **สำเนา** ของ `case_assignees` ไม่ได้อ่านสดเหมือนสถานะ
  * → ทุกทางที่แตะ `case_assignees` ต้องเรียกตัวนี้ต่อทันที ไม่งั้นผู้รับผิดชอบดริฟต์
  * ⚠️ ห้าม throw
- * ⭐ เฟส B (2026-09-03): ไม่ต้อง clamp สถานะเองแล้ว — trigger `trg_kanban_assignees_clamp` ทำให้
- *    ตอน COMMIT ถ้าถอดคนสุดท้ายออก (trigger เป็น DEFERRABLE จึงไม่โดนจังหวะ "ลบก่อนเพิ่ม" ตรงนี้)
+ * ⛔ **ไม่ clamp สถานะ** — ถอดคนสุดท้ายออกแล้วการ์ดอยู่กองเดิม (trigger clamp ถูก DROP ทิ้ง 2026-09-03)
+ *    ใครจะย้ายไปไหนเป็นเรื่องของคน ไม่ใช่ของ DB
  */
 async function syncCaseCardPeopleFromBot(caseId) {
   const client = await pool.connect();

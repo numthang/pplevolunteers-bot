@@ -6268,6 +6268,152 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-03T08:31:18.498Z"
+    },
+    {
+      "id": "bug-352",
+      "timestamp": "2026-09-03T11:35:31.812Z",
+      "error_message": "Significant refactor of cards.js",
+      "file": "web/db/kanban/cards.js",
+      "root_cause": "11 lines replaced/restructured",
+      "fix": "Rewrote 13→8 lines (11 removed) | Also: * ⚠️ กติกา \"ไม่มีผู้รับผิดชอบห้ามออกจาก backlog\" ต; *    (trigger ใน DB เป็นตาข่ายสุดท้าย ไม่ใช่ที่ที่ | Also: * เพิ่มผู้รับผิดชอบ 1 คน — การ์ดที่อยู่ backlog ขย; * ⭐ กติกา \"backlog = รอทำ ยังไม่มีผู้รับผิดชอบ\" บั",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-03T11:36:48.142Z"
+    },
+    {
+      "id": "bug-353",
+      "timestamp": "2026-09-03T11:37:34.287Z",
+      "error_message": "Significant refactor of links.js",
+      "file": "web/db/kanban/links.js",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 13→9 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:37:34.287Z"
+    },
+    {
+      "id": "bug-354",
+      "timestamp": "2026-09-03T11:38:07.097Z",
+      "error_message": "Significant refactor of kanbanAccess.js",
+      "file": "web/lib/kanbanAccess.js",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:38:07.097Z"
+    },
+    {
+      "id": "bug-355",
+      "timestamp": "2026-09-03T11:38:23.547Z",
+      "error_message": "Missing guard clause",
+      "file": "web/lib/kanbanAccess.js",
+      "root_cause": "No early return/throw for edge case: !STATUS_TYPES.includes(nextStatus",
+      "fix": "Added guard clause: if (!STATUS_TYPES.includes(nextStatus)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:38:23.547Z"
+    },
+    {
+      "id": "bug-356",
+      "timestamp": "2026-09-03T11:39:07.458Z",
+      "error_message": "Incorrect value in code",
+      "file": "db/kanbanCards.js",
+      "root_cause": "Had 'doing'",
+      "fix": "Changed to \"รับเองไหม\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:39:07.458Z"
+    },
+    {
+      "id": "bug-357",
+      "timestamp": "2026-09-03T11:39:22.925Z",
+      "error_message": "Significant refactor of kanbanCards.js",
+      "file": "db/kanbanCards.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→3 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:39:22.925Z"
+    },
+    {
+      "id": "bug-358",
+      "timestamp": "2026-09-03T11:41:29.524Z",
+      "error_message": "Significant refactor of KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→8 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:41:29.524Z"
+    },
+    {
+      "id": "bug-359",
+      "timestamp": "2026-09-03T11:41:40.447Z",
+      "error_message": "CSS fix: statusType, dueAt",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "statusType: bucketKey, assignToMe: bucketKey !== 'backlog' → bucketKey, assignToMe: mineView; dueAt: defaultDueForBucket(bucketKey) || undefined, assignToMe: true → defaultDueForBucket(bucketKey) || undefined, assignToMe: mineView",
+      "fix": "Changed statusType: bucketKey, assignToMe: bucketKey !== 'backlog' → bucketKey, assignToMe: mineView; dueAt: defaultDueForBucket(bucketKey) || undefined, assignToMe: true → defaultDueForBucket(bucketKey) || undefined, assignToMe: mineView",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:41:40.447Z"
+    },
+    {
+      "id": "bug-360",
+      "timestamp": "2026-09-03T11:50:24.891840Z",
+      "error_message": "การ์ด kanban ของโพสต์ backfill 953 ใบที่อยู่กอง 'เสร็จ' ตกกลับไปกอง 'รอทำ' ทั้งแผง (status_type='backlog', completed_at=NULL) — เกิดทั้ง dev และ prod",
+      "file": "scripts/migration/migration.sql",
+      "root_cause": "invariant 'ไม่มีผู้รับผิดชอบ = อยู่ได้แค่ backlog/cancelled' ถูกบังคับด้วย trigger trg_kanban_assignees_clamp · บล็อกเฟส B (2026-09-03) DELETE เจ้าภาพปลอมออกจาก kanban_card_assignees ถูกต้องแล้ว แต่การ์ด 953 ใบนั้นอาศัยชื่อปลอมค้ำให้อยู่สถานะ 'done' ได้ → พอชื่อหาย clamp ยิงตอน COMMIT แล้วลากทุกใบกลับ backlog พร้อมล้าง completed_at · คอมเมนต์ในบล็อกเขียนเองว่า 'ลบได้ตรงๆ เดี๋ยว trigger จัดการให้' โดยไม่รู้ว่ากำลังลากงานที่เสร็จแล้ว",
+      "fix": "ถอด invariant ทั้งชุด (user เคาะ: Notion/AppFlowy ไม่มีกฎแบบนี้) — DROP trigger 2 ตัว + ลบ auto-status ใน web/db/kanban/cards.js (createCard/duplicateCard/setCardStatus/addAssignee), links.js bumpsBacklog, kanbanAccess.js needAssignee, KanbanHome.jsx assignToMe, db/kanbanCards.js ฝั่งบอท · แล้ว UPDATE 953 ใบกลับเป็น done โดยใช้ completed_at = post_episodes.created_at (วันตั้งกระทู้จริง ไม่ใช่ now())",
+      "tags": [
+        "kanban",
+        "migration",
+        "trigger",
+        "postgres",
+        "data-loss",
+        "regression"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T11:50:24.891862Z"
     }
   ]
 }

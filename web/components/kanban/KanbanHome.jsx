@@ -692,8 +692,8 @@ export default function KanbanHome() {
     // ในกรุโชว์ทุกใบ ไม่แยกของใคร — ของที่เก็บเข้ากรุแล้วมีไม่เยอะ และคนตามหามักจำไม่ได้ว่าใครเก็บ
     () => {
       if (scope === 'mine') return cards.filter((c) => isMyCard(c, viewerUserId))
-      // ⚠️ "ไม่มีคนรับ" = ไม่มีแถวใน kanban_card_assignees เลย — trigger ใน DB บังคับว่า
-      //    การ์ดไม่มีเจ้าภาพต้องอยู่กอง backlog อยู่แล้ว (ดู onDrop) กองอื่นจึงไม่มีทางติดมา
+      // ⚠️ "ไม่มีคนรับ" = ไม่มีแถวใน kanban_card_assignees เลย — **อยู่กองไหนก็ได้** ตั้งแต่ถอดกฎ
+      //    2026-09-03 (เดิม trigger บังคับให้อยู่ backlog เท่านั้น) → มุมมองนี้คร่อมทุกกองโดยตั้งใจ
       if (scope === 'unassigned') return cards.filter((c) => !(c.assignee_ids || []).length)
       // 'assigned' = ด้านตรงข้ามของ unassigned — มีไว้ให้เลขฝั่งขวาของ "กำลังทำ" บนหน้าแรก
       // กดแล้วเจอชุดเดียวกันเป๊ะ (db/kanban/cards.js countCardStats)
@@ -927,7 +927,7 @@ export default function KanbanHome() {
         setCards((prev) => prev.map((c) => (c.id === card.id ? card : c)))
         return
       }
-      // server อาจแก้อย่างอื่นด้วย (ย้ายมา backlog = ถอดเจ้าภาพ) → ใช้ของจริงที่คืนมา
+      // ใช้ของจริงที่ server คืนมา (ย้ายกองไม่แตะรายชื่อแล้ว แต่ updated_at/completed_at เปลี่ยน)
       setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, ...json.card } : c)))
     } catch {
       setActionError(t('board.moveFailed'))
@@ -935,7 +935,7 @@ export default function KanbanHome() {
     }
   }
 
-  /** รับงานที่ยังไม่มีคนรับ — server ขยับสถานะ backlog → doing ให้เอง (addAssignee) */
+  /** รับงานที่ยังไม่มีคนรับ — ⛔ การ์ด **ไม่ขยับกอง** (ถอดกฎ 2026-09-03) ได้แค่ชื่อเราขึ้นไปบนใบ */
   async function handleClaim(card) {
     setActionError('')
     setClaimingId(card.id)
@@ -1027,9 +1027,10 @@ export default function KanbanHome() {
   /**
    * สร้างการ์ดจากในกองเลย (ปุ่ม + บนหัวกอง) — พิมพ์ชื่อแล้ว Enter จบ
    *
-   * ⚠️ กองที่ไม่ใช่ "รอทำ" ต้องมีเจ้าภาพ (DB CHECK: ไม่มีเจ้าภาพห้ามออกจาก backlog)
-   *    → ใช้ `assignToMe` ที่ API มีอยู่แล้ว = คนกดเป็นผู้รับผิดชอบ
-   *    (ตรงกับเจตนา "ฉันกำลังเพิ่มงานที่ขั้นนี้" และเป็นทางลัดเดิมของหน้าการบ้านของฉัน)
+   * ⭐ ใส่ชื่อตัวเองให้ก็ต่อเมื่ออยู่ในมุมมอง **"ของฉัน"** (แก้ 2026-09-03)
+   *    ⛔ เดิมดูจาก "กองไหน" (กองที่ไม่ใช่รอทำ = ยัดชื่อให้) — นั่นคือระบบเดาแทนคนตาม**กอง**
+   *      ซึ่งถอดทิ้งไปทั้งชุดแล้ว · ที่เหลือคือมารยาทของ **มุมมองที่กรองอยู่**: สร้างของใหม่ในวิว
+   *      ที่กรอง "ของฉัน" แล้วมันต้องไม่หายวับไปทันทีที่ Enter (Notion ก็สืบค่าจากตัวกรองแบบนี้)
    */
   async function createCardIn(bucketKey, title) {
     setActionError('')
@@ -1039,9 +1040,10 @@ export default function KanbanHome() {
       // (ปุ่ม + ในโหมดกำหนดส่งเพิ่งมีเมื่อ 2026-08-24 ตอนถอดปุ่ม "เพิ่มการบ้าน" ด้านบนออก
       //  ถ้าไม่มี = สลับมาโหมดนี้แล้วสร้างงานไม่ได้เลย)
       const byStatus = groupBy === 'status'
+      const mineView = scope === 'mine'
       const payload = byStatus
-        ? { title, statusType: bucketKey, assignToMe: bucketKey !== 'backlog' }
-        : { title, dueAt: defaultDueForBucket(bucketKey) || undefined, assignToMe: true }
+        ? { title, statusType: bucketKey, assignToMe: mineView }
+        : { title, dueAt: defaultDueForBucket(bucketKey) || undefined, assignToMe: mineView }
 
       const res = await fetch('/api/kanban/cards', {
         method: 'POST',

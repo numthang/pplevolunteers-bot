@@ -228,19 +228,14 @@ export async function createCard(orgId, { title, detail = null, assigneeIds = []
   // ⛔ ห้ามผลักภาระนี้ไปให้คนเรียก — ทางเขียนการ์ดมีหลายทางเกินกว่าจะไล่แก้ให้ครบทุกที่ทุกครั้ง
   const board = boardId || (await ensureDefaultBoard(orgId, createdBy))
   const people = [...new Set((assigneeIds || []).filter(Boolean).map(Number))]
-  let status = statusType || (people.length ? 'doing' : 'backlog')
+  // ⛔ ห้ามเดาสถานะจากจำนวนคน (ถอดกฎ 2026-09-03) — คนเรียกส่งมาอะไรใช้อันนั้น ไม่ส่งมา = "รอทำ"
+  //    "รอทำ" แปลว่า **ยังไม่ลงมือ** ไม่ใช่ "ยังไม่มีคนรับ" → รับงานแล้วทิ้งไว้ในคิวได้
+  //    (เดิมบังคับ 2 ทาง: มีคน→doing / ไม่มีคน→backlog · Notion/AppFlowy ไม่มีกฎนี้ และของเรา
+  //     ทำเจ้าภาพปลอม 176 ใบ + ลากการ์ดที่เสร็จแล้ว 953 ใบกลับกองรอทำ — ดู migration 2026-09-03 รอบ 2)
+  const status = statusType || 'backlog'
 
-  // ⭐ กฎ 2 ทางของ "backlog = รอทำ — ยังไม่มีผู้รับผิดชอบ" (บังคับที่นี่ ไม่ใช่ที่ route)
-  //    - มีคนรับแล้วอยู่ backlog ไม่ได้ → สภาพขัดกันเองแบบ bug-406 ตั้งแต่แถวแรก (เจอตอน import AppFlowy)
-  //    - ไม่มีคนรับก็ออกจาก backlog ไม่ได้ → trigger `trg_kanban_cards_require_assignee` จะปัดตกทั้งแถว
-  //      (เดิมเป็น CHECK kanban_cards_owner_required · คนเรียกที่ส่ง statusType='done' มาตอน backfill
-  //       ของเก่าที่ยังไม่มีคนรับ เคยพังทั้งใบเพราะข้อนี้ — clamp ให้แทนที่จะโยน)
-  if (people.length && status === 'backlog') status = 'doing'
-  if (!people.length && status !== 'backlog' && status !== 'cancelled') status = 'backlog'
-
-  // ⚠️ การ์ด + ผู้รับผิดชอบต้องอยู่ **ทรานแซกชันเดียวกัน** — trigger เป็น DEFERRABLE INITIALLY
-  //    DEFERRED ยิงตอน COMMIT ก็จริง แต่แยกทรานแซกชันเมื่อไหร่ = INSERT การ์ด 'doing' commit ก่อน
-  //    โดยยังไม่มีแถวคน = ติดด่านตัวเอง
+  // ⚠️ การ์ด + ผู้รับผิดชอบยังอยู่ **ทรานแซกชันเดียวกัน** — ไม่ใช่เพราะ trigger อีกแล้ว (ถอดไปแล้ว)
+  //    แต่เพราะการ์ดที่ commit ไปก่อนแล้วคนตามไม่ทัน = การ์ดไร้ชื่อค้างให้คนงงว่าใครควรทำ
   const client = await pool.connect()
   try {
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -304,14 +299,8 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
     if (!src[0]) { await client.query('ROLLBACK'); return null }
     const s = src[0]
 
-    // กฎเดียวกับ createCard — มีคนรับแล้วอยู่ backlog ไม่ได้ (bug-406) · ไม่มีคนรับก็ออกจาก backlog ไม่ได้
-    // (ผู้รับผิดชอบของสำเนาลอกมาครบทุกคนข้างล่าง จึงตัดสินจากชุดของต้นฉบับได้เลย)
-    const { rows: srcPeople } = await client.query(
-      `SELECT user_id FROM kanban_card_assignees WHERE card_id = $1`, [s.id]
-    )
-    let status = s.status_type
-    if (srcPeople.length && status === 'backlog') status = 'doing'
-    if (!srcPeople.length && status !== 'backlog' && status !== 'cancelled') status = 'backlog'
+    // สำเนาอยู่กองเดียวกับต้นฉบับเสมอ — ⛔ ห้ามขยับตามจำนวนคน (ถอดกฎ 2026-09-03)
+    const status = s.status_type
 
     let newId = null
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -422,43 +411,25 @@ export async function updateCard(orgId, id, fields, { lockToken }) {
 
 /**
  * เปลี่ยนสถานะ — ไม่ผ่าน lock เพราะเป็น action ปุ่มเดียว ไม่ใช่ autosave
- * ⚠️ กติกา "ไม่มีผู้รับผิดชอบห้ามออกจาก backlog" ต้องเช็คที่ชั้น API ด้วย checkStatusTransition ก่อนเรียก
- *    (trigger ใน DB เป็นตาข่ายสุดท้าย ไม่ใช่ที่ที่ควรให้ผู้ใช้ไปชน)
  *
- * ⭐ backlog = "รอทำ — ยังไม่มีผู้รับผิดชอบ" (ดีไซน์ §ประเภทสถานะ) → ย้ายมา backlog = ปล่อยงานคืนกอง
- *    **ถอดผู้รับผิดชอบออกทุกคน** ไม่งั้นได้สภาพขัดกันเอง: การ์ด "รอทำ" ที่มีคนถืออยู่
- *    → ไม่โผล่ในกอง "ยังไม่มีคนรับ" แต่ก็ไม่ควรอยู่ในกอง "กำลังทำ"
- *    บังคับที่นี่ ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
- * ⚠️ 2 คำสั่งต้องอยู่ทรานแซกชันเดียว — แยกเมื่อไหร่ DELETE จะ commit ก่อนแล้ว trigger clamp
- *    ดันการ์ดไป backlog เอง (ผลเหมือนกันโดยบังเอิญ) แต่ล้มกลางทางแล้วได้การ์ดไร้คนที่ยังค้าง 'done'
+ * ⛔ **ห้ามแตะผู้รับผิดชอบที่นี่** (ถอดกฎ 2026-09-03) — เดิมย้ายมา backlog แล้ว `DELETE` ชื่อคน
+ *    ทิ้งทุกคนโดยไม่ถาม ย้อนไม่ได้ · ตอนนี้ "รอทำ" = ยังไม่ลงมือ ซึ่ง**มีคนรับได้**
+ *    ลากงานของตัวเองกลับเข้าคิวเป็นท่าปกติ ไม่ใช่การปล่อยงานคืน
  */
 export async function setCardStatus(orgId, id, statusType) {
-  const client = await pool.connect()
-  try {
-    await client.query('BEGIN')
-    // ⚠️ ต้อง cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ 2 บริบท (ค่าที่เซ็ต + เงื่อนไขใน CASE)
-    //    ถ้าไม่ cast pg เดาชนิดไม่ตรงกันแล้วโยน 42P08 "inconsistent types deduced" (เจอตอน smoke test)
-    const { rows } = await client.query(
-      `UPDATE kanban_cards
-          SET status_type   = $3::varchar,
-              -- 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่ไม่ใช่ตอนนี้) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
-              completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
-              updated_at    = now()
-        WHERE org_id = $1 AND id = $2
-        RETURNING id`,
-      [orgId, id, statusType]
-    )
-    if (rows[0] && statusType === 'backlog') {
-      await client.query(`DELETE FROM kanban_card_assignees WHERE card_id = $1`, [id])
-    }
-    await client.query('COMMIT')
-    return rows[0] ? await getCard(orgId, id) : null
-  } catch (e) {
-    await client.query('ROLLBACK')
-    throw e
-  } finally {
-    client.release()
-  }
+  // ⚠️ ต้อง cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ 2 บริบท (ค่าที่เซ็ต + เงื่อนไขใน CASE)
+  //    ถ้าไม่ cast pg เดาชนิดไม่ตรงกันแล้วโยน 42P08 "inconsistent types deduced" (เจอตอน smoke test)
+  const { rows } = await pool.query(
+    `UPDATE kanban_cards
+        SET status_type   = $3::varchar,
+            -- 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่ไม่ใช่ตอนนี้) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
+            completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
+            updated_at    = now()
+      WHERE org_id = $1 AND id = $2
+      RETURNING id`,
+    [orgId, id, statusType]
+  )
+  return rows[0] ? await getCard(orgId, id) : null
 }
 
 /**
@@ -513,42 +484,25 @@ export async function deleteCard(orgId, id) {
 //    ทุกคนอยู่ใน kanban_card_assignees เท่ากันหมด · เพิ่ม/ถอดทีละคนผ่าน 2 ตัวข้างล่างเท่านั้น
 
 /**
- * เพิ่มผู้รับผิดชอบ 1 คน — การ์ดที่อยู่ backlog ขยับเป็น doing ให้เอง
+ * เพิ่มผู้รับผิดชอบ 1 คน — **ไม่ขยับกองของการ์ด** (ถอดกฎ 2026-09-03)
  *
- * ⭐ กติกา "backlog = รอทำ ยังไม่มีผู้รับผิดชอบ" บังคับที่นี่ที่เดียว ไม่ใช่ที่ route
- *    ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
- * ⚠️ อยู่ในทรานแซกชันเดียว — INSERT คนกับ UPDATE สถานะแยกกันเมื่อไหร่ ล้มกลางทางแล้วได้
- *    การ์ด backlog ที่มีคนถืออยู่ (สภาพขัดกันเองที่ trigger ไม่กัน เพราะกันได้ทางเดียว)
+ * ⛔ เดิมดัน backlog → doing ให้เอง = ระบบตัดสินแทนคนว่า "รับงานแล้ว = กำลังทำอยู่"
+ *    ซึ่งไม่จริง คนรับงานไว้ในคิวแล้วยังไม่เริ่มเป็นเรื่องปกติ · จะเริ่มเมื่อไหร่คนลากเอง
  */
 export async function addAssignee(orgId, cardId, userId) {
-  const client = await pool.connect()
-  try {
-    await client.query('BEGIN')
-    await client.query(
-      `INSERT INTO kanban_card_assignees (card_id, user_id)
-       SELECT $2, $3 FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
-       ON CONFLICT DO NOTHING`,
-      [orgId, cardId, userId]
-    )
-    await client.query(
-      `UPDATE kanban_cards SET status_type = 'doing', updated_at = now()
-        WHERE org_id = $1 AND id = $2 AND status_type = 'backlog'`,
-      [orgId, cardId]
-    )
-    await client.query('COMMIT')
-  } catch (e) {
-    await client.query('ROLLBACK')
-    throw e
-  } finally {
-    client.release()
-  }
+  await pool.query(
+    `INSERT INTO kanban_card_assignees (card_id, user_id)
+     SELECT $2, $3 FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
+     ON CONFLICT DO NOTHING`,
+    [orgId, cardId, userId]
+  )
   return await getCard(orgId, cardId)
 }
 
 /**
- * ถอดผู้รับผิดชอบ 1 คน — **ไม่ต้อง clamp สถานะเอง**
- * trigger `trg_kanban_assignees_clamp` ดันการ์ดกลับ backlog ให้ตอน COMMIT ถ้าไม่เหลือใครแล้ว
- * (เดิม logic นี้ก็อปอยู่ 2 ที่ ทั้งฝั่งเว็บและฝั่งบอท — ยุบลง DB แล้วหายไปทั้งคู่)
+ * ถอดผู้รับผิดชอบ 1 คน — **การ์ดอยู่กองเดิม** (ถอดกฎ 2026-09-03)
+ * เดิม trigger `trg_kanban_assignees_clamp` ดันกลับ backlog ให้ตอน COMMIT ถ้าไม่เหลือใคร —
+ * DROP ทิ้งแล้ว · งานที่คนสุดท้ายถอนตัวออกไม่ได้แปลว่ามันย้อนกลับไปยังไม่เริ่ม ใครจะย้ายค่อยลากเอง
  */
 export async function removeAssignee(orgId, cardId, userId) {
   await pool.query(

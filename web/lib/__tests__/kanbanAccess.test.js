@@ -116,15 +116,15 @@ describe('checkStatusTransition', () => {
     () => expect(ka.checkStatusTransition(card(), 'doing')).toEqual({ ok: true, reason: null }))
   it('มีคนรับ → done ได้',
     () => expect(ka.checkStatusTransition(card(), 'done')).toEqual({ ok: true, reason: null }))
-  it('ไม่มีคนรับ → doing ไม่ได้ + บอกเหตุผล',
-    () => expect(ka.checkStatusTransition(unassigned(), 'doing')).toEqual({ ok: false, reason: 'needAssignee' }))
-  it('ไม่มีคนรับ → done ไม่ได้',
-    () => expect(ka.checkStatusTransition(unassigned(), 'done')).toEqual({ ok: false, reason: 'needAssignee' }))
+  // ⛔ ถอดกฎ "ชื่อคนผูกกับกอง" ทั้งชุดแล้ว 2026-09-03 (Notion/AppFlowy ไม่มีกฎนี้)
+  //    ไม่มีคนรับ = ไปกองไหนก็ได้ · เดิม doing/done/review/ready ถูกปฏิเสธด้วย reason 'needAssignee'
+  it('ไม่มีคนรับ → doing ได้ (มนุษย์ตัดสิน ไม่ใช่ระบบ)',
+    () => expect(ka.checkStatusTransition(unassigned(), 'doing')).toEqual({ ok: true, reason: null }))
+  it('ไม่มีคนรับ → done ได้ (งานที่เสร็จแล้วไม่ต้องมีคนถือ — บั๊กการ์ด 953 ใบตกกองรอทำ)',
+    () => expect(ka.checkStatusTransition(unassigned(), 'done')).toEqual({ ok: true, reason: null }))
   it('ไม่มีคนรับ → backlog ได้ (อยู่ที่เดิม)',
     () => expect(ka.checkStatusTransition(unassigned(), 'backlog')).toEqual({ ok: true, reason: null }))
-  // 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น · 2026-08-17) — งานที่ยังไม่มีใครรับก็พักได้
-  // ไม่ต้องบังคับหาคนรับก่อน (invariant ยอมให้ cancelled อยู่แล้ว)
-  it('ไม่มีคนรับ → กรุ ได้ (ไม่ต้องหาคนก่อนพัก)',
+  it('ไม่มีคนรับ → กรุ ได้',
     () => expect(ka.checkStatusTransition(unassigned(), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('มีคนรับ → กรุ ได้',
     () => expect(ka.checkStatusTransition(card(), 'cancelled')).toEqual({ ok: true, reason: null }))
@@ -132,8 +132,8 @@ describe('checkStatusTransition', () => {
     () => expect(ka.checkStatusTransition(card(), 'blocked')).toEqual({ ok: false, reason: 'unknownStatus' }))
   it('"ติดปัญหา" ไม่ใช่สถานะ เป็นธงบนการ์ด',
     () => expect(ka.STATUS_TYPES).not.toContain('blocked'))
-  it('ไม่มีการ์ด → needAssignee',
-    () => expect(ka.checkStatusTransition(null, 'doing')).toEqual({ ok: false, reason: 'needAssignee' }))
+  it('ไม่มีการ์ด → noCard (เดิมโดน needAssignee ปัดตกให้โดยบังเอิญ)',
+    () => expect(ka.checkStatusTransition(null, 'doing')).toEqual({ ok: false, reason: 'noCard' }))
 })
 
 // ---- ค่าคงที่ที่ห้ามเปลี่ยนโดยไม่ตั้งใจ ----
@@ -168,7 +168,7 @@ describe('checkStatusTransition — การ์ดที่ผูกของ�
     () => expect(ka.checkStatusTransition(linked('case'), 'done')).toEqual({ ok: false, reason: 'linked' }))
   it('ผูกโพสต์แล้วลากข้ามกอง → ไม่ได้',
     () => expect(ka.checkStatusTransition(linked('post'), 'review')).toEqual({ ok: false, reason: 'linked' }))
-  it('ผูกของจริง + ยังไม่มีคนรับ → บอก linked ไม่ใช่ needAssignee (เหตุผลที่ตรงกว่า)',
+  it('ผูกของจริง + ยังไม่มีคนรับ → บอก linked (สถานะเป็นของต้นทาง — คนละเรื่องกับชื่อคน)',
     () => expect(ka.checkStatusTransition(linked('case', { assignee_ids: [] }), 'doing'))
             .toEqual({ ok: false, reason: 'linked' }))
   it('สถานะมั่ว → ยังตอบ unknownStatus ก่อน (กันค่ามั่วหลุดเข้าไปถึง DB)',
@@ -179,14 +179,14 @@ describe('checkStatusTransition — การ์ดที่ผูกของ�
 
 // ---- งานสื่อช่วงร่าง: kanban ถือสถานะเอง (2026-08-25) ----
 describe('checkStatusTransition — งานสื่อช่วงร่าง', () => {
-  it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "รอทำ" ได้ (ปล่อยงานคืนกอง)',
+  it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "รอทำ" ได้ (เข้าคิวไว้ก่อน — ⛔ ไม่ถอดชื่อใครออกแล้ว)',
     () => expect(ka.checkStatusTransition(linked('post'), 'backlog')).toEqual({ ok: true, reason: null }))
   it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "พักไว้" ได้',
     () => expect(ka.checkStatusTransition(linked('post'), 'cancelled')).toEqual({ ok: true, reason: null }))
-  it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีคนรับ → ไป "กำลังทำ" ไม่ได้ (ต้องรับงานก่อน)',
+  it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีคนรับ → ไป "กำลังทำ" ได้ (ไม่ต้องรับงานก่อนแล้ว)',
     () => expect(ka.checkStatusTransition(
       linked('post', { status_type: 'backlog', assignee_ids: [] }), 'doing'
-    )).toEqual({ ok: false, reason: 'needAssignee' }))
+    )).toEqual({ ok: true, reason: null }))
   // ⛔ ต้นทางถือสถานะแล้ว (ส่งตรวจ/อนุมัติ/เผยแพร่) = หมดช่วงที่ kanban มีสิทธิ์
   it('ผูกโพสต์ ที่ส่งตรวจแล้ว → ลากกลับ "กำลังทำ" ไม่ได้',
     () => expect(ka.checkStatusTransition(linked('post', { status_type: 'review' }), 'doing'))

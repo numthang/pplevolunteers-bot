@@ -63,13 +63,13 @@ try {
   card = await getCard(ORG, cardId)
   ok('ได้ผลเหมือนฝั่งเว็บเป๊ะ', card.assignee_ids.length === 3, card.assignee_ids.join(','))
 
-  console.log('\n── ถอดคนสุดท้ายที่ต้นทาง → การ์ดกลับกอง "รอทำ" เอง ──')
+  console.log('\n── ถอดคนสุดท้ายที่ต้นทาง → การ์ด **อยู่กองเดิม** (⛔ ถอด trigger clamp 2026-09-03) ──')
   await setAssignees(caseId, [])
   await syncCaseCardPeople(caseId)
   card = await getCard(ORG, cardId)
   ok('ไม่เหลือใครในการ์ด', card.assignee_ids.length === 0)
   const raw2 = await rawStatus(cardId)
-  ok('trigger clamp คอลัมน์เป็น backlog', raw2 === 'backlog', raw2)
+  ok('ไม่มีใครรับแล้วแต่การ์ดยังอยู่กองเดิม (ไม่มี clamp)', raw2 === 'doing', raw2)
 } catch (e) {
   fail++
   console.error('\n💥 หยุดกลางทาง:', e.message)
