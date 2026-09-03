@@ -635,6 +635,37 @@ async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress 
   throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
 }
 
+/**
+ * publish container ของ Threads แบบทนจังหวะ
+ *
+ * container ขึ้น FINISHED แล้วยัง publish ทันทีไม่ได้เสมอไป — backend ยังไม่ propagate
+ * ตีกลับ error 24/4279009 "ไม่พบสื่อที่มี ID …" ทั้งที่ container ไม่ได้เสียอะไรเลย
+ * (เคสจริง 2026-09-03: job 132 ล้ม 3 รอบติดข้ามชั่วโมง · container id คนละตัวทุกรอบ
+ *  = ไม่ใช่ container พัง แต่เป็นจังหวะ · เอกสาร Threads เองก็แนะนำให้เว้นก่อน publish)
+ *
+ * ยิงทันทีก่อน (เคสปกติเร็วเหมือนเดิม) · ล้มด้วยรหัสนี้ค่อยถอยรอเป็นสเต็ป รวมสูงสุด ~60s
+ * รหัสอื่น (โทเคนตาย / สื่อโหลดไม่ได้) รอไปก็ไม่หาย → โยนออกทันที ไม่ต้องเสียเวลา
+ */
+async function threadsPublishWithRetry(cfg, containerId, onProgress = null, label = '') {
+  const waits = [0, 5000, 10000, 15000, 30000];
+  let lastErr;
+  for (const wait of waits) {
+    if (wait) {
+      if (onProgress) onProgress(`📤 @ Threads: ${label}รอ Threads พร้อมเผยแพร่... (${wait / 1000}s)`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+    try {
+      return await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
+        creation_id: containerId, access_token: cfg.token,
+      });
+    } catch (err) {
+      if (!/4279009/.test(err.message)) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 function splitCaption(caption, maxLen = 500) {
   if (!caption || caption.length <= maxLen) return [caption || ''];
   const chunks = [];
@@ -665,9 +696,7 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
   const total = imageUrls.length;
 
   async function publishContainer(containerId) {
-    const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
-      creation_id: containerId, access_token: cfg.token,
-    });
+    const { id: mediaId } = await threadsPublishWithRetry(cfg, containerId, onProgress);
     // permalink อาจยังไม่พร้อมทันทีด้วยเหตุเดียวกับ waitPostVisible — ลองซ้ำสั้นๆ ก่อนยอมคืน null
     // ห้าม throw ตรงนี้เด็ดขาด: โพสต์ออกไปแล้ว ย้อนไม่ได้ · ไม่มีลิงก์ ≠ โพสต์ไม่สำเร็จ
     let permalink = null;
@@ -704,9 +733,9 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
       await waitForThreadsContainer(containerId, cfg.token, 30000,
         s => onProgress && onProgress(`📤 @ Threads: thread ${i + 2}/${chunks.length} กำลัง process... (${s}s)`)
       );
-      const { id: publishedId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
-        creation_id: containerId, access_token: cfg.token,
-      });
+      const { id: publishedId } = await threadsPublishWithRetry(
+        cfg, containerId, onProgress, `thread ${i + 2}/${chunks.length} `
+      );
       replyToId = publishedId;
     }
   }
@@ -903,9 +932,7 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
     s => onProgress && onProgress(`📤 Threads Reels: กำลัง process วิดีโอ... (${s}s)`)
   );
 
-  const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
-    creation_id: containerId, access_token: cfg.token,
-  });
+  const { id: mediaId } = await threadsPublishWithRetry(cfg, containerId, onProgress, 'Reels ');
   const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
   return { id: mediaId, permalink: info.permalink || null };
 }
