@@ -32,15 +32,26 @@ budget_tokens: 1000
 
 ---
 
-## ⛔ ค้างอยู่ ต้องทำก่อนอย่างอื่น
+## 🔴 ค้างอยู่ — prod ครึ่งๆ อยู่ตอนนี้ (ตรวจของจริงแล้ว 2026-09-03 16:2x)
 
-1. **เฟส C ยังไม่ขึ้น prod** — รันบล็อก `2026-09-03 (รอบสาม)` ท้าย `scripts/migration/migration.sql`
-   ใน DBeaver **แล้ว deploy เว็บ + บอทพร้อมกัน** (คอลัมน์ถูก rename — ตัวที่ขึ้นทีหลัง 500 ทันที)
-   · **Claude เขียน DB prod เองไม่ได้ (classifier บล็อก)**
-2. **prod ยังไม่ได้ตรึง search_path** (ค้างจากเฟส B) — บล็อก `2026-09-03 (รอบสอง)` ในไฟล์เดียวกัน
-   ไม่ทำ = วันที่กู้ prod จาก `pg_dump` จะ restore ไม่ขึ้นทั้งก้อน (42P01 ตอน COMMIT)
+**DB prod migrate ครบแล้ว แต่โค้ด prod ยังเป็นตัวก่อนเฟส C** (ยังไม่ push)
+- ✅ prod DB: `post_episodes.created_by` มีแล้ว · `owner_user_id` หายแล้ว · `post_assignees` 1 แถว ·
+  การ์ดโพสต์ไม่เหลือคนลอย 0 · `search_path` ของ trigger 2 ตัวตรึงแล้ว (บล็อก "รอบสอง" ลงไปด้วย)
+- ❌ โค้ด prod ยังอ้าง `owner_user_id`: `web/db/posts/episodes.js` 17 จุด · `web/db/kanban/links.js` 5 ·
+  `web/db/kanban/statusSql.js` 2 · `db/mediaBasket.js` 1
+- ⇒ **`/posts` และ `/kanban` ทั้งบอร์ด จะโยน 42703** (visibleLinkSql อ้างคอลัมน์นี้ = listCards ล้มทั้งก้อน)
+  · บอทเปิดตะกร้าสื่อก็ INSERT ไม่ผ่าน · ตอนตรวจยังไม่มี 42703 ใน log = ยังไม่มีใครเปิด 2 หน้านั้น
+
+**ต้องทำ (เรียงตามนี้ ห้ามสลับ):**
+1. `git push` — 4 commit local: `c9d64bd` `abc96d4` `56382bc` `7883c67` (**ต้องขออนุญาต user ก่อน**)
+2. prod: `git pull` → `npm run build` (web) → `pm2 restart pple-web pple-dcbot` — **พร้อมกันทั้งคู่**
 3. **user ยังไม่ได้กดทดสอบเอง** ทั้งเฟส B และ C — รายการอยู่ §ให้ user กด ข้างล่าง
-4. **ยังไม่ push** — `c9d64bd`, `abc96d4` อยู่ local
+
+**⚠️ สิ่งที่จะเห็นบน prod หลัง deploy — เป็นของที่ตั้งใจ ไม่ใช่บั๊ก:**
+- การ์ดโพสต์เกือบพันใบขึ้นว่า **"ยังไม่มีคนรับ"** และแท่ง lifecycle ขั้นแรกว่าง
+  (968 แถวที่ก็อป "คนสร้าง" มาเป็นผู้รับผิดชอบถูกลบตอน migration — ⛔ อย่าเสนอ backfill กลับ)
+- โพสต์ที่ import แบบ `createdVia='backfill'` การ์ดจะลงกอง **"รอทำ"** ไม่ใช่ "เสร็จ" อีกต่อไป
+  (ไม่มีผู้รับผิดชอบ = `createCard` clamp กลับ backlog ตามกติกา)
 
 ---
 
