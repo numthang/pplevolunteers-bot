@@ -1,4 +1,4 @@
-// กวาดเจ้าภาพ/คนช่วยของการ์ดที่ผูกเคสให้ตรงกับ `case_assignees` — **รันครั้งเดียวตอน deploy**
+// กวาดผู้รับผิดชอบของการ์ดที่ผูกเคสให้ตรงกับ `case_assignees` — **รันครั้งเดียวตอน deploy**
 //
 //   node --env-file=.env scripts/kanban/syncCaseAssignees.mjs --org 1 [--dry]
 //
@@ -9,10 +9,11 @@
 // ── ทำไมต้องมี ─────────────────────────────────────────────────────
 // ก่อน 2026-08-31 เจ้าภาพเคยถูกเก็บ 2 ที่โดยไม่มีใคร sync:
 //   `case_assignees` (ต้นทาง) ↔ `kanban_cards.owner_user_id` + `kanban_card_helpers` (สำเนา)
+// ⭐ 2026-09-03 (เฟส B): สำเนาเหลือตารางเดียว `kanban_card_assignees` แล้ว — สคริปต์นี้อัปเดตตาม
 // ตอนนี้ทุกทางเข้าผ่าน `web/lib/caseAssign.js` แล้ว แต่ **ของเก่าที่ดริฟต์ไปแล้วไม่หายเอง**
 //
 // ⭐ ดัน "ขึ้น" ก่อน แล้วค่อย mirror "ลง" — ห้ามสลับลำดับ
-//    คนที่กด "ลงมือด้วย" บนบอร์ดก่อนหน้านี้อยู่แค่ `kanban_card_helpers` ไม่เคยลงถึงต้นทาง
+//    คนที่กด "ลงมือด้วย" บนบอร์ดก่อนหน้านี้อยู่แค่สำเนาฝั่ง kanban ไม่เคยลงถึงต้นทาง
 //    ถ้า mirror ลงอย่างเดียว = กวาดคนพวกนั้นทิ้งเงียบๆ (งานที่เขารับไว้หายจาก "การบ้านของฉัน")
 //
 // ⭐ รันซ้ำได้ปลอดภัย — รอบสองต้องรายงาน 0/0 เสมอ
@@ -26,17 +27,13 @@ const arg = (name, fallback = null) => {
 const orgId = Number(arg('org', 1))
 const dry = process.argv.includes('--dry')
 
-// คนที่อยู่ในการ์ดแต่ยังไม่อยู่ในเคส (เจ้าภาพ + คนช่วย รวมกัน)
+// คนที่อยู่ในการ์ดแต่ยังไม่อยู่ในเคส
 const MISSING_UPSTREAM = `
   SELECT DISTINCT l.entity_id AS case_id, p.user_id
     FROM kanban_card_links l
     JOIN kanban_cards c ON c.id = l.card_id AND c.org_id = $1
     JOIN cases cs ON cs.id = l.entity_id AND cs.org_id = $1
-    JOIN LATERAL (
-      SELECT c.owner_user_id AS user_id WHERE c.owner_user_id IS NOT NULL
-      UNION
-      SELECT h.user_id FROM kanban_card_helpers h WHERE h.card_id = c.id
-    ) p ON TRUE
+    JOIN kanban_card_assignees p ON p.card_id = c.id
    WHERE l.entity_type = 'case'
      AND NOT EXISTS (SELECT 1 FROM case_assignees a
                       WHERE a.case_id = l.entity_id AND a.user_id = p.user_id)`
@@ -48,19 +45,16 @@ const DRIFTED = `
     JOIN kanban_cards c ON c.id = l.card_id AND c.org_id = $1
    WHERE l.entity_type = 'case'
      AND (
-       c.owner_user_id IS DISTINCT FROM (SELECT a.user_id FROM case_assignees a
-                                          WHERE a.case_id = l.entity_id
-                                          ORDER BY a.assigned_at, a.user_id LIMIT 1)
-       OR EXISTS (SELECT 1 FROM kanban_card_helpers h
-                   WHERE h.card_id = c.id
-                     AND (h.user_id = c.owner_user_id
-                          OR NOT EXISTS (SELECT 1 FROM case_assignees a
-                                          WHERE a.case_id = l.entity_id AND a.user_id = h.user_id)))
+       -- มีในการ์ด แต่ไม่มีในเคส
+       EXISTS (SELECT 1 FROM kanban_card_assignees k
+                WHERE k.card_id = c.id
+                  AND NOT EXISTS (SELECT 1 FROM case_assignees a
+                                   WHERE a.case_id = l.entity_id AND a.user_id = k.user_id))
+       -- มีในเคส แต่ไม่มีในการ์ด
        OR EXISTS (SELECT 1 FROM case_assignees a
                    WHERE a.case_id = l.entity_id
-                     AND a.user_id IS DISTINCT FROM c.owner_user_id
-                     AND NOT EXISTS (SELECT 1 FROM kanban_card_helpers h
-                                      WHERE h.card_id = c.id AND h.user_id = a.user_id))
+                     AND NOT EXISTS (SELECT 1 FROM kanban_card_assignees k
+                                      WHERE k.card_id = c.id AND k.user_id = a.user_id))
      )`
 
 const { rows: missing } = await pool.query(MISSING_UPSTREAM, [orgId])

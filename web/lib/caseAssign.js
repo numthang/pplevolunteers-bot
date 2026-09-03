@@ -4,7 +4,7 @@
  * ⭐ ทำไมต้องเป็น service ไม่ใช่เรียก db/cases.js ตรงๆ: การมอบหมายเคสมี side effect 3 อย่าง
  *    ที่ต้องเกิดพร้อมกันเสมอ ไม่ว่าจะกดมาจากหน้าไหน
  *      1. `case_assignees` (ความจริง)
- *      2. sync การ์ด kanban — `owner_user_id`/`kanban_card_helpers` เป็น **สำเนา** ไม่ได้อ่านสด
+ *      2. sync การ์ด kanban — `kanban_card_assignees` เป็น **สำเนา** ไม่ได้อ่านสด
  *      3. ping เธรด Discord + audit log
  *    ก่อนหน้านี้ข้อ 2 ไม่มีใครทำเลย (เจ้าภาพดริฟต์) และข้อ 3 มีเฉพาะทาง `/case`
  *    → กดรับงานจากบอร์ด kanban แล้วไม่มีใครใน Discord รู้เรื่อง

@@ -29,7 +29,7 @@ export const DEFAULT_VIEW = {
   group: 'status',
   status: [],
   kind: [],
-  helper: [],
+  assignee: [],
   label: [],      // [{ id, field_id }] — ชื่อ/สีเติมทีหลังจากการ์ดที่โหลดมา
   q: '',
   sort: null,     // { key, dir }
@@ -70,7 +70,9 @@ export function parseViewFromParams(input) {
     group: oneOf(p.get('group'), GROUP_MODES, 'status'),
     status: list(p.get('status')).filter((s) => STATUS_TYPES.includes(s)),
     kind: list(p.get('kind')).filter((k) => KINDS.includes(k)),
-    helper: list(p.get('helper')),
+    // ⭐ รับ `helper=` ของลิงก์เก่าด้วย (คีย์เปลี่ยนชื่อ 2026-09-03 ตอนยุบเจ้าภาพ/ผู้ช่วยเป็นผู้รับผิดชอบ)
+    //    เขียนออกเป็น `assignee=` อย่างเดียว — ลิงก์ที่แชร์กันไว้แล้วยังเปิดได้เหมือนเดิม
+    assignee: list(p.get('assignee') || p.get('helper')),
     label: list(p.get('label')).map(parseLabelToken),
     q: p.get('q') || '',
     sort,
@@ -91,7 +93,7 @@ export function viewToQueryString(view = {}) {
   if (v.group && v.group !== DEFAULT_VIEW.group) p.set('group', v.group)
   if (v.status?.length) p.set('status', v.status.join(','))
   if (v.kind?.length) p.set('kind', v.kind.join(','))
-  if (v.helper?.length) p.set('helper', v.helper.map(String).join(','))
+  if (v.assignee?.length) p.set('assignee', v.assignee.map(String).join(','))
   if (v.label?.length) p.set('label', v.label.map(labelToken).join(','))
   if (v.q?.trim()) p.set('q', v.q)
   if (v.sort?.key) p.set('sort', `${v.sort.key}:${v.sort.dir === 'desc' ? 'desc' : 'asc'}`)

@@ -43,18 +43,20 @@ const COLS = `
   c.id, c.org_id, c.board_id, c.ref_no, c.title, c.detail,
   ${LIVE_STATUS_SQL} AS status_type,
   ${LINK_JSON_SQL} AS link,
-  c.owner_user_id, c.start_at, c.due_at, c.priority,
+  c.start_at, c.due_at, c.priority,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
   c.source_url, c.source_message_id,
   ${LOCK} AS lock_token`
 
-// คนช่วยดึงมาด้วยเสมอ — การ์ดใบเดียวไม่มีทางใหญ่พอให้ต้อง lazy load
+// ผู้รับผิดชอบดึงมาด้วยเสมอ — การ์ดใบเดียวไม่มีทางใหญ่พอให้ต้อง lazy load
+// ⭐ 2026-09-03: เลิกมี "เจ้าภาพ" (owner_user_id) แล้ว — ทุกคนอยู่ในตารางเดียวกันเท่ากันหมด
+//    เรียงตาม assigned_at เพื่อให้คนที่รับก่อนขึ้นก่อน (UI โชว์ "คนแรก +N")
 // ⚠️ งานย่อย (checklist) ไม่ได้อยู่ตรงนี้แล้ว — กลายเป็น custom field ชนิด checklist ไปแล้ว (2026-08-18 รอบเย็น)
 //    อยู่ใน fields array ข้างล่างเหมือนชนิดอื่น ไม่มี checklist_total/checklist_done แบบเดิมอีกต่อไป
 const AGG = `
-  COALESCE((SELECT json_agg(json_build_object('user_id', h.user_id, 'name', ${DISPLAY_NAME}) ORDER BY h.joined_at)
-              FROM kanban_card_helpers h JOIN users u ON u.id = h.user_id
-             WHERE h.card_id = c.id), '[]'::json) AS helpers,
+  COALESCE((SELECT json_agg(json_build_object('user_id', a.user_id, 'name', ${DISPLAY_NAME}) ORDER BY a.assigned_at, a.user_id)
+              FROM kanban_card_assignees a JOIN users u ON u.id = a.user_id
+             WHERE a.card_id = c.id), '[]'::json) AS assignees,
   -- ⛔ เคยมีคอลัมน์ labels ตรงนี้ — ถอดออก 2026-08-19 ตอนยุบป้ายเข้า custom field
   --    ชิปบนการ์ดสร้างจาก fields ข้างล่างผ่าน cardTags() ใน lib/kanbanTagFilter.js แทน
   --    (ห้ามใส่ backtick ในคอมเมนต์นี้ — ทั้งก้อนเป็น template literal ของ JS จะโดนปิดกลางคัน)
@@ -100,13 +102,19 @@ const AGG = `
               LEFT JOIN kanban_card_field_values v ON v.card_id = c.id AND v.field_id = d.id
              WHERE d.org_id = c.org_id AND d.archived_at IS NULL AND d.board_id = c.board_id), '[]'::json) AS fields`
 
-const OWNER = `(SELECT ${DISPLAY_NAME} FROM users u WHERE u.id = c.owner_user_id) AS owner_name`
+/**
+ * "การ์ดใบนี้มีคนรับหรือยัง" — ที่เดียวที่เขียนเงื่อนไขนี้ ห้ามก็อปไปเขียนมือที่อื่น
+ * (เดิมคือ `c.owner_user_id IS NOT NULL` กระจายอยู่ 8 จุด นิยามเพี้ยนกันเงียบๆ ได้ตลอด)
+ * @param {string} extra เงื่อนไขต่อท้ายใน subquery เช่น ` AND a.user_id = $2`
+ */
+const ASSIGNEE_EXISTS = (extra = '') =>
+  `EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = c.id${extra})`
 
-/** helper_ids แบนๆ ให้ kanbanAccess.isCardStakeholder ใช้ได้ตรงๆ */
+/** assignee_ids แบนๆ ให้ kanbanAccess.isCardStakeholder ใช้ได้ตรงๆ */
 function shape(row) {
   if (!row) return null
-  const helpers = row.helpers || []
-  const out = { ...row, helpers, helper_ids: helpers.map(h => h.user_id) }
+  const assignees = row.assignees || []
+  const out = { ...row, assignees, assignee_ids: assignees.map(a => a.user_id) }
   // ⭐ การ์ดที่ผูกของจริง: ชื่ออ่านสดจากต้นทาง — แก้ชื่อเคสที่ /case แล้วการ์ดต้องเปลี่ยนตาม
   //    ต้นทางยังไม่มีชื่อ (โพสต์ร่างที่ยังไม่ตั้งชื่อ) → ตกกลับไปใช้ชื่อที่การ์ดเก็บไว้
   if (out.link) {
@@ -123,7 +131,7 @@ function shape(row) {
  */
 export async function getCard(orgId, id) {
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2`,
+    `SELECT ${COLS}, ${AGG} FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2`,
     [orgId, id]
   )
   return shape(rows[0])
@@ -135,7 +143,7 @@ export async function getCard(orgId, id) {
  */
 export async function getCardForViewer(orgId, id, viewer = NO_VIEWER) {
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c
+    `SELECT ${COLS}, ${AGG} FROM kanban_cards c
       WHERE c.org_id = $1 AND c.id = $2 AND ${visibleLinkSql(3, 4, 5)}`,
     [orgId, id, ...viewerParams(viewer)]
   )
@@ -145,42 +153,17 @@ export async function getCardForViewer(orgId, id, viewer = NO_VIEWER) {
 /** หาด้วยเลขที่คนพิมพ์ในดิสฯ (K-42) — ref_no ไม่ซ้ำใน org เดียวกัน */
 export async function getCardByRef(orgId, refNo, viewer = NO_VIEWER) {
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c
+    `SELECT ${COLS}, ${AGG} FROM kanban_cards c
       WHERE c.org_id = $1 AND c.ref_no = $2 AND ${visibleLinkSql(3, 4, 5)}`,
     [orgId, refNo, ...viewerParams(viewer)]
   )
   return shape(rows[0])
 }
 
-/**
- * หน้าแรก "การบ้านของฉัน" — คืน 2 กองแยกกัน (ดีไซน์ §Views)
- *   mine    = งานที่ฉันต้องส่ง (เจ้าภาพ)
- *   helping = งานที่ฉันช่วย
- * เรียงตามกำหนดส่ง · งานที่ไม่มีกำหนดส่งไปท้ายสุด · งานที่จบแล้วไม่เอา
- */
-export async function listMyCards(orgId, userId, { includeClosed = false, viewer = NO_VIEWER } = {}) {
-  // ⚠️ กรองด้วยสถานะ **สด** ไม่ใช่คอลัมน์ — เคสที่เพิ่งปิดที่หน้า /case ต้องหลุดจากรายการนี้ทันที
-  //    (ถ้ากรองด้วยคอลัมน์ cache การ์ดจะค้างอยู่ในงานของเจ้าภาพทั้งที่งานจบไปแล้ว)
-  const closed = includeClosed ? '' : `AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
-  const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG},
-            (c.owner_user_id = $2) AS is_owner
-       FROM kanban_cards c
-      WHERE c.org_id = $1
-        AND c.archived_at IS NULL
-        AND ${visibleLinkSql(3, 4, 5)}
-        ${closed}
-        AND (c.owner_user_id = $2 OR EXISTS (
-              SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id AND h.user_id = $2))
-      ORDER BY (c.due_at IS NULL), c.due_at ASC, c.priority DESC, c.created_at ASC`,
-    [orgId, userId, ...viewerParams(viewer)]
-  )
-  const all = rows.map(shape)
-  return {
-    mine:    all.filter(r => r.is_owner),
-    helping: all.filter(r => !r.is_owner),
-  }
-}
+// ⛔ listMyCards() ถูกลบทิ้ง 2026-09-03 (เฟส B) — มันแยก "งานที่ฉันต้องส่ง" กับ "งานที่ฉันช่วย"
+//    ด้วย is_owner ซึ่งเลิกมีความหมายแล้วเมื่อผู้รับผิดชอบเท่ากันหมด · grep ทั้งรีโปไม่มี caller
+//    (หน้าแรกใช้ countCardStats · หน้า /kanban ใช้ listCards ผ่าน ?view=board) — user เคาะให้ลบ
+//    อยากได้ "การ์ดที่ฉันรับผิดชอบ" ให้กรองด้วย isMyCard() ฝั่ง client จากชุดเดียวกัน
 
 /**
  * เพดานกันระเบิด **ไม่ใช่ขนาดหน้า** — ตั้งใจให้สูงจนไม่มีวันชนในการใช้งานจริง
@@ -202,7 +185,7 @@ export const CARD_HARD_CAP = 3000
  * งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม
  * @returns {{cards: object[], truncated: boolean}} truncated = ชนเพดาน มีการ์ดที่ไม่ได้คืนมา
  */
-export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = CARD_HARD_CAP } = {}) {
+export async function listCards(orgId, { status = null, assigneeUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = CARD_HARD_CAP } = {}) {
   // viewer อยู่ต้นแถวพารามิเตอร์เสมอ ($2–$4) — ที่เหลือ push ต่อท้ายได้ตามเดิมโดยเลขไม่ขยับ
   const params = [orgId, ...viewerParams(viewer)]
   let where = `c.org_id = $1 AND ${visibleLinkSql(2, 3, 4)}`
@@ -214,14 +197,14 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
   // ⚠️ ทั้ง 2 บรรทัดนี้ใช้สถานะ **สด** ไม่ใช่คอลัมน์ — ไม่งั้นการ์ดที่ผูกเคสจะถูกคัดผิดกอง
   if (!includeClosed)   where += ` AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
   if (status)           { params.push(status);      where += ` AND ${LIVE_STATUS_SQL} = $${params.length}` }
-  if (ownerUserId)      { params.push(ownerUserId); where += ` AND c.owner_user_id = $${params.length}` }
-  if (unassigned)       where += ` AND c.owner_user_id IS NULL`
+  if (assigneeUserId)   { params.push(assigneeUserId); where += ` AND ${ASSIGNEE_EXISTS(` AND a.user_id = $${params.length}`)}` }
+  if (unassigned)       where += ` AND NOT ${ASSIGNEE_EXISTS()}`
   // ดึงเกินมา 1 ใบเพื่อ **รู้ว่าชนเพดานจริงไหม** — เทียบ rows.length === limit เฉยๆ จะเตือนผิด
   // ตอนมีการ์ดพอดีเป๊ะเท่าเพดาน (เตือนว่า "ไม่ครบ" ทั้งที่ครบ = โกหกอีกทาง)
   params.push(limit + 1)
 
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG}
+    `SELECT ${COLS}, ${AGG}
        FROM kanban_cards c
       WHERE ${where}
       ORDER BY (c.due_at IS NULL), c.due_at ASC, c.priority DESC, c.created_at DESC
@@ -239,44 +222,64 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
  *    → ห้ามมีใครเรียกฟังก์ชันนี้ตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์มเปล่า
  *      (เคสจริงที่เคยพลาด: /posts กด "เขียนโพสต์ใหม่" แล้ว POST ทันที = ร่างเปล่าค้าง DB)
  */
-export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null, sourceUrl = null, sourceMessageId = null, boardId = null }, createdBy) {
+export async function createCard(orgId, { title, detail = null, assigneeIds = [], startAt = null, dueAt = null, priority = 0, statusType = null, sourceUrl = null, sourceMessageId = null, boardId = null }, createdBy) {
   // board_id เป็น NOT NULL แต่คนเรียกไม่ได้ส่งมาเสมอ (บอท · context menu ในดิสฯ · สคริปต์ import)
   // → เติมกระดานตั้งต้นให้เอง สร้างให้ถ้า org ยังไม่มีสักใบ
   // ⛔ ห้ามผลักภาระนี้ไปให้คนเรียก — ทางเขียนการ์ดมีหลายทางเกินกว่าจะไล่แก้ให้ครบทุกที่ทุกครั้ง
   const board = boardId || (await ensureDefaultBoard(orgId, createdBy))
-  // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น (DB มี CHECK กันอีกชั้น — ที่นี่กันไม่ให้ยิงไปแล้วพัง)
-  let status = statusType || (ownerUserId ? 'doing' : 'backlog')
+  const people = [...new Set((assigneeIds || []).filter(Boolean).map(Number))]
+  let status = statusType || (people.length ? 'doing' : 'backlog')
 
-  // ⭐ อีกด้านของกฎเดียวกัน: backlog = "รอทำ — ยังไม่มีเจ้าภาพ" → มีเจ้าภาพแล้วอยู่ backlog ไม่ได้
-  //    DB CHECK กันได้ทางเดียว (ไม่มีเจ้าภาพห้ามออกจาก backlog) แต่ไม่กันทางนี้
-  //    ถ้าปล่อยไว้จะสร้างสภาพขัดกันเองแบบ bug-406 ตั้งแต่แถวแรก — เจอตอน import ข้อมูล AppFlowy
-  //    (setCardStatus อุดฝั่งแก้ไขแล้ว ที่นี่คืออุดฝั่งสร้าง)
-  if (ownerUserId && status === 'backlog') status = 'doing'
+  // ⭐ กฎ 2 ทางของ "backlog = รอทำ — ยังไม่มีผู้รับผิดชอบ" (บังคับที่นี่ ไม่ใช่ที่ route)
+  //    - มีคนรับแล้วอยู่ backlog ไม่ได้ → สภาพขัดกันเองแบบ bug-406 ตั้งแต่แถวแรก (เจอตอน import AppFlowy)
+  //    - ไม่มีคนรับก็ออกจาก backlog ไม่ได้ → trigger `trg_kanban_cards_require_assignee` จะปัดตกทั้งแถว
+  //      (เดิมเป็น CHECK kanban_cards_owner_required · คนเรียกที่ส่ง statusType='done' มาตอน backfill
+  //       ของเก่าที่ยังไม่มีคนรับ เคยพังทั้งใบเพราะข้อนี้ — clamp ให้แทนที่จะโยน)
+  if (people.length && status === 'backlog') status = 'doing'
+  if (!people.length && status !== 'backlog' && status !== 'cancelled') status = 'backlog'
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, source_url, source_message_id, board_id)
-         VALUES ($1,
-                 (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-         RETURNING id`,
-        [orgId, title, detail, status, ownerUserId, startAt || null, dueAt || null, priority, createdBy,
-         sourceUrl || null, sourceMessageId || null, board]
-      )
-      return await getCard(orgId, rows[0].id)
-    } catch (e) {
-      // 23505 = unique_violation → อีกคนคว้า ref_no นี้ไปก่อน ลองใหม่
-      if (e.code === '23505' && attempt < 4) continue
-      throw e
+  // ⚠️ การ์ด + ผู้รับผิดชอบต้องอยู่ **ทรานแซกชันเดียวกัน** — trigger เป็น DEFERRABLE INITIALLY
+  //    DEFERRED ยิงตอน COMMIT ก็จริง แต่แยกทรานแซกชันเมื่อไหร่ = INSERT การ์ด 'doing' commit ก่อน
+  //    โดยยังไม่มีแถวคน = ติดด่านตัวเอง
+  const client = await pool.connect()
+  try {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await client.query('BEGIN')
+      try {
+        const { rows } = await client.query(
+          `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, start_at, due_at, priority, created_by, source_url, source_message_id, board_id)
+           VALUES ($1,
+                   (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
+                   $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING id`,
+          [orgId, title, detail, status, startAt || null, dueAt || null, priority, createdBy,
+           sourceUrl || null, sourceMessageId || null, board]
+        )
+        if (people.length) {
+          await client.query(
+            `INSERT INTO kanban_card_assignees (card_id, user_id)
+             SELECT $1, unnest($2::int[]) ON CONFLICT DO NOTHING`,
+            [rows[0].id, people]
+          )
+        }
+        await client.query('COMMIT')
+        return await getCard(orgId, rows[0].id)
+      } catch (e) {
+        await client.query('ROLLBACK')
+        // 23505 = unique_violation → อีกคนคว้า ref_no นี้ไปก่อน ลองใหม่
+        if (e.code === '23505' && attempt < 4) continue
+        throw e
+      }
     }
+  } finally {
+    client.release()
   }
 }
 
 /**
  * ทำสำเนาการ์ด — **ลอกมาหมดทุกอย่าง** ยกเว้นของที่เป็น "ประวัติ" ไม่ใช่ "เนื้องาน"
  *
- * ลอก: ชื่อ · รายละเอียด · ป้าย · ค่า custom field ทุกช่อง · รายการเช็คลิสต์ · เจ้าภาพ · คนช่วย
+ * ลอก: ชื่อ · รายละเอียด · ป้าย · ค่า custom field ทุกช่อง · รายการเช็คลิสต์ · ผู้รับผิดชอบทุกคน
  *      · วันเริ่ม/กำหนดส่ง · สถานะ · ความสำคัญ
  * ไม่ลอก 3 อย่าง:
  *   1. `ref_no`  — ตัวระบุการ์ด ซ้ำไม่ได้ ต้องได้เลขใหม่
@@ -301,10 +304,14 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
     if (!src[0]) { await client.query('ROLLBACK'); return null }
     const s = src[0]
 
-    // กฎเดียวกับ createCard — มีเจ้าภาพแล้วอยู่ backlog ไม่ได้ (bug-406)
-    // DB CHECK อนุญาต (ผ่านเพราะมี owner) แต่โค้ดถือเป็นสภาพขัดกันเอง อย่าให้มี 2 มาตรฐาน
+    // กฎเดียวกับ createCard — มีคนรับแล้วอยู่ backlog ไม่ได้ (bug-406) · ไม่มีคนรับก็ออกจาก backlog ไม่ได้
+    // (ผู้รับผิดชอบของสำเนาลอกมาครบทุกคนข้างล่าง จึงตัดสินจากชุดของต้นฉบับได้เลย)
+    const { rows: srcPeople } = await client.query(
+      `SELECT user_id FROM kanban_card_assignees WHERE card_id = $1`, [s.id]
+    )
     let status = s.status_type
-    if (s.owner_user_id && status === 'backlog') status = 'doing'
+    if (srcPeople.length && status === 'backlog') status = 'doing'
+    if (!srcPeople.length && status !== 'backlog' && status !== 'cancelled') status = 'backlog'
 
     let newId = null
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -316,12 +323,12 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
         //    สำเนาอยู่กระดานเดียวกับต้นฉบับ ไม่ใช่กระดานตั้งต้นของ org
         const { rows } = await client.query(
           `INSERT INTO kanban_cards
-             (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, board_id)
+             (org_id, ref_no, title, detail, status_type, start_at, due_at, priority, created_by, board_id)
            VALUES ($1,
                    (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                   $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                   $2, $3, $4, $5, $6, $7, $8, $9)
            RETURNING id`,
-          [orgId, s.title, s.detail, status, s.owner_user_id, s.start_at, s.due_at, s.priority, createdBy, s.board_id]
+          [orgId, s.title, s.detail, status, s.start_at, s.due_at, s.priority, createdBy, s.board_id]
         )
         newId = rows[0].id
         await client.query('RELEASE SAVEPOINT ref_try')
@@ -336,8 +343,8 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
     // ⛔ เคยลอก kanban_card_labels ด้วย — เลิกแล้ว 2026-08-19 (ป้ายยุบเข้า field)
     //    ถ้าปล่อยไว้ = ทำสำเนาการ์ดแล้วป้ายฟื้นกลับมาแบบที่ UI มองไม่เห็น
     await client.query(
-      `INSERT INTO kanban_card_helpers (card_id, user_id)
-       SELECT $2, user_id FROM kanban_card_helpers WHERE card_id = $1`, [s.id, newId])
+      `INSERT INTO kanban_card_assignees (card_id, user_id)
+       SELECT $2, user_id FROM kanban_card_assignees WHERE card_id = $1`, [s.id, newId])
 
     await client.query(
       `INSERT INTO kanban_card_field_values (card_id, field_id, value_text, value_num, value_date, value_bool, value_options)
@@ -415,55 +422,43 @@ export async function updateCard(orgId, id, fields, { lockToken }) {
 
 /**
  * เปลี่ยนสถานะ — ไม่ผ่าน lock เพราะเป็น action ปุ่มเดียว ไม่ใช่ autosave
- * ⚠️ กติกา "ไม่มีเจ้าภาพห้ามออกจาก backlog" ต้องเช็คที่ชั้น API ด้วย checkStatusTransition ก่อนเรียก
- *    (DB CHECK เป็นตาข่ายสุดท้าย ไม่ใช่ที่ที่ควรให้ผู้ใช้ไปชน)
+ * ⚠️ กติกา "ไม่มีผู้รับผิดชอบห้ามออกจาก backlog" ต้องเช็คที่ชั้น API ด้วย checkStatusTransition ก่อนเรียก
+ *    (trigger ใน DB เป็นตาข่ายสุดท้าย ไม่ใช่ที่ที่ควรให้ผู้ใช้ไปชน)
+ *
+ * ⭐ backlog = "รอทำ — ยังไม่มีผู้รับผิดชอบ" (ดีไซน์ §ประเภทสถานะ) → ย้ายมา backlog = ปล่อยงานคืนกอง
+ *    **ถอดผู้รับผิดชอบออกทุกคน** ไม่งั้นได้สภาพขัดกันเอง: การ์ด "รอทำ" ที่มีคนถืออยู่
+ *    → ไม่โผล่ในกอง "ยังไม่มีคนรับ" แต่ก็ไม่ควรอยู่ในกอง "กำลังทำ"
+ *    บังคับที่นี่ ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
+ * ⚠️ 2 คำสั่งต้องอยู่ทรานแซกชันเดียว — แยกเมื่อไหร่ DELETE จะ commit ก่อนแล้ว trigger clamp
+ *    ดันการ์ดไป backlog เอง (ผลเหมือนกันโดยบังเอิญ) แต่ล้มกลางทางแล้วได้การ์ดไร้คนที่ยังค้าง 'done'
  */
 export async function setCardStatus(orgId, id, statusType) {
-  // ⚠️ ต้อง cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ 2 บริบท (ค่าที่เซ็ต + เงื่อนไขใน CASE)
-  //    ถ้าไม่ cast pg เดาชนิดไม่ตรงกันแล้วโยน 42P08 "inconsistent types deduced" (เจอตอน smoke test)
-  // ⭐ backlog = "รอทำ — ยังไม่มีเจ้าภาพ" (ดีไซน์ §ประเภทสถานะ) → ย้ายมา backlog = ปล่อยงานคืนกอง
-  //    ต้องถอดเจ้าภาพออกด้วย ไม่งั้นได้สภาพขัดกันเอง: การ์ด "รอทำ" ที่มีเจ้าภาพ
-  //    → ไม่โผล่ในกอง "ยังไม่มีคนรับ" (กรองด้วย owner IS NULL) แต่ก็ไม่ควรอยู่ในกอง "ต้องส่ง"
-  //    บังคับที่นี่ ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
-  const { rows } = await pool.query(
-    `UPDATE kanban_cards
-        SET status_type   = $3::varchar,
-            owner_user_id = CASE WHEN $3::varchar = 'backlog' THEN NULL ELSE owner_user_id END,
-            -- 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่ไม่ใช่ตอนนี้) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
-            completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
-            updated_at    = now()
-      WHERE org_id = $1 AND id = $2
-      RETURNING id`,
-    [orgId, id, statusType]
-  )
-  return rows[0] ? await getCard(orgId, id) : null
-}
-
-/**
- * ตั้ง/ถอดเจ้าภาพ — สถานะขยับตามให้เอง ทั้ง 2 ทาง
- *
- * ⭐ กติกาเดียวกับ setCardStatus/createCard: "backlog = รอทำ ยังไม่มีเจ้าภาพ"
- *    - ตั้งเจ้าภาพให้การ์ดที่อยู่ backlog → ต้องขยับเป็น doing
- *      (ไม่งั้นได้ "รอทำ + มีเจ้าภาพ" = สภาพขัดกันเองแบบ bug-406 · ไม่โผล่ทั้งกอง "ยังไม่มีคนรับ"
- *       เพราะกรอง owner IS NULL และก็ไม่ควรอยู่กอง "ต้องส่ง")
- *    - ถอดเจ้าภาพ → ต้องกลับ backlog + ล้าง completed_at ไม่งั้นชน DB CHECK
- *    บังคับที่นี่ที่เดียว ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
- */
-export async function setCardOwner(orgId, id, ownerUserId) {
-  // ⚠️ cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ทั้งค่าที่เซ็ตและเงื่อนไขใน CASE (42P08 แบบเดียวกับ setCardStatus)
-  const { rows } = await pool.query(
-    `UPDATE kanban_cards
-        SET owner_user_id = $3::int,
-            status_type = CASE
-              WHEN $3::int IS NULL           THEN 'backlog'
-              WHEN status_type = 'backlog'   THEN 'doing'
-              ELSE status_type END,
-            completed_at = CASE WHEN $3::int IS NULL THEN NULL ELSE completed_at END,
-            updated_at = now()
-      WHERE org_id = $1 AND id = $2 RETURNING id`,
-    [orgId, id, ownerUserId]
-  )
-  return rows[0] ? await getCard(orgId, id) : null
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    // ⚠️ ต้อง cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ 2 บริบท (ค่าที่เซ็ต + เงื่อนไขใน CASE)
+    //    ถ้าไม่ cast pg เดาชนิดไม่ตรงกันแล้วโยน 42P08 "inconsistent types deduced" (เจอตอน smoke test)
+    const { rows } = await client.query(
+      `UPDATE kanban_cards
+          SET status_type   = $3::varchar,
+              -- 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่ไม่ใช่ตอนนี้) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
+              completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
+              updated_at    = now()
+        WHERE org_id = $1 AND id = $2
+        RETURNING id`,
+      [orgId, id, statusType]
+    )
+    if (rows[0] && statusType === 'backlog') {
+      await client.query(`DELETE FROM kanban_card_assignees WHERE card_id = $1`, [id])
+    }
+    await client.query('COMMIT')
+    return rows[0] ? await getCard(orgId, id) : null
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
 }
 
 /**
@@ -501,7 +496,7 @@ export async function unarchiveCard(orgId, id) {
  * ⚠️ ห้ามเอาไปผูกกับปุ่ม "เก็บเข้ากรุ" เด็ดขาด — commit 37dd5e6 เคยพลาดแบบนั้นมาแล้ว
  *    (ปุ่มเขียน "เก็บเข้ากรุ" แต่ทำงานเป็นลบถาวร = โกหกผู้ใช้)
  *    ตารางลูกครบ 4 ตัวเป็น ON DELETE CASCADE (ตรวจกับ information_schema แล้ว 2026-08-18):
- *    kanban_card_labels · kanban_card_field_values · kanban_card_checklist · kanban_card_helpers
+ *    kanban_card_labels · kanban_card_field_values · kanban_card_checklist · kanban_card_assignees
  *    → หายตามหมด ไม่ต้องกวาดเอง (โมดูลนี้ยังไม่มีตารางคอมเมนต์)
  */
 export async function deleteCard(orgId, id) {
@@ -512,23 +507,54 @@ export async function deleteCard(orgId, id) {
   return Boolean(rows[0])
 }
 
-// ── คนช่วย ──────────────────────────────────────────────────────────
+// ── ผู้รับผิดชอบ ────────────────────────────────────────────────────
+//
+// ⭐ 2026-09-03 (เฟส B): `setCardOwner()` ถูกลบทิ้ง — ไม่มี "เจ้าภาพ" ให้ตั้งอีกแล้ว
+//    ทุกคนอยู่ใน kanban_card_assignees เท่ากันหมด · เพิ่ม/ถอดทีละคนผ่าน 2 ตัวข้างล่างเท่านั้น
 
-export async function addHelper(orgId, cardId, userId) {
-  await pool.query(
-    `INSERT INTO kanban_card_helpers (card_id, user_id)
-     SELECT $2, $3 FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
-     ON CONFLICT DO NOTHING`,
-    [orgId, cardId, userId]
-  )
+/**
+ * เพิ่มผู้รับผิดชอบ 1 คน — การ์ดที่อยู่ backlog ขยับเป็น doing ให้เอง
+ *
+ * ⭐ กติกา "backlog = รอทำ ยังไม่มีผู้รับผิดชอบ" บังคับที่นี่ที่เดียว ไม่ใช่ที่ route
+ *    ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
+ * ⚠️ อยู่ในทรานแซกชันเดียว — INSERT คนกับ UPDATE สถานะแยกกันเมื่อไหร่ ล้มกลางทางแล้วได้
+ *    การ์ด backlog ที่มีคนถืออยู่ (สภาพขัดกันเองที่ trigger ไม่กัน เพราะกันได้ทางเดียว)
+ */
+export async function addAssignee(orgId, cardId, userId) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      `INSERT INTO kanban_card_assignees (card_id, user_id)
+       SELECT $2, $3 FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
+       ON CONFLICT DO NOTHING`,
+      [orgId, cardId, userId]
+    )
+    await client.query(
+      `UPDATE kanban_cards SET status_type = 'doing', updated_at = now()
+        WHERE org_id = $1 AND id = $2 AND status_type = 'backlog'`,
+      [orgId, cardId]
+    )
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
   return await getCard(orgId, cardId)
 }
 
-export async function removeHelper(orgId, cardId, userId) {
+/**
+ * ถอดผู้รับผิดชอบ 1 คน — **ไม่ต้อง clamp สถานะเอง**
+ * trigger `trg_kanban_assignees_clamp` ดันการ์ดกลับ backlog ให้ตอน COMMIT ถ้าไม่เหลือใครแล้ว
+ * (เดิม logic นี้ก็อปอยู่ 2 ที่ ทั้งฝั่งเว็บและฝั่งบอท — ยุบลง DB แล้วหายไปทั้งคู่)
+ */
+export async function removeAssignee(orgId, cardId, userId) {
   await pool.query(
-    `DELETE FROM kanban_card_helpers h
+    `DELETE FROM kanban_card_assignees a
       USING kanban_cards c
-      WHERE h.card_id = c.id AND c.org_id = $1 AND h.card_id = $2 AND h.user_id = $3`,
+      WHERE a.card_id = c.id AND c.org_id = $1 AND a.card_id = $2 AND a.user_id = $3`,
     [orgId, cardId, userId]
   )
   return await getCard(orgId, cardId)
@@ -554,9 +580,9 @@ export async function removeHelper(orgId, cardId, userId) {
  * ⭐ **แบ่งกองด้วยความเป็นเจ้าของ ไม่ใช่ชื่อสถานะ** — นี่คือหัวใจของดีไซน์รอบนี้
  *      รอทำ    = ยังไม่มีใครรับ  · กำลังทำ = {ของฉัน}/{ที่มีคนรับแล้วทั้งหมด} · เสร็จสิ้น = done
  *    สามกองนี้ **แบ่งไม่ทับกัน**: เสร็จ/ยกเลิกตัดออกก่อน แล้วที่เหลือแยกด้วย "มีคนรับหรือยัง"
- *    ⛔ อย่าเปลี่ยน "รอทำ" ไปผูกกับ status = 'backlog' — การ์ดที่มีเจ้าภาพแล้วแต่ยังอยู่ backlog
+ *    ⛔ อย่าเปลี่ยน "รอทำ" ไปผูกกับ status = 'backlog' — การ์ดที่มีคนรับแล้วแต่ยังอยู่ backlog
  *       ต้องอยู่กอง "กำลังทำ" ไม่ใช่ "รอทำ" (มีคนถือแล้ว = ไม่ต้องหาคนมารับ)
- * ⭐ "รับผิดชอบ" = **เจ้าภาพหรือผู้ช่วย** ทั้งคู่ (user ย้ำ) — ต้องตรงกับตัวกรอง scope บนกระดาน
+ * ⭐ "รับผิดชอบ" = มีแถวใน kanban_card_assignees — ต้องตรงกับตัวกรอง scope บนกระดาน
  *    ที่ components/kanban/KanbanHome.jsx ไม่งั้นกดเลขแล้วเจอการ์ดคนละชุด
  * ⚠️ done จำกัด 30 วันล่าสุด — ยอดสะสมตลอดกาลโตอย่างเดียว อีกไม่นานจะเป็นเลข 4 หลัก
  *    ที่นั่งกลบสองบรรทัดบนซึ่งเป็นงานจริง
@@ -566,14 +592,12 @@ export async function removeHelper(orgId, cardId, userId) {
  *    ไม่มี completed_at = ไม่รู้ว่าเสร็จเมื่อไหร่ = ไม่นับ · ของใหม่เขียนค่านี้ให้อยู่แล้ว (ดู moveCard)
  */
 export async function countCardStats(orgId, userId, viewer = NO_VIEWER) {
-  const HELPER = (extra = '') => `EXISTS (SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id${extra})`
-  // ⚠️ "มีคนรับแล้ว" ดูที่ **เจ้าภาพเท่านั้น** ให้ตรงกับตัวกรอง scope บนกระดาน
-  //    (components/kanban/KanbanHome.jsx: unassigned = !c.owner_user_id) — นิยามต่างเมื่อไหร่
+  // ⚠️ "มีคนรับแล้ว" ต้องเป็นนิยามเดียวกับตัวกรอง scope บนกระดาน
+  //    (components/kanban/KanbanHome.jsx: unassigned = ไม่มีแถวใน assignees) — นิยามต่างเมื่อไหร่
   //    กดเลขแล้วเจอการ์ดคนละชุดทันที
-  // ⭐ ส่วน "ของฉัน" นับผู้ช่วยด้วย (user ย้ำ) แต่คาดด้วย ASSIGNED เพื่อให้ mine ⊆ assigned เสมอ
-  //    ไม่งั้นการ์ดไร้เจ้าภาพที่ฉันเป็นผู้ช่วยจะโผล่ทั้งกอง "รอทำ" และ "กำลังทำ"
-  const ASSIGNED = `c.owner_user_id IS NOT NULL`
-  const MINE = `${ASSIGNED} AND (c.owner_user_id = $2 OR ${HELPER(' AND h.user_id = $2')})`
+  // ⭐ mine ⊆ assigned เสมอโดยอัตโนมัติแล้ว ตั้งแต่เลิกแยกเจ้าภาพ/ผู้ช่วย (เฟส B)
+  const ASSIGNED = ASSIGNEE_EXISTS()
+  const MINE = ASSIGNEE_EXISTS(' AND a.user_id = $2')
   const OPEN = `${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
 
   const { rows } = await pool.query(

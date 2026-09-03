@@ -539,32 +539,28 @@ async function complainantNameOf(guildId, ownerId) {
   if (!DRY_RUN && totalNew) { await sleep(2000); }
 
   /**
-   * ⭐ sync เจ้าภาพลงการ์ด — **ต้องทำเป็นก้อนท้ายสุด ไม่ใช่ทีละใบระหว่างลูป**
+   * ⭐ sync ผู้รับผิดชอบลงการ์ด — **ต้องทำเป็นก้อนท้ายสุด ไม่ใช่ทีละใบระหว่างลูป**
    *
-   * `kanban_cards.owner_user_id` เป็น **สำเนา** ของ assignee คนแรก ไม่ได้อ่านสดจาก
-   * `case_assignees` (ต่างจากสถานะที่อ่านสดผ่าน LIVE_STATUS_SQL) → ต้องเขียนให้เองสองที่
+   * `kanban_card_assignees` เป็น **สำเนา** ของ `case_assignees` ไม่ได้อ่านสดเหมือนสถานะ
+   * (สถานะอ่านสดผ่าน LIVE_STATUS_SQL) → ต้องเขียนให้เอง
    *
-   * ทำท้ายสุดเพราะการ์ดเกิดแบบ fire-and-forget — ระหว่างลูปมันอาจยังไม่มีแถวให้ UPDATE
+   * ทำท้ายสุดเพราะการ์ดเกิดแบบ fire-and-forget — ระหว่างลูปมันอาจยังไม่มีแถวให้เขียน
    *
-   * ⚠️ นี่คืออาการเดียวกับบั๊กที่ `addAssignee` ทั้ง 2 ฝั่งมีอยู่ตอนนี้ (เขียน case_assignees
-   *    แล้วไม่แตะการ์ด) — ที่นี่แก้เฉพาะของที่รอบนี้สร้าง ไม่ไปยุ่งของเดิม · ตัวบั๊กจดไว้ที่ PENDING
+   * ⭐ 2026-09-03 (เฟส B): เดิมยัด assignee **คนแรก** ลง `kanban_cards.owner_user_id`
+   *    คอลัมน์นั้นถูกยุบทิ้งแล้ว → ลงตารางเป็นชุดแทน · สถานะการ์ดขยับตามให้เองด้วย trigger
    */
   if (!DRY_RUN && createdCaseIds.length) {
     const { rowCount } = await pool.query(
-      `UPDATE kanban_cards k
-          SET owner_user_id = a.user_id
+      `INSERT INTO kanban_card_assignees (card_id, user_id, assigned_at)
+       SELECT l.card_id, a.user_id, a.assigned_at
          FROM kanban_card_links l
-         JOIN LATERAL (
-           SELECT user_id FROM case_assignees
-            WHERE case_id = l.entity_id ORDER BY assigned_at, user_id LIMIT 1
-         ) a ON TRUE
-        WHERE l.card_id = k.id
-          AND l.entity_type = 'case'
+         JOIN case_assignees a ON a.case_id = l.entity_id
+        WHERE l.entity_type = 'case'
           AND l.entity_id = ANY($1)
-          AND k.owner_user_id IS NULL`,
+       ON CONFLICT DO NOTHING`,
       [createdCaseIds],
     );
-    console.log(`sync เจ้าภาพลงการ์ด kanban: ${rowCount} ใบ`);
+    console.log(`sync ผู้รับผิดชอบลงการ์ด kanban: ${rowCount} แถว`);
   }
 
   await pool.end();

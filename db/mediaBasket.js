@@ -86,7 +86,8 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
     //    (LEFT JOIN dc_guilds ข้างบน) → ไม่มี org ก็ไม่มีกระดานให้ลง ข้ามไปเลย
     if (rows[0].org_id) {
       mirrorEntityCardFromBot(rows[0].org_id, 'post', {
-        id: rows[0].id, title: channelName || null, ownerUserId,
+        // ⚠️ เฟส C จะเลิกก็อปคนสร้างลงเป็นผู้รับผิดชอบ (ดู postsImport.js ที่เดียวกัน)
+        id: rows[0].id, title: channelName || null, assigneeIds: ownerUserId ? [ownerUserId] : [],
       }, { createdBy: ownerUserId, guildId }).catch(() => {});
     }
     return rows[0].id;

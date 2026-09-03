@@ -61,7 +61,9 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     //    ⭐ ของ backfill = งานเก่าที่จบไปแล้ว → การ์ดลงกอง "เสร็จแล้ว" ตั้งแต่สร้าง
     //       (ได้ผลจริงเพราะโพสต์เป็น draft → POST_STATUS คืน NULL → ใช้ค่านี้)
     mirrorEntityCardFromBot(orgId, 'post', {
-      id: post.id, title: post.title, ownerUserId,
+      // ⚠️ ownerUserId ของโพสต์ = "คนนำเข้า" ไม่ใช่ผู้รับผิดชอบจริง — คงพฤติกรรมเดิมไว้ก่อน
+      //    เฟส C (post_assignees) จะเลิกก็อปคนสร้างลงมาตรงนี้ · ต้องแก้คู่กับ SOURCE_SQL.post
+      id: post.id, title: post.title, assigneeIds: ownerUserId ? [ownerUserId] : [],
     }, {
       createdBy: ownerUserId, guildId,
       statusType: createdVia === 'backfill' ? 'done' : null,

@@ -3,9 +3,9 @@ import * as ka from '../kanbanAccess.js'
 import { rolesToAccess } from './_rolesToAccess.js'
 
 // user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id
-const ALICE = 1   // คนสร้างการ์ด
-const BOB   = 2   // เจ้าภาพ
-const CAROL = 3   // คนช่วย
+const ALICE = 1   // คนสร้างการ์ด (ไม่ได้รับผิดชอบเอง)
+const BOB   = 2   // ผู้รับผิดชอบคนที่ 1
+const CAROL = 3   // ผู้รับผิดชอบคนที่ 2 — ⭐ เท่ากับ BOB ทุกอย่าง ไม่มีหัวหน้าแล้ว (เฟส B 2026-09-03)
 const DAVE  = 4   // คนนอก อยู่ใน org แต่ไม่เกี่ยวกับการ์ด
 
 const card = (over = {}) => ({
@@ -14,13 +14,12 @@ const card = (over = {}) => ({
   ref_no: 42,
   title: 'จัดอีเวนต์ลงพื้นที่',
   status_type: 'doing',
-  owner_user_id: BOB,
   created_by: ALICE,
-  helper_ids: [CAROL],
+  assignee_ids: [BOB, CAROL],
   ...over,
 })
 
-const noOwner = () => card({ owner_user_id: null, status_type: 'backlog' })
+const unassigned = () => card({ assignee_ids: [], status_type: 'backlog' })
 const acc = (roles = []) => rolesToAccess(roles)
 
 // ---- ref ----
@@ -62,13 +61,13 @@ describe('isKanbanAdmin', () => {
 
 // ---- isCardStakeholder ----
 describe('isCardStakeholder', () => {
-  it('เจ้าภาพใช่',          () => expect(ka.isCardStakeholder(card(), BOB)).toBe(true))
+  it('ผู้รับผิดชอบคนแรกใช่', () => expect(ka.isCardStakeholder(card(), BOB)).toBe(true))
   it('คนสร้างใช่',          () => expect(ka.isCardStakeholder(card(), ALICE)).toBe(true))
-  it('คนช่วยใช่',           () => expect(ka.isCardStakeholder(card(), CAROL)).toBe(true))
+  it('ผู้รับผิดชอบคนที่สองใช่', () => expect(ka.isCardStakeholder(card(), CAROL)).toBe(true))
   it('คนนอกไม่ใช่',         () => expect(ka.isCardStakeholder(card(), DAVE)).toBe(false))
   it('userId null ไม่ใช่ (debug mode)', () => expect(ka.isCardStakeholder(card(), null)).toBe(false))
   it('ไม่มีการ์ดไม่ใช่',     () => expect(ka.isCardStakeholder(null, BOB)).toBe(false))
-  it('helper_ids ไม่มีก็ไม่พัง', () => expect(ka.isCardStakeholder(card({ helper_ids: undefined }), CAROL)).toBe(false))
+  it('assignee_ids ไม่มีก็ไม่พัง', () => expect(ka.isCardStakeholder(card({ assignee_ids: undefined }), CAROL)).toBe(false))
 })
 
 // ---- canViewCard — ก้อน 1 ทุกคนใน org เห็นหมด ----
@@ -79,9 +78,9 @@ describe('canViewCard', () => {
 
 // ---- canEditCard ----
 describe('canEditCard', () => {
-  it('เจ้าภาพแก้ได้',              () => expect(ka.canEditCard(card(), acc([]), BOB)).toBe(true))
+  it('ผู้รับผิดชอบแก้ได้',          () => expect(ka.canEditCard(card(), acc([]), BOB)).toBe(true))
   it('คนสร้างแก้ได้',              () => expect(ka.canEditCard(card(), acc([]), ALICE)).toBe(true))
-  it('คนช่วยแก้ได้',               () => expect(ka.canEditCard(card(), acc([]), CAROL)).toBe(true))
+  it('ผู้รับผิดชอบคนที่สองแก้ได้',   () => expect(ka.canEditCard(card(), acc([]), CAROL)).toBe(true))
   it('คนนอกแก้ไม่ได้',             () => expect(ka.canEditCard(card(), acc([]), DAVE)).toBe(false))
   it('Admin แก้การ์ดคนอื่นได้',     () => expect(ka.canEditCard(card(), acc(['Admin']), DAVE)).toBe(true))
   it('เลขาธิการแก้การ์ดคนอื่นได้',  () => expect(ka.canEditCard(card(), acc(['เลขาธิการ']), DAVE)).toBe(true))
@@ -94,8 +93,8 @@ describe('canEditCard', () => {
 
 // ---- canClaimCard — ใครก็ได้ใน org อาสาทำเองได้ ----
 describe('canClaimCard', () => {
-  it('คนนอกรับงานที่ไม่มีเจ้าภาพได้', () => expect(ka.canClaimCard(noOwner(), acc([]), DAVE)).toBe(true))
-  it('คนนอกกดลงมือด้วยกับงานที่มีเจ้าภาพแล้วได้', () => expect(ka.canClaimCard(card(), acc([]), DAVE)).toBe(true))
+  it('คนนอกรับงานที่ยังไม่มีคนรับได้', () => expect(ka.canClaimCard(unassigned(), acc([]), DAVE)).toBe(true))
+  it('คนนอกกดลงมือด้วยกับงานที่มีคนรับแล้วได้', () => expect(ka.canClaimCard(card(), acc([]), DAVE)).toBe(true))
   it('งานเสร็จแล้วรับไม่ได้',     () => expect(ka.canClaimCard(card({ status_type: 'done' }), acc([]), DAVE)).toBe(false))
   it('งานยกเลิกแล้วรับไม่ได้',    () => expect(ka.canClaimCard(card({ status_type: 'cancelled' }), acc([]), DAVE)).toBe(false))
   it('userId null รับไม่ได้ (debug mode)', () => expect(ka.canClaimCard(card(), acc(['Admin']), null)).toBe(false))
@@ -118,23 +117,23 @@ describe('checkStatusTransition', () => {
   it('มีเจ้าภาพ → done ได้',
     () => expect(ka.checkStatusTransition(card(), 'done')).toEqual({ ok: true, reason: null }))
   it('ไม่มีเจ้าภาพ → doing ไม่ได้ + บอกเหตุผล',
-    () => expect(ka.checkStatusTransition(noOwner(), 'doing')).toEqual({ ok: false, reason: 'needOwner' }))
+    () => expect(ka.checkStatusTransition(unassigned(), 'doing')).toEqual({ ok: false, reason: 'needAssignee' }))
   it('ไม่มีเจ้าภาพ → done ไม่ได้',
-    () => expect(ka.checkStatusTransition(noOwner(), 'done')).toEqual({ ok: false, reason: 'needOwner' }))
+    () => expect(ka.checkStatusTransition(unassigned(), 'done')).toEqual({ ok: false, reason: 'needAssignee' }))
   it('ไม่มีเจ้าภาพ → backlog ได้ (อยู่ที่เดิม)',
-    () => expect(ka.checkStatusTransition(noOwner(), 'backlog')).toEqual({ ok: true, reason: null }))
+    () => expect(ka.checkStatusTransition(unassigned(), 'backlog')).toEqual({ ok: true, reason: null }))
   // 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น · 2026-08-17) — งานที่ยังไม่มีใครรับก็พักได้
   // ไม่ต้องบังคับหาเจ้าภาพก่อน (DB CHECK ผ่อนให้แล้วใน migration วันเดียวกัน)
   it('ไม่มีเจ้าภาพ → กรุ ได้ (ไม่ต้องหาเจ้าภาพก่อนพัก)',
-    () => expect(ka.checkStatusTransition(noOwner(), 'cancelled')).toEqual({ ok: true, reason: null }))
+    () => expect(ka.checkStatusTransition(unassigned(), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('มีเจ้าภาพ → กรุ ได้',
     () => expect(ka.checkStatusTransition(card(), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('สถานะที่ระบบไม่รู้จัก → ไม่ได้',
     () => expect(ka.checkStatusTransition(card(), 'blocked')).toEqual({ ok: false, reason: 'unknownStatus' }))
   it('"ติดปัญหา" ไม่ใช่สถานะ เป็นธงบนการ์ด',
     () => expect(ka.STATUS_TYPES).not.toContain('blocked'))
-  it('ไม่มีการ์ด → needOwner',
-    () => expect(ka.checkStatusTransition(null, 'doing')).toEqual({ ok: false, reason: 'needOwner' }))
+  it('ไม่มีการ์ด → needAssignee',
+    () => expect(ka.checkStatusTransition(null, 'doing')).toEqual({ ok: false, reason: 'needAssignee' }))
 })
 
 // ---- ค่าคงที่ที่ห้ามเปลี่ยนโดยไม่ตั้งใจ ----
@@ -169,8 +168,8 @@ describe('checkStatusTransition — การ์ดที่ผูกของ�
     () => expect(ka.checkStatusTransition(linked('case'), 'done')).toEqual({ ok: false, reason: 'linked' }))
   it('ผูกโพสต์แล้วลากข้ามกอง → ไม่ได้',
     () => expect(ka.checkStatusTransition(linked('post'), 'review')).toEqual({ ok: false, reason: 'linked' }))
-  it('ผูกของจริง + ไม่มีเจ้าภาพ → บอก linked ไม่ใช่ needOwner (เหตุผลที่ตรงกว่า)',
-    () => expect(ka.checkStatusTransition(linked('case', { owner_user_id: null }), 'doing'))
+  it('ผูกของจริง + ยังไม่มีคนรับ → บอก linked ไม่ใช่ needAssignee (เหตุผลที่ตรงกว่า)',
+    () => expect(ka.checkStatusTransition(linked('case', { assignee_ids: [] }), 'doing'))
             .toEqual({ ok: false, reason: 'linked' }))
   it('สถานะมั่ว → ยังตอบ unknownStatus ก่อน (กันค่ามั่วหลุดเข้าไปถึง DB)',
     () => expect(ka.checkStatusTransition(linked('case'), 'ไม่มีจริง')).toEqual({ ok: false, reason: 'unknownStatus' }))
@@ -186,8 +185,8 @@ describe('checkStatusTransition — งานสื่อช่วงร่า�
     () => expect(ka.checkStatusTransition(linked('post'), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีเจ้าภาพ → ไป "กำลังทำ" ไม่ได้ (ต้องรับงานก่อน)',
     () => expect(ka.checkStatusTransition(
-      linked('post', { status_type: 'backlog', owner_user_id: null }), 'doing'
-    )).toEqual({ ok: false, reason: 'needOwner' }))
+      linked('post', { status_type: 'backlog', assignee_ids: [] }), 'doing'
+    )).toEqual({ ok: false, reason: 'needAssignee' }))
   // ⛔ ต้นทางถือสถานะแล้ว (ส่งตรวจ/อนุมัติ/เผยแพร่) = หมดช่วงที่ kanban มีสิทธิ์
   it('ผูกโพสต์ ที่ส่งตรวจแล้ว → ลากกลับ "กำลังทำ" ไม่ได้',
     () => expect(ka.checkStatusTransition(linked('post', { status_type: 'review' }), 'doing'))

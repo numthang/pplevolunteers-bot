@@ -50,7 +50,7 @@ async function resolveBoardId(orgId, guildId, createdBy) {
 
 /**
  * สร้างการบ้านจากข้อความในดิสฯ
- * @returns {{id: string, ref_no: number, title: string, status_type: string, owner_user_id: number|null}}
+ * @returns {{id: string, ref_no: number, title: string, status_type: string}}
  */
 async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {}, title, detail = null, dueAt = null, assignToSelf = true, sourceUrl = null, sourceMessageId = null }) {
   const orgId = await orgIdOfGuild(guildId);
@@ -61,29 +61,43 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
   if (!userId) userId = await upsertUserByDiscord(actorDiscordId, actorProfile);
   if (!userId) throw new Error('สร้างผู้ใช้จาก Discord ไม่สำเร็จ');
 
-  const ownerUserId = assignToSelf ? userId : null;
-  const status = ownerUserId ? 'doing' : 'backlog';
+  const status = assignToSelf ? 'doing' : 'backlog';
 
   // กระดานปลายทาง — เลือกของเซิร์ฟนี้ก่อน (kanban_boards.guild_id เป็นป้ายบอกว่ากระดานเป็นของทีมไหน)
   // ไม่มีกระดานที่ผูกเซิร์ฟนี้ → ตกไปที่กระดานแรกของ org · org ยังไม่มีสักใบ → สร้าง "กระดานหลัก" ให้
   // ⚠️ ต้องตรงกับ ensureDefaultBoard() ใน web/db/kanban/boards.js (ตะเข็บ 2 ฝั่ง แก้คู่กันเสมอ)
   const boardId = await resolveBoardId(orgId, guildId, userId);
 
+  // ⚠️ การ์ด + ผู้รับผิดชอบต้องอยู่ **ทรานแซกชันเดียวกัน** (เฟส B 2026-09-03)
+  //    trigger `trg_kanban_cards_require_assignee` เป็น DEFERRABLE INITIALLY DEFERRED ยิงตอน COMMIT
+  //    → แยกทรานแซกชันเมื่อไหร่ = INSERT การ์ด 'doing' commit ก่อนโดยยังไม่มีแถวคน = ติดด่านตัวเอง
   for (let attempt = 0; attempt < 5; attempt++) {
+    const client = await pool.connect();
     try {
-      const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, due_at, created_by, source_url, source_message_id, board_id)
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, due_at, created_by, source_url, source_message_id, board_id)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, ref_no, title, status_type, owner_user_id, board_id`,
-        [orgId, title, detail, status, ownerUserId, dueAt || null, userId, sourceUrl, sourceMessageId, boardId]
+                 $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, ref_no, title, status_type, board_id`,
+        [orgId, title, detail, status, dueAt || null, userId, sourceUrl, sourceMessageId, boardId]
       );
+      if (assignToSelf) {
+        await client.query(
+          `INSERT INTO kanban_card_assignees (card_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [rows[0].id, userId]
+        );
+      }
+      await client.query('COMMIT');
       return rows[0];
     } catch (err) {
+      await client.query('ROLLBACK');
       // 23505 = unique_violation → อีกคนคว้า ref_no นี้ไปก่อน ลองใหม่
       if (err.code === '23505' && attempt < 4) continue;
       throw err;
+    } finally {
+      client.release();
     }
   }
 }
@@ -99,11 +113,11 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
  * ⚠️ **idempotent** — entity ที่มีการ์ดแล้วคืน id เดิม ไม่สร้างซ้ำ (UNIQUE (entity_type, entity_id)
  *    กันอีกชั้น) · เรียกซ้ำได้ปลอดภัย และต้องเป็นแบบนั้น เพราะ reconcileEntityCards() ตามเก็บทับได้
  *
- * ⚠️ **ห้ามปล่อยการ์ดไม่มีเจ้าภาพ** — isMyCard() นับงานไม่มีเจ้าภาพเป็น "ของทุกคน"
- *    เคส 200 ใบไม่มีเจ้าภาพ = หน้า "การบ้านของฉัน" พังทั้งทีม → ลากเจ้าภาพจากต้นทางมาเสมอ
+ * ⭐ เฟส B (2026-09-03): ผู้รับผิดชอบเป็น **ชุด** แล้ว (`assigneeIds`) ไม่ใช่เจ้าภาพคนเดียว
+ *    และการ์ดที่ยังไม่มีคนรับก็ปล่อยว่างได้แล้ว — isMyCard() เลิกนับงานไร้คนรับเป็นของทุกคน (เฟส A)
  *
  * @param {'case'|'post'} entityType
- * @param {{id: number|string, title: string, ownerUserId: number|null}} src
+ * @param {{id: number|string, title: string, assigneeIds?: number[]}} src
  * @param {string|null} statusType ค่าตั้งต้นของคอลัมน์ cache — ใส่ตอนกวาดของเก่าที่จบงานแล้ว
  *        (backfillPostThreads.js ส่ง 'done') มีผลจริงเฉพาะตอนต้นทางเป็นสถานะที่คืน NULL
  *        เท่านั้น คือโพสต์ที่ยัง draft (ดู POST_STATUS ใน web/db/kanban/statusSql.js)
@@ -119,7 +133,8 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
 
   // created_by เป็น NOT NULL แต่ต้นทางอาจไม่มีคนสร้าง (เคสจากฟอร์มสาธารณะ ผู้ร้องไม่ได้ล็อกอิน)
   // → ตกไปใช้คนที่สร้างกระดานแรกของ org (เป็นสมาชิก org จริงเสมอ)
-  let by = createdBy || src.ownerUserId;
+  const people = [...new Set((src.assigneeIds || []).filter(Boolean).map(Number))];
+  let by = createdBy || people[0];
   if (!by) {
     const { rows } = await pool.query(
       `SELECT created_by FROM kanban_boards WHERE org_id = $1 ORDER BY sort_order, id LIMIT 1`, [orgId]
@@ -129,11 +144,10 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
   if (!by) return null;
 
   const boardId = await resolveBoardId(orgId, guildId, by);
-  const ownerUserId = src.ownerUserId || null;
   // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดจากต้นทางเสมอ
-  // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น) → ไม่มีเจ้าภาพก็บังคับ backlog
-  // ต่อให้คนเรียกส่ง statusType มา (CHECK kanban_cards_owner_required จะปัดตกทั้งแถว)
-  const status = ownerUserId ? (statusType || 'doing') : 'backlog';
+  // แต่ต้องไม่ขัด trigger ของ DB (ไม่มีผู้รับผิดชอบ = อยู่ backlog เท่านั้น) → ไม่มีคนรับก็บังคับ backlog
+  // ต่อให้คนเรียกส่ง statusType มา (trg_kanban_cards_require_assignee จะปัดตกทั้งทรานแซกชัน)
+  const status = people.length ? (statusType || 'doing') : 'backlog';
   const title = src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ');
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -141,13 +155,20 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, status_type, owner_user_id, created_by, board_id)
+        `INSERT INTO kanban_cards (org_id, ref_no, title, status_type, created_by, board_id)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6)
+                 $2, $3, $4, $5)
          RETURNING id`,
-        [orgId, title, status, ownerUserId, by, boardId]
+        [orgId, title, status, by, boardId]
       );
+      if (people.length) {
+        await client.query(
+          `INSERT INTO kanban_card_assignees (card_id, user_id)
+           SELECT $1, unnest($2::int[]) ON CONFLICT DO NOTHING`,
+          [rows[0].id, people]
+        );
+      }
       // ⚠️ ผูกลิงก์ในทรานแซกชันเดียวกับตอนสร้างการ์ด — แยกกันเมื่อไหร่ ล้มกลางทางแล้วได้
       //    การ์ดเปล่าที่ไม่ผูกอะไร ค้างกินเลข K ไปเรื่อยๆ โดยไม่มีใครรู้ว่ามันคืออะไร
       await client.query(
@@ -180,9 +201,11 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
  * ⭐ ฝาแฝด CJS ของ `syncCaseCardPeople()` ใน web/db/kanban/links.js — **แก้ที่นั่นต้องแก้ที่นี่ด้วย**
  *    (เหตุผลที่ไม่ import ฝั่งเว็บมาใช้: pool ที่สองในโปรเซสบอท — ดู mirrorEntityCardFromBot)
  *
- * เจ้าภาพ/คนช่วยของการ์ดที่ผูกเคสเป็น **สำเนา** ของ `case_assignees` ไม่ได้อ่านสดเหมือนสถานะ
- * → ทุกทางที่แตะ `case_assignees` ต้องเรียกตัวนี้ต่อทันที ไม่งั้นเจ้าภาพดริฟต์
- * ⚠️ ห้าม throw · ⚠️ ระวัง CHECK `kanban_cards_owner_required` (ไม่มีเจ้าภาพ = backlog/cancelled เท่านั้น)
+ * ผู้รับผิดชอบของการ์ดที่ผูกเคสเป็น **สำเนา** ของ `case_assignees` ไม่ได้อ่านสดเหมือนสถานะ
+ * → ทุกทางที่แตะ `case_assignees` ต้องเรียกตัวนี้ต่อทันที ไม่งั้นผู้รับผิดชอบดริฟต์
+ * ⚠️ ห้าม throw
+ * ⭐ เฟส B (2026-09-03): ไม่ต้อง clamp สถานะเองแล้ว — trigger `trg_kanban_assignees_clamp` ทำให้
+ *    ตอน COMMIT ถ้าถอดคนสุดท้ายออก (trigger เป็น DEFERRABLE จึงไม่โดนจังหวะ "ลบก่อนเพิ่ม" ตรงนี้)
  */
 async function syncCaseCardPeopleFromBot(caseId) {
   const client = await pool.connect();
@@ -196,32 +219,15 @@ async function syncCaseCardPeopleFromBot(caseId) {
     const cardId = rows[0].card_id;
 
     await client.query(
-      `UPDATE kanban_cards c
-          SET owner_user_id = a.user_id,
-              status_type  = CASE WHEN a.user_id IS NOT NULL THEN c.status_type
-                                  WHEN c.status_type = 'cancelled' THEN 'cancelled'
-                                  ELSE 'backlog' END,
-              completed_at = CASE WHEN a.user_id IS NULL THEN NULL ELSE c.completed_at END,
-              updated_at   = now()
-         FROM (SELECT (SELECT user_id FROM case_assignees
-                        WHERE case_id = $2 ORDER BY assigned_at, user_id LIMIT 1) AS user_id) a
-        WHERE c.id = $1`,
+      `DELETE FROM kanban_card_assignees a
+        WHERE a.card_id = $1
+          AND NOT EXISTS (SELECT 1 FROM case_assignees ca
+                           WHERE ca.case_id = $2 AND ca.user_id = a.user_id)`,
       [cardId, caseId]
     );
     await client.query(
-      `DELETE FROM kanban_card_helpers h
-        USING kanban_cards c
-        WHERE c.id = h.card_id AND h.card_id = $1
-          AND (h.user_id = c.owner_user_id
-               OR NOT EXISTS (SELECT 1 FROM case_assignees a
-                               WHERE a.case_id = $2 AND a.user_id = h.user_id))`,
-      [cardId, caseId]
-    );
-    await client.query(
-      `INSERT INTO kanban_card_helpers (card_id, user_id)
-       SELECT $1, a.user_id FROM case_assignees a
-         JOIN kanban_cards c ON c.id = $1
-        WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM c.owner_user_id
+      `INSERT INTO kanban_card_assignees (card_id, user_id, assigned_at)
+       SELECT $1, ca.user_id, ca.assigned_at FROM case_assignees ca WHERE ca.case_id = $2
        ON CONFLICT DO NOTHING`,
       [cardId, caseId]
     );

@@ -3,20 +3,23 @@
 // PATCH รับ 3 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
 //   { lockToken, title?, detail?, dueAt?, priority? }                           ← autosave (ต้องมี token)
 //   { statusType }                                                              ← ปุ่มเปลี่ยนสถานะ
-//   { ownerUserId } | { claim: true }                                           ← เจ้าภาพ
+//   { claim: true }                                                             ← อาสารับงานเอง
+//
+// ⭐ 2026-09-03 (เฟส B): `{ ownerUserId }` ถูกถอดออก — ไม่มี "เจ้าภาพ" ให้ตั้งอีกแล้ว
+//    มอบหมาย/ถอดคนอื่นย้ายไปที่ POST/DELETE `/api/kanban/cards/[id]/assignees` ทางเดียว
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import {
-  canEditCard, canArchiveCard, canChangeStatus, canAssignOwner, canClaimCard,
+  canEditCard, canArchiveCard, canChangeStatus, canClaimCard,
   checkStatusTransition, formatRef, canPurge, isLinkedCard, LINK_KIND_LABEL,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
 
-// เคสมีผู้รับผิดชอบได้หลายคน — คนที่เพิ่มทีหลังเป็น "ร่วม" ไม่ใช่แทนที่ (ดู §ownerUserId)
+// เคสมีผู้รับผิดชอบได้หลายคน — คนที่เพิ่มทีหลังเป็น "ร่วม" ไม่ใช่แทนที่
 const CO_ASSIGNEE_NOTICE = 'เคสนี้มีผู้รับผิดชอบอยู่แล้ว — คนที่เพิ่มเข้ามาถูกบันทึกเป็นผู้รับผิดชอบร่วม'
 
 const REASON_TEXT = {
-  needOwner:     'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอทำได้',
+  needAssignee:  'ต้องมีผู้รับผิดชอบก่อนถึงจะย้ายออกจากช่องรอทำได้',
   unknownStatus: 'สถานะไม่ถูกต้อง',
 }
 
@@ -43,10 +46,9 @@ export async function GET(_req, { params }) {
       restore: canArchiveCard(ctx.card, ctx.access, ctx.userId) && Boolean(ctx.card.archived_at),
       claim:   canClaimCard(ctx.card, ctx.access, ctx.userId),
       // join = ปุ่ม "ลงมือด้วย" ควรโผล่ไหม — claim อย่างเดียวไม่พอ
-      // เจ้าภาพ/คนช่วยอยู่แล้วไม่ควรเห็นปุ่มนี้ (จะกลายเป็นเพิ่มตัวเองเป็นคนช่วยของงานตัวเอง)
+      // คนที่รับผิดชอบอยู่แล้วไม่ควรเห็นปุ่มนี้ (จะกลายเป็นรับงานที่ตัวเองถืออยู่ซ้ำ)
       join:    canClaimCard(ctx.card, ctx.access, ctx.userId)
-               && ctx.card.owner_user_id !== ctx.userId
-               && !(ctx.card.helper_ids || []).includes(ctx.userId),
+               && !(ctx.card.assignee_ids || []).includes(ctx.userId),
       // ลบถาวร (การ์ด + custom field) — admin เท่านั้น · UI ซ่อนปุ่มไปเลยถ้าไม่มีสิทธิ์
       // ⚠️ ไม่เกี่ยวกับ edit/archive — คนสร้างการ์ดเก็บเข้ากรุได้ แต่ลบถาวรไม่ได้ถ้าไม่ใช่ admin
       purge:   canPurge(ctx.access) && !isLinkedCard(ctx.card),
@@ -95,40 +97,9 @@ export async function PATCH(req, { params }) {
       })
     }
 
-    if (card.owner_user_id) {
-      return Response.json({ card: await cardDB.addHelper(orgId, card.id, userId) })
-    }
-    const owned = await cardDB.setCardOwner(orgId, card.id, userId)
-    // ⛔ ห้ามยัด 'doing' ทับการ์ดที่ผูกของจริง — สถานะมาจากต้นทาง เขียนไปก็เป็นแค่ cache ที่ผิด
-    if (isLinkedCard(card)) return Response.json({ card: owned })
-    return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, 'doing') })
-  }
-
-  // ── มอบหมายให้คนอื่น / ถอดเจ้าภาพ ──
-  if (body.ownerUserId !== undefined) {
-    if (!canAssignOwner(card, access, userId)) return err(403, 'ไม่มีสิทธิ์เปลี่ยนเจ้าภาพ')
-    const next = body.ownerUserId ? Number(body.ownerUserId) : null
-
-    // ⭐ การ์ดที่ผูกเคส: มอบหมาย/ถอด = เพิ่ม/ถอด `case_assignees` ที่ต้นทาง
-    //    เจ้าภาพ = assignee คนแรกเสมอ → มอบหมายให้คนใหม่ทั้งที่เคสมีคนรับแล้ว = **ผู้รับผิดชอบร่วม**
-    //    ไม่ใช่การแย่งเจ้าภาพ (user เคาะ 2026-08-31) · ต้องบอกกลับไป ไม่ใช่เงียบ
-    const linkedCaseOwner = await caseOfCard(orgId, card)
-    if (linkedCaseOwner) {
-      if (next === null) {
-        if (!card.owner_user_id) return Response.json({ card })
-        await unassignCase(orgId, linkedCaseOwner, card.owner_user_id, { actorUserId: userId, app: 'kanban' })
-        return Response.json({ card: await cardDB.getCard(orgId, card.id) })
-      }
-      const { wasFirst } = await assignCase(orgId, linkedCaseOwner, next, { actorUserId: userId, app: 'kanban' })
-      return Response.json({
-        card: await cardDB.getCard(orgId, card.id),
-        notice: wasFirst ? undefined : CO_ASSIGNEE_NOTICE,
-      })
-    }
-
-    // สถานะขยับตามเจ้าภาพให้เองใน setCardOwner (ถอด → backlog · ตั้งให้การ์ด backlog → doing)
-    // ห้ามย้ายกติกานี้กลับมาไว้ที่นี่ — บอท/cron เรียก db ตรงๆ ไม่ผ่าน route
-    return Response.json({ card: await cardDB.setCardOwner(orgId, card.id, next) })
+    // ⭐ เฟส B: ทางเดียวแล้ว — ไม่ต้องแยก "ยังไม่มีเจ้าภาพ = ตั้งเจ้าภาพ" กับ "มีแล้ว = ลงเป็นคนช่วย"
+    //    addAssignee ขยับ backlog → doing ให้เองด้วย (บังคับกติกาที่ชั้น db ที่เดียว)
+    return Response.json({ card: await cardDB.addAssignee(orgId, card.id, userId) })
   }
 
   // ── autosave เนื้อหา ──

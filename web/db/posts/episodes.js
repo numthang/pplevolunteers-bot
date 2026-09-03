@@ -289,8 +289,11 @@ export async function createPost({ orgId, ownerUserId, visibility = 'personal', 
     //    ⚠️ ไม่ใช่การเปิดให้คนอื่นเห็น — ด่านตอนอ่าน (statusSql.js visibleLinkSql) ยอมให้เฉพาะ
     //       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดเจ้าของคนเดียว
     //    fire-and-forget — kanban พังต้องไม่ทำให้เขียนโพสต์ไม่ได้ (ตาข่ายคือ reconcileEntityCards)
+    //    ⚠️ assigneeIds = คนสร้าง เป็นพฤติกรรมเดิมที่ยกมาทั้งดุ้นตอนยุบ owner_user_id (เฟส B)
+    //       **มันผิดอยู่** — คนนำเข้า ≠ ผู้รับผิดชอบ · เฟส C (post_assignees) จะเลิกก็อปลงมา
     mirrorEntityCard(orgId, 'post', {
-      id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`, ownerUserId,
+      id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`,
+      assigneeIds: ownerUserId ? [ownerUserId] : [],
     }, ownerUserId).catch(() => {})
 
     return await getPost(rows[0].id)
@@ -489,7 +492,8 @@ export async function promoteToOrg(id, byUserId) {
   //    สิ่งที่เปลี่ยนจริงตอน promote คือ **ใครเห็นการ์ด** ไม่ใช่ว่ามีการ์ดไหม (visibleLinkSql อ่านสด)
   if (post?.visibility === 'org') {
     mirrorEntityCard(post.org_id, 'post', {
-      id: post.id, title: post.title || `งานสื่อ #${post.id}`, ownerUserId: post.owner_user_id,
+      id: post.id, title: post.title || `งานสื่อ #${post.id}`,
+      assigneeIds: post.owner_user_id ? [post.owner_user_id] : [],   // ⚠️ เฟส C จะเลิกก็อปคนสร้างลงมา
     }, byUserId).catch(() => {})
   }
   return post

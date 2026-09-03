@@ -302,7 +302,7 @@ async function main() {
       if (!COMMIT) {
         if (i < 5) {
           console.log(`  [${r.Status}] ${title.slice(0, 46)}`)
-          console.log(`      เจ้าภาพ=${ownerUserId || '—'} คนช่วย=${helperIds.length} แท็ก=${labelIds.length} งบ=${scalars.length} ดิสฯ=${sourceUrl ? 'มี' : '—'} เริ่ม=${start || '—'} ส่ง=${due || '—'} → ${status}`)
+          console.log(`      ผู้รับผิดชอบ=${[ownerUserId, ...helperIds].filter(Boolean).length} แท็ก=${labelIds.length} งบ=${scalars.length} ดิสฯ=${sourceUrl ? 'มี' : '—'} เริ่ม=${start || '—'} ส่ง=${due || '—'} → ${status}`)
         }
         stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length; stat.scalars += scalars.length
         continue
@@ -311,14 +311,16 @@ async function main() {
       const card = await cardDB.createCard(ORG, {
         title,
         detail: ((r.Description ? String(r.Description).trim() : '') + provenance) || null,
-        ownerUserId, startAt: start, dueAt: due, statusType: status,
+        // ⭐ เฟส B (2026-09-03): เจ้าภาพ+คนช่วยยุบเป็นชุดเดียว ส่งพร้อมกันตั้งแต่ตอนสร้าง
+        //    (createCard เขียนคน+การ์ดในทรานแซกชันเดียว — ต้องเป็นแบบนั้นเพราะ trigger เป็น DEFERRED)
+        assigneeIds: [ownerUserId, ...helperIds].filter(Boolean),
+        startAt: start, dueAt: due, statusType: status,
         sourceUrl: sourceUrl || null,
       }, importerId)
 
       // ⚠️ addCardTags **เพิ่ม** ไม่ทับของเดิม (ต่างจาก setCardLabels ตัวเก่าที่เขียนทับทั้งชุด)
       //    import ไม่ควรลบค่าที่คนกรอกเองในการ์ดที่มีอยู่แล้ว
       if (labelIds.length) await tagDB.addCardTags(ORG, card.id, labelIds.filter(Boolean))
-      for (const h of helperIds) await cardDB.addHelper(ORG, card.id, h)
 
       // ค่าเดี่ยว — ensureField สร้าง field ให้เองถ้ายังไม่มี (cache กันยิงซ้ำทุกแถว)
       for (const f of scalars) {

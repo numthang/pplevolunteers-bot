@@ -1638,3 +1638,112 @@ DELETE FROM org_ai_prompts WHERE value = 'case.letter_draft' AND kind = 'slot';
 
 
 -- production ทำถึงตรงนี้
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-09-03 · เฟส B — kanban: ยุบ `kanban_cards.owner_user_id` ลงตาราง assignees
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ⭐ กติกาที่ทั้งระบบยึดตั้งแต่นี้ไป (เคาะกับ user 2026-09-03 · เขียนไว้ที่ md/kanban/KANBAN.md ด้วย):
+--   1. คอลัมน์ "คน" บนแถวหลักมีได้ตัวเดียวคือ `created_by` = คนสร้าง ไม่เปลี่ยนตลอดชีวิตแถว
+--      ให้สิทธิ์ลบ/เก็บเข้ากรุ
+--   2. ผู้รับผิดชอบอยู่ในตาราง `<entity>_assignees (…, user_id, assigned_at)` เสมอ
+--      **หลายคน ไม่มีหัวหน้า** — เลิกมีคำว่า "เจ้าภาพ/ผู้ช่วย" ทั้งในโค้ดและบนจอ เหลือ "ผู้รับผิดชอบ"
+--   3. cases ทำแบบนี้อยู่แล้ว (`case_assignees`) — ก้อนนี้ทำ kanban ให้เหมือน · posts เป็นเฟส C
+--
+-- ที่มา: `owner_user_id` ของการ์ด**ชื่อโกหก** — มันคือ "ผู้รับผิดชอบ" ไม่ใช่เจ้าของ
+-- ผลจริงคือ `SOURCE_SQL.post` ก็อป `post_episodes.owner_user_id` (= คนนำเข้า) ลงช่องนั้น
+-- → "คนนำเข้า" กลายเป็น "ผู้รับผิดชอบ" ทุกใบเงียบๆ และ backfill 176 ใบที่ user ต้องไล่ถอนเองบน prod
+--
+-- ⚠️ **เว็บกับบอทต้อง deploy พร้อมกัน** — คอลัมน์หายไปเลย ตัวที่ขึ้นทีหลังจะ 500 ทันที
+--    (บอทมีสำเนา syncCaseCardPeople ของตัวเองที่ db/kanbanCards.js)
+-- ⚠️ prod: `pg_dump -t kanban_cards -t kanban_card_helpers` เก็บไว้ก่อนรัน
+
+BEGIN;
+
+-- ── 1. เปลี่ยนชื่อตาราง "คนช่วย" เป็น "ผู้รับผิดชอบ" (ชื่อ index/constraint ตามไปด้วย) ──
+ALTER TABLE kanban_card_helpers RENAME TO kanban_card_assignees;
+ALTER TABLE kanban_card_assignees RENAME COLUMN joined_at TO assigned_at;   -- ให้ตรง case_assignees
+ALTER TABLE kanban_card_assignees RENAME CONSTRAINT kanban_card_helpers_card_id_fkey TO kanban_card_assignees_card_id_fkey;
+ALTER TABLE kanban_card_assignees RENAME CONSTRAINT kanban_card_helpers_user_id_fkey TO kanban_card_assignees_user_id_fkey;
+ALTER INDEX kanban_card_helpers_pkey  RENAME TO kanban_card_assignees_pkey;
+ALTER INDEX idx_kanban_helpers_user   RENAME TO idx_kanban_card_assignees_user;
+
+COMMENT ON TABLE kanban_card_assignees IS
+  'ผู้รับผิดชอบการ์ด — หลายคนเท่ากันหมด ไม่มีหัวหน้า/เจ้าภาพ (กติกาเดียวกับ case_assignees). '
+  'คอลัมน์ "คน" บน kanban_cards เหลือ created_by = คนสร้างเท่านั้น.';
+
+-- ── 2. ยกเจ้าภาพเดิมลงมาเป็นแถวหนึ่ง ──
+--    ใช้ created_at ของการ์ดเป็นเวลา เพื่อให้เขาอยู่ต้นลิสต์เสมอ (เก่ากว่าคนช่วยทุกคน)
+INSERT INTO kanban_card_assignees (card_id, user_id, assigned_at)
+SELECT id, owner_user_id, created_at FROM kanban_cards WHERE owner_user_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+-- ── 3. ทิ้งคอลัมน์ + CHECK/index ที่ผูกกับมัน ──
+ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_owner_required;
+DROP INDEX IF EXISTS idx_kanban_cards_owner;
+ALTER TABLE kanban_cards DROP COLUMN owner_user_id;
+
+-- ── 4. invariant เดิมที่ CHECK เคยกันไว้ ย้ายมาเป็น trigger ──
+--
+-- invariant: "ไม่มีผู้รับผิดชอบ = อยู่ได้แค่ backlog/cancelled"
+-- เขียนเป็น CHECK ไม่ได้แล้วเพราะความจริงย้ายไปอยู่คนละตาราง — **ไม่ยอมทิ้ง** เพราะ DDL เดิม
+-- จงใจกำกับว่าบังคับที่ DB ไม่ใช่แค่ UI
+--
+-- ⛔ **ต้องเป็น CONSTRAINT TRIGGER … DEFERRABLE INITIALLY DEFERRED เท่านั้น** (ยิงตอน COMMIT)
+--    BEFORE/AFTER ธรรมดาพัง 2 ทาง (/scrutinize จับได้ 2026-09-03):
+--    - สลับตัวคนจะดันการ์ดตกกอง: syncCaseCardPeople แทนชุดคนด้วย DELETE-ก่อน-INSERT
+--      → A→B มีจังหวะกลางที่เหลือ 0 แถว → clamp ยิง → การ์ด "กำลังทำ" ตกกอง "รอทำ" เงียบๆ
+--    - สร้างการ์ดใหม่ที่มีคนรับจะติดด่านตัวเอง: การ์ด INSERT ก่อน คน INSERT ทีหลัง (คนละคำสั่ง)
+--
+-- ⚠️ ทั้ง 2 ฟังก์ชัน **อ่านสถานะสดจากตารางตอน COMMIT ไม่เชื่อ NEW/OLD** — deferred แปลว่า
+--    แถวอาจถูกแก้ต่ออีกหลายครั้งในทรานแซกชันเดียวกันหลังจากที่ event ถูก queue ไว้แล้ว
+
+-- 4.1 ด่าน: ขยับสถานะออกจาก backlog/cancelled โดยไม่มีผู้รับผิดชอบเลย = ปฏิเสธทั้งทรานแซกชัน
+CREATE OR REPLACE FUNCTION kanban_card_require_assignee() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM kanban_cards c
+     WHERE c.id = NEW.id
+       AND c.status_type NOT IN ('backlog', 'cancelled')
+       AND NOT EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = c.id)
+  ) THEN
+    RAISE EXCEPTION 'การ์ด kanban id=% ไม่มีผู้รับผิดชอบ จึงอยู่ได้แค่สถานะ backlog หรือ cancelled', NEW.id
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+
+-- 4.2 อีกทางของกฎเดียวกัน: ถอดคนสุดท้ายออก → การ์ดกลับกอง "รอทำ" ให้เอง (ไม่ใช่ปฏิเสธ)
+--     ⭐ ตัวนี้ทำให้ logic clamp ที่เคยก็อปอยู่ 2 ที่ (web/db/kanban/links.js + db/kanbanCards.js
+--        ฝั่งบอท) หายไปทั้งคู่ — ได้กำไร ไม่ใช่แค่เสมอตัว
+CREATE OR REPLACE FUNCTION kanban_card_clamp_unassigned() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE kanban_cards c
+     SET status_type  = 'backlog',
+         completed_at = NULL,
+         updated_at   = now()
+   WHERE c.id = OLD.card_id
+     AND c.status_type NOT IN ('backlog', 'cancelled')
+     AND NOT EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = c.id);
+  RETURN NULL;
+END $$;
+
+-- ⚠️ สร้าง trigger **หลัง** backfill เสมอ ไม่งั้น backfill ติดด่านตัวเอง
+DROP TRIGGER IF EXISTS trg_kanban_cards_require_assignee ON kanban_cards;
+CREATE CONSTRAINT TRIGGER trg_kanban_cards_require_assignee
+  AFTER INSERT OR UPDATE ON kanban_cards
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW WHEN (NEW.status_type NOT IN ('backlog', 'cancelled'))
+  EXECUTE FUNCTION kanban_card_require_assignee();
+
+DROP TRIGGER IF EXISTS trg_kanban_assignees_clamp ON kanban_card_assignees;
+CREATE CONSTRAINT TRIGGER trg_kanban_assignees_clamp
+  AFTER DELETE ON kanban_card_assignees
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION kanban_card_clamp_unassigned();
+
+COMMIT;

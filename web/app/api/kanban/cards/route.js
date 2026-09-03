@@ -1,6 +1,6 @@
 // /api/kanban/cards — รายการKANBAN + สร้างใหม่
 //
-// GET  ?view=mine       → หน้าแรก "KANBANของฉัน" (2 กอง: ต้องส่ง / ช่วย)
+// GET  ?view=board     → กระดาน (ค่าตั้งต้น · หน้า /kanban ใช้ตัวนี้)
 //      ?view=unassigned → งานที่ยังไม่มีคนรับ
 //      ?view=all        → ทั้ง org
 // POST                  → สร้างKANBAN
@@ -16,17 +16,16 @@ export async function GET(req) {
   if (ctx.error) return ctx.error
 
   const params = new URL(req.url).searchParams
-  const view = params.get('view') || 'mine'
+  // ⛔ ?view=mine ถูกลบทิ้ง 2026-09-03 (เฟส B) — มันคืน { mine, helping } ที่แยกด้วย "เจ้าภาพ vs ผู้ช่วย"
+  //    ซึ่งเลิกมีอยู่จริงแล้ว · grep ทั้งรีโปไม่มี caller (หน้าแรกใช้ /api/kanban/stats)
+  //    ค่าตั้งต้นย้ายมาเป็น 'board' — ทางที่หน้าเว็บใช้จริงทางเดียว
+  const view = params.get('view') || 'board'
   // ?board=<id> → เฉพาะกระดานนั้น · ไม่ส่ง = ทุกกระดาน (ตัวเลือก "ทั้งหมด" ใน dropdown)
   // ⚠️ ไม่ต้องเช็คสิทธิ์กระดานที่นี่ — listCards มี org_id ใน WHERE แล้ว และก้อนนี้ทุกกระดาน
   //    ที่ open_to_org ทุกคนใน org เห็นได้อยู่แล้ว · ถึงตอนมีกระดานปิด ให้กรองที่ listCards ที่เดียว
   const rawBoard = params.get('board')
   const boardId = rawBoard && /^\d+$/.test(rawBoard) ? rawBoard : null
 
-  if (view === 'mine') {
-    const { mine, helping } = await cardDB.listMyCards(ctx.orgId, ctx.userId, { viewer: ctx.viewer })
-    return Response.json({ mine, helping })
-  }
   if (view === 'unassigned') {
     const { cards, truncated } = await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false, viewer: ctx.viewer })
     return Response.json({ cards, truncated })
@@ -77,17 +76,20 @@ export async function POST(req) {
   if (body.statusType && !STATUS_TYPES.includes(body.statusType)) return err(400, 'สถานะไม่ถูกต้อง')
 
   // assignToMe = ทางลัดของหน้า "KANBANของฉัน" — client ไม่ต้องรู้ userId ตัวเอง
-  // (เคสปกติที่สุดคือจดงานของตัวเอง → ต้องเข้ากอง "ต้องส่ง" ทันที ไม่ใช่ไปกองรอรับแล้วกดรับซ้ำ)
-  const ownerUserId = body.assignToMe ? ctx.userId : (body.ownerUserId ? Number(body.ownerUserId) : null)
-  // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น — กันไม่ให้ client ยัด status มาชน CHECK ของ DB
-  if (!ownerUserId && body.statusType && body.statusType !== 'backlog') {
-    return err(400, 'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอทำได้')
+  // (เคสปกติที่สุดคือจดงานของตัวเอง → ต้องเข้ากอง "กำลังทำ" ทันที ไม่ใช่ไปกองรอรับแล้วกดรับซ้ำ)
+  // ⭐ เฟส B: รับได้หลายคนตั้งแต่ตอนสร้าง — body.assigneeIds เป็น array (รับ ownerUserId เดี่ยวไม่ได้แล้ว)
+  const assigneeIds = body.assignToMe
+    ? [ctx.userId]
+    : (Array.isArray(body.assigneeIds) ? body.assigneeIds.map(Number).filter(Boolean) : [])
+  // ไม่มีผู้รับผิดชอบ = อยู่ backlog เท่านั้น — กันไม่ให้ client ยัด status มาชน trigger ของ DB
+  if (!assigneeIds.length && body.statusType && body.statusType !== 'backlog') {
+    return err(400, 'ต้องมีผู้รับผิดชอบก่อนถึงจะย้ายออกจากช่องรอทำได้')
   }
 
   const card = await cardDB.createCard(ctx.orgId, {
     title,
     detail: body.detail ?? null,
-    ownerUserId,
+    assigneeIds,
     dueAt: body.dueAt || null,     // ⚠️ ส่งดิบ — ห้ามแปลง timezone (local Thai time จากฟอร์ม)
     priority: Number(body.priority) || 0,
     statusType: body.statusType || null,

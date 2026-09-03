@@ -5,15 +5,14 @@ const card = (over = {}) => ({
   id: 1, ref_no: 139,
   title: 'ตามรอยนกเงือก เดินป่าบางกะม่า',
   detail: 'ประสานงานกับเทศบาลเรื่องรถรับส่ง',
-  owner_name: 'ธนวัฒน์',
-  helpers: [{ user_id: 2, name: 'Somsri' }],
+  assignees: [{ user_id: 1, name: 'ธนวัฒน์' }, { user_id: 2, name: 'Somsri' }],
   ...over,
 })
 
 const cards = [
   card(),
-  card({ id: 2, ref_no: 140, title: 'จัดงาน PrideMonth ราชบุรี', detail: null, owner_name: 'Somsri', helpers: [] }),
-  card({ id: 3, ref_no: 141, title: 'ไฟทางสาธารณะ', detail: 'ซอย 5 ดับทั้งซอย', owner_name: null, helpers: [] }),
+  card({ id: 2, ref_no: 140, title: 'จัดงาน PrideMonth ราชบุรี', detail: null, assignees: [{ user_id: 2, name: 'Somsri' }] }),
+  card({ id: 3, ref_no: 141, title: 'ไฟทางสาธารณะ', detail: 'ซอย 5 ดับทั้งซอย', assignees: [] }),
 ]
 const ids = (rows) => rows.map((c) => c.id)
 
@@ -32,8 +31,8 @@ describe('filterCardsByText', () => {
   it('ค้นด้วย K-140 ของเก่า',   () => expect(ids(filterCardsByText(cards, 'K-140'))).toEqual([2]))
   it('ค้นด้วยเลขล้วน 141',      () => expect(ids(filterCardsByText(cards, '141'))).toEqual([3]))
 
-  it('เจอในชื่อเจ้าภาพ',        () => expect(ids(filterCardsByText(cards, 'ธนวัฒน์'))).toEqual([1]))
-  it('เจอในชื่อคนช่วย',         () => expect(ids(filterCardsByText(cards, 'somsri'))).toEqual([1, 2]))
+  it('เจอในชื่อผู้รับผิดชอบคนแรก', () => expect(ids(filterCardsByText(cards, 'ธนวัฒน์'))).toEqual([1]))
+  it('เจอในชื่อผู้รับผิดชอบคนที่สอง', () => expect(ids(filterCardsByText(cards, 'somsri'))).toEqual([1, 2]))
   it('ไม่สนตัวพิมพ์เล็กใหญ่',    () => expect(ids(filterCardsByText(cards, 'PRIDEMONTH'))).toEqual([2]))
 
   // หลายคำ = AND — พิมพ์คำที่ 2 ต้องแคบลง ไม่ใช่กว้างขึ้น
@@ -45,13 +44,13 @@ describe('filterCardsByText', () => {
 
   // ฟิลด์ว่าง/ไม่มี ต้องไม่ระเบิด
   it('detail null ไม่พัง',      () => expect(ids(filterCardsByText(cards, 'PrideMonth'))).toEqual([2]))
-  it('ไม่มี helpers ไม่พัง',    () => expect(() => filterCardsByText([{ id: 9, ref_no: 1 }], 'x')).not.toThrow())
+  it('ไม่มี assignees ไม่พัง',  () => expect(() => filterCardsByText([{ id: 9, ref_no: 1 }], 'x')).not.toThrow())
   it('cards ว่าง',              () => expect(filterCardsByText([], 'x')).toEqual([]))
   it('cards null',              () => expect(filterCardsByText(null, 'x')).toEqual([]))
 
   // ⛔ คำในฟิลด์ที่ไม่ได้อยู่ใน haystack ต้องไม่แมตช์ (custom field มีตัวกรองตัวเลือกแยกอยู่แล้ว)
   it('ไม่ค้นใน custom field', () => {
-    const withField = [card({ id: 7, title: 'ก', detail: null, owner_name: null, helpers: [],
+    const withField = [card({ id: 7, title: 'ก', detail: null, assignees: [],
       fields: [{ label: 'อุปกรณ์', value: 'เต็นท์' }] })]
     expect(filterCardsByText(withField, 'เต็นท์')).toEqual([])
   })

@@ -1,4 +1,4 @@
-// web/db/kanban/people.js — ค้นคนใน org ไว้เลือกเป็นเจ้าภาพ/คนช่วย
+// web/db/kanban/people.js — ค้นคนใน org ไว้เลือกเป็นผู้รับผิดชอบการ์ด
 //
 // ⚠️ **ชื่อที่คืนต้องเป็นสูตรเดียวกับที่การ์ดโชว์เป๊ะ** ไม่งั้นเลือกคนจากกล่องค้นหาแล้วการ์ดขึ้นอีกชื่อ
 //    → ทั้งคู่เรียก displayNameSql() ตัวเดียวกันจาก db/displayName.js แล้ว ไม่ต้องไล่แก้ 2 ที่อีก
@@ -36,7 +36,7 @@ export async function searchKanbanPeople(orgId, q, limit = 20) {
 const PROFILE_NAME = displayNameSql('u', '$1')
 
 /**
- * โปรไฟล์คร่าวๆ ของคน 1 คน — ใช้เปิดกล่องลอยตอนกดชื่อเจ้าภาพ/คนช่วย
+ * โปรไฟล์คร่าวๆ ของคน 1 คน — ใช้เปิดกล่องลอยตอนกดชื่อผู้รับผิดชอบ
  *
  * ⚠️ ต้อง gate ด้วยแถว org_members ก่อนเสมอ — displayNameSql() fallback ไปที่ users.firstname/username
  *    (ไม่ผูก org) และ users.avatar เป็นคอลัมน์ global เหมือนกัน ถ้าไม่เช็คว่า userId นี้เคยอยู่ org นี้จริง
@@ -63,8 +63,8 @@ export async function getPersonProfile(orgId, userId) {
               WHERE om3.user_id = u.id AND om3.org_id = $1) AS roles,
             (SELECT COUNT(*) FROM kanban_cards c
               WHERE c.org_id = $1 AND c.archived_at IS NULL
-                AND (c.owner_user_id = u.id OR EXISTS (
-                      SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id AND h.user_id = u.id))
+                AND EXISTS (SELECT 1 FROM kanban_card_assignees a
+                             WHERE a.card_id = c.id AND a.user_id = u.id)
             ) AS "cardCount"
        FROM users u
       WHERE u.id = $2

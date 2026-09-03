@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  ExternalLink, Link as LinkIcon, Link2, Loader2, UserCircle, UserPlus, Users, X,
+  ExternalLink, Link as LinkIcon, Link2, Loader2, UserPlus, Users, X,
 } from 'lucide-react'
 import { formatRef, isDraggableCard, statusOptionsFor } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -218,12 +218,12 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   }, [])
 
   /**
-   * คนช่วย — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
+   * ผู้รับผิดชอบ — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
    * → เทียบกับชุดเดิมแล้วยิงเฉพาะส่วนต่าง (ยิงทั้งชุดทุกครั้ง = ถอดแล้วเพิ่มคนเดิมซ้ำ)
    */
-  async function commitHelpers(ids) {
+  async function commitAssignees(ids) {
     setActionError('')
-    const before = new Set((card.helpers || []).map((h) => String(h.user_id)))
+    const before = new Set((card.assignees || []).map((a) => String(a.user_id)))
     const after = new Set(ids.map(String))
     const added = [...after].filter((id) => !before.has(id))
     const removed = [...before].filter((id) => !after.has(id))
@@ -231,7 +231,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     let latest = null
     try {
       for (const id of added) {
-        const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, {
+        const res = await fetch(`/api/kanban/cards/${cardId}/assignees`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: Number(id) }),
@@ -241,7 +241,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
         latest = json.card
       }
       for (const id of removed) {
-        const res = await fetch(`/api/kanban/cards/${cardId}/helpers?userId=${id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/kanban/cards/${cardId}/assignees?userId=${id}`, { method: 'DELETE' })
         const json = await res.json().catch(() => ({}))
         if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
         latest = json.card
@@ -524,20 +524,22 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   />
                 </FieldRow>
 
-                {/* เจ้าภาพ — select ทรงเดียวกับ custom field แต่ตัวเลือกแก้ไม่ได้ (คนใน org ค้นเอา ไม่ใช่พิมพ์เอง)
+                {/* ผู้รับผิดชอบ — multi_select ทรงเดียวกับ custom field · ตัวเลือกคือคนใน org ค้นเอา
+                    ⭐ 2026-09-03 (เฟส B): ยุบ 2 แถวเดิม ("เจ้าภาพ" select เดี่ยว + "คนช่วย" multi) เหลือแถวนี้แถวเดียว
+                       ทุกคนเท่ากันหมด ไม่มีหัวหน้า — กติกาเดียวกับผู้รับผิดชอบของเคส
                     ⛔ readOnly ผูกกับ can.edit อย่างเดียว — **ห้ามเติม `|| can.claim` กลับมา**
-                       onCommit ยิง { ownerUserId } ซึ่งด่านคือ canAssignOwner = คนเกี่ยวข้องเท่านั้น
+                       onCommit ยิงไป /assignees ซึ่งด่านคือ canAssign = คนเกี่ยวข้องเท่านั้น
                        เติมเมื่อไหร่ = คนนอกเปิดช่องเลือกได้ เลือกเสร็จเด้ง 403 (บั๊กจริงถึง 2026-08-27)
                        ทางของคนนอกคือปุ่ม "ลงมือด้วย" ท้ายกล่อง ซึ่งยิง { claim:true } คนละ path กัน */}
-                <FieldRow icon={UserCircle} label={t('modal.ownerLabel')}>
+                <FieldRow icon={Users} label={t('modal.assigneesLabel')}>
                   <TagCombobox
-                    type="select"
+                    type="multi_select"
                     numericIds={false}
                     readOnly={!can.edit}
-                    placeholder={t('modal.noOwner')}
+                    placeholder={t('modal.noAssignees')}
                     source={{ mode: 'search', search: searchPeople }}
-                    value={card.owner_user_id ? [{ id: String(card.owner_user_id), name: card.owner_name || '' }] : []}
-                    onCommit={(ids) => patch({ ownerUserId: ids[0] ? Number(ids[0]) : null })}
+                    value={(card.assignees || []).map((a) => ({ id: String(a.user_id), name: a.name }))}
+                    onCommit={commitAssignees}
                     onError={setActionError}
                     onOpenProfile={(id) => setProfileUserId(id)}
                     t={t}
@@ -570,21 +572,6 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     สายงาน/พื้นที่/อุปกรณ์ ขึ้นเป็นแถว field ปกติในกล่อง "ข้อมูลของทีม" ข้างล่างแทน
                     อย่าเอากลับมา: มีที่เก็บ 2 ที่เมื่อไหร่ ข้อมูลใหม่จะแตกไปคนละทางทันที */}
 
-                {/* คนช่วย — multi_select ทรงเดียวกับ custom field · ตัวเลือกคือคนใน org ค้นเอา */}
-                <FieldRow icon={Users} label={t('modal.helpersLabel')}>
-                  <TagCombobox
-                    type="multi_select"
-                    numericIds={false}
-                    readOnly={!can.edit}
-                    placeholder={t('modal.noHelpers')}
-                    source={{ mode: 'search', search: searchPeople }}
-                    value={(card.helpers || []).map((h) => ({ id: String(h.user_id), name: h.name }))}
-                    onCommit={commitHelpers}
-                    onError={setActionError}
-                    onOpenProfile={(id) => setProfileUserId(id)}
-                    t={t}
-                  />
-                </FieldRow>
               </div>
 
               {profileUserId && (
@@ -644,7 +631,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     </button>
                   ) : <span />}
 
-                  {/* ป้ายเปลี่ยนตามบทที่จะได้: ยังไม่มีเจ้าภาพ = "รับงานนี้" · มีแล้ว = "ลงมือด้วย"
+                  {/* ป้ายเปลี่ยนตามบทที่จะได้: ยังไม่มีใครรับ = "รับงานนี้" · มีคนรับแล้ว = "ลงมือด้วย"
                       ⚠️ เป็นแค่ป้าย — คนตัดสินจริงคือ server (ดู join()) ห้ามเอาเงื่อนไขนี้ไปตัดสินอะไรอย่างอื่น */}
                   {can.join && (
                     <button
@@ -657,7 +644,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                         : <UserPlus size={16} />}
                       {joining
                         ? t('actions.claiming')
-                        : card.owner_user_id ? t('modal.joinAsHelper') : t('actions.claim')}
+                        : (card.assignee_ids || []).length ? t('modal.joinAsAssignee') : t('actions.claim')}
                     </button>
                   )}
                 </div>

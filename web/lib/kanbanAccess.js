@@ -115,15 +115,15 @@ export function canManageBoard(board, access = {}, userId = null) {
 }
 
 /**
- * คนที่ "เกี่ยวข้อง" กับการ์ดใบนี้ — เจ้าภาพ · คนช่วย · คนสร้าง
- * @param {object} card  { owner_user_id, created_by, helper_ids? }
+ * คนที่ "เกี่ยวข้อง" กับการ์ดใบนี้ — ผู้รับผิดชอบ (คนไหนก็ได้) หรือคนสร้าง
+ * ⭐ เฟส B (2026-09-03): เลิกมี `owner_user_id` แล้ว — ผู้รับผิดชอบทุกคนเท่ากันหมดใน assignee_ids
+ * @param {object} card  { created_by, assignee_ids? }
  * @param {number|null} userId
  */
 export function isCardStakeholder(card, userId) {
   if (!card || !userId) return false           // debug mode (userId null) → ไม่ใช่ stakeholder
-  if (card.owner_user_id === userId) return true
   if (card.created_by === userId) return true
-  return (card.helper_ids || []).includes(userId)
+  return (card.assignee_ids || []).includes(userId)
 }
 
 /**
@@ -149,7 +149,7 @@ export function canEditCard(card, access = {}, userId = null) {
 }
 
 /**
- * รับงานที่ยังไม่มีเจ้าภาพ / กด "ลงมือด้วย" (grill ข้อ 8 — ทั้งมอบหมายและอาสาเองได้)
+ * รับงานที่ยังไม่มีคนรับ / กด "ลงมือด้วย" (grill ข้อ 8 — ทั้งมอบหมายและอาสาเองได้)
  * — ใครก็ได้ใน org ตราบใดที่การ์ดยังไม่จบ
  */
 export function canClaimCard(card, access = {}, userId = null) {
@@ -158,10 +158,10 @@ export function canClaimCard(card, access = {}, userId = null) {
 }
 
 /**
- * เปลี่ยนเจ้าภาพเป็นคนอื่น (มอบหมาย/ยึดงานคืน) — คนเกี่ยวข้อง หรือ admin
+ * มอบหมายคนอื่น / ถอดคนอื่นออก — คนเกี่ยวข้อง หรือ admin
  * แยกจาก canClaimCard เพราะ "อาสาทำเอง" กับ "สั่งคนอื่นทำ" คนละเรื่อง
  */
-export function canAssignOwner(card, access = {}, userId = null) {
+export function canAssign(card, access = {}, userId = null) {
   return canEditCard(card, access, userId)
 }
 
@@ -241,11 +241,12 @@ export function checkStatusTransition(card, nextStatus) {
       && POST_DRAFT_PHASE.includes(nextStatus)
     if (!draftPhase) return { ok: false, reason: 'linked' }
   }
-  // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีเจ้าภาพ ออกจาก backlog ไม่ได้ (DB ก็มี CHECK กันอีกชั้น)
+  // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีผู้รับผิดชอบ ออกจาก backlog ไม่ได้
+  // (DB มี trigger `trg_kanban_cards_require_assignee` กันอีกชั้น — ที่นี่คือด่านที่ตอบผู้ใช้เป็นภาษาคน)
   // ยกเว้น 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่หาคนทำไม่ได้ตอนนี้ · 2026-08-18) — งานที่ยังไม่มีใครรับ
-  // ก็พักได้ ไม่ต้องบังคับหาเจ้าภาพก่อนถึงจะเก็บเข้ากรุ (migration ผ่อน CHECK ให้แล้ว)
-  if (!card?.owner_user_id && nextStatus !== 'backlog' && nextStatus !== 'cancelled') {
-    return { ok: false, reason: 'needOwner' }
+  // ก็พักได้ ไม่ต้องบังคับหาคนรับก่อนถึงจะเก็บเข้ากรุ
+  if (!(card?.assignee_ids || []).length && nextStatus !== 'backlog' && nextStatus !== 'cancelled') {
+    return { ok: false, reason: 'needAssignee' }
   }
   return { ok: true, reason: null }
 }

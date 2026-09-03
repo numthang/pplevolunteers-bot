@@ -58,7 +58,7 @@ export function defaultDueForBucket(bucket, now = new Date()) {
 }
 
 /**
- * "ของฉัน" — เจ้าภาพ หรือคนช่วย **เท่านั้น**
+ * "ของฉัน" — การ์ดที่ฉันเป็นผู้รับผิดชอบ **เท่านั้น**
  *
  * ⛔ 2026-09-03 กลับคำจากที่เคาะไว้ 2026-08-18 (เดิม: งานไม่มีเจ้าภาพ = ของฉันของทุกคน)
  *    เจตนาเดิมถูก — กองรอทำต้องมีคนเห็น ไม่งั้นงานค้างเงียบ — แต่ผลข้างเคียงคือ
@@ -73,8 +73,7 @@ export function defaultDueForBucket(bucket, now = new Date()) {
  */
 export function isMyCard(card, userId) {
   if (!card || !userId) return false
-  if (String(card.owner_user_id) === String(userId)) return true
-  return (card.helper_ids || []).some((id) => String(id) === String(userId))
+  return (card.assignee_ids || []).some((id) => String(id) === String(userId))
 }
 
 /**

@@ -203,8 +203,8 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
       // ⭐ ขั้น "รับเรื่องแล้ว" ต้องมีคนรับผิดชอบจริง ไม่ใช่แค่ status='open' (user ทัก 2026-09-03):
       //    assign ไม่ได้เปลี่ยน cases.status (ดู lib/caseAssign.js) เคส open ที่ยังไม่มีใครรับ
       //    จึงเข้าเงื่อนไข status_type='backlog' เหมือนกัน ถ้านับเป็นขั้น 1 ทันทีจะโกหกว่ามีคนรับแล้ว
-      //    owner_user_id sync มาจาก assignee คนแรกอยู่แล้ว (db/kanban/links.js) ใช้เช็คแทนได้เลย
-      if (!card.owner_user_id) return 0
+      //    ผู้รับผิดชอบของการ์ด sync มาจาก case_assignees อยู่แล้ว (db/kanban/links.js) ใช้เช็คแทนได้เลย
+      if (!(card.assignee_ids || []).length) return 0
       const idx = ['backlog', 'doing', 'done'].indexOf(card.status_type)
       return idx === -1 ? null : idx + 1
     }
@@ -329,11 +329,16 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
             <Clock size={16} /> {fmtDueShort(card.due_at)}
           </span>
         )}
-        {card.owner_name && (
-          <span className="flex items-center gap-1 min-w-0">
-            {/* ⛔ ห้าม truncate ชื่อคน (user สั่ง 2026-08-19) — ชื่อยาวขึ้นหลังเปลี่ยนมาใช้ display_name
-                เช่น "Tee (ราชบุรี)" · ตัดหัวท้ายแล้วดูไม่ออกว่าใคร ปล่อยให้ตกบรรทัดในการ์ดแทน */}
-            <User size={16} className="shrink-0" /> <span>{card.owner_name}</span>
+        {(card.assignees || []).length > 0 && (
+          /* ⭐ ผู้รับผิดชอบหลายคนได้แล้ว (2026-09-03) — โชว์คนแรก + "+N" ไม่ใช่ทุกชื่อ
+             การ์ดในคอลัมน์แคบ 3-4 ชื่อเต็มๆ ดันการ์ดสูงจนอ่านอย่างอื่นไม่ทัน · ชื่อครบอยู่ใน title
+             ⛔ ห้าม truncate ชื่อคน (user สั่ง 2026-08-19) — ชื่อยาวขึ้นหลังเปลี่ยนมาใช้ display_name
+                เช่น "Tee (ราชบุรี)" · ตัดหัวท้ายแล้วดูไม่ออกว่าใคร ปล่อยให้ตกบรรทัดในการ์ดแทน */
+          <span className="flex items-center gap-1 min-w-0" title={card.assignees.map((a) => a.name).join(', ')}>
+            <User size={16} className="shrink-0" /> <span>{card.assignees[0].name}</span>
+            {card.assignees.length > 1 && (
+              <span className="text-warm-400 dark:text-disc-muted">+{card.assignees.length - 1}</span>
+            )}
           </span>
         )}
       </div>
@@ -384,8 +389,8 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
             </button>
           )}
         </div>
-      ) : !card.owner_user_id && (
-        /* งานที่ยังไม่มีเจ้าภาพ = รับได้จากหน้าการ์ดเลย ไม่ต้องเปิดกล่องก่อน
+      ) : !(card.assignee_ids || []).length && (
+        /* งานที่ยังไม่มีคนรับ = รับได้จากหน้าการ์ดเลย ไม่ต้องเปิดกล่องก่อน
            (กองรอทำโผล่ในตัวกรอง "ของฉัน" อยู่แล้ว — ต้องรับได้ในคลิกเดียว ไม่งั้นก็ค้างเหมือนเดิม) */
         <button
           onClick={(e) => { e.stopPropagation(); onClaim(card) }}
@@ -437,10 +442,10 @@ export default function KanbanHome() {
   const [labelFilter, setLabelFilter] = useState([])
   // คำค้นข้อความ — อยู่นอกกรวยกรอง (ช่องค้นหาต้องพิมพ์ได้เลย ไม่ต้องกดเปิดอะไรก่อน)
   const [textQuery, setTextQuery] = useState('')
-  const [helperFilter, setHelperFilter] = useState([])   // user_id (string) ของผู้ช่วยที่ถูกเลือกกรอง
+  const [assigneeFilter, setAssigneeFilter] = useState([])   // user_id (string) ของผู้รับผิดชอบที่ถูกเลือกกรอง
   const [kindFilter, setKindFilter] = useState([])       // ชนิดงาน: 'plain' | 'case' | 'post' (ว่าง = ทั้งหมด)
   const [statusFilter, setStatusFilter] = useState([])   // status_type ที่ถูกเลือกกรอง (แยกจาก groupBy — กรองซ่อนใบที่ไม่เข้าเกณฑ์ ไม่ใช่จัดกอง)
-  // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'helper' (pill ผู้ช่วยท้ายแถว) หรือ 'status' หรือ null = ปิดหมด
+  // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'assignee' (pill ผู้รับผิดชอบท้ายแถว) หรือ 'status' หรือ null = ปิดหมด
   // (ใช้ index แทนชื่อกลุ่มเพราะกลุ่ม "ไม่มีชื่อ" มีค่าเป็น null อยู่แล้ว ชนกับ sentinel ปิดไม่ได้)
   const [openGroupIdx, setOpenGroupIdx] = useState(null)
   const filterRowRef = useRef(null)
@@ -559,7 +564,7 @@ export default function KanbanHome() {
       setGroupBy(v.group)
       setStatusFilter(v.status)
       setKindFilter(v.kind)
-      setHelperFilter(v.helper)
+      setAssigneeFilter(v.assignee)
       setLabelFilter(v.label)
       setTextQuery(v.q)
       setSort(v.sort)
@@ -587,14 +592,14 @@ export default function KanbanHome() {
     if (!urlHydrated) return
     const next = mergeViewIntoSearch(window.location.search, {
       board: activeBoardId, scope, group: groupBy,
-      status: statusFilter, kind: kindFilter, helper: helperFilter,
+      status: statusFilter, kind: kindFilter, assignee: assigneeFilter,
       label: labelFilter, q: textQuery, sort,
     })
     const target = next ? `${window.location.pathname}?${next}` : window.location.pathname
     if (window.location.pathname + window.location.search !== target) {
       window.history.replaceState(null, '', target)
     }
-  }, [urlHydrated, activeBoardId, scope, groupBy, statusFilter, kindFilter, helperFilter, labelFilter, textQuery, sort])
+  }, [urlHydrated, activeBoardId, scope, groupBy, statusFilter, kindFilter, assigneeFilter, labelFilter, textQuery, sort])
 
   function openCard(id) {
     const url = new URL(window.location.href)
@@ -680,12 +685,12 @@ export default function KanbanHome() {
     // ในกรุโชว์ทุกใบ ไม่แยกของใคร — ของที่เก็บเข้ากรุแล้วมีไม่เยอะ และคนตามหามักจำไม่ได้ว่าใครเก็บ
     () => {
       if (scope === 'mine') return cards.filter((c) => isMyCard(c, viewerUserId))
-      // ⚠️ "ไม่มีเจ้าภาพ" ดูที่ owner_user_id เท่านั้น ไม่นับผู้ช่วย — DB CHECK บังคับว่า
+      // ⚠️ "ไม่มีคนรับ" = ไม่มีแถวใน kanban_card_assignees เลย — trigger ใน DB บังคับว่า
       //    การ์ดไม่มีเจ้าภาพต้องอยู่กอง backlog อยู่แล้ว (ดู onDrop) กองอื่นจึงไม่มีทางติดมา
-      if (scope === 'unassigned') return cards.filter((c) => !c.owner_user_id)
+      if (scope === 'unassigned') return cards.filter((c) => !(c.assignee_ids || []).length)
       // 'assigned' = ด้านตรงข้ามของ unassigned — มีไว้ให้เลขฝั่งขวาของ "กำลังทำ" บนหน้าแรก
       // กดแล้วเจอชุดเดียวกันเป๊ะ (db/kanban/cards.js countCardStats)
-      if (scope === 'assigned') return cards.filter((c) => !!c.owner_user_id)
+      if (scope === 'assigned') return cards.filter((c) => (c.assignee_ids || []).length > 0)
       return cards
     },
     [cards, scope, viewerUserId]
@@ -704,15 +709,15 @@ export default function KanbanHome() {
     if (inArchive) return { archived: cards.length }
     return {
       mine: cards.filter((c) => isMyCard(c, viewerUserId)).length,
-      unassigned: cards.filter((c) => !c.owner_user_id).length,
-      assigned: cards.filter((c) => !!c.owner_user_id).length,
+      unassigned: cards.filter((c) => !(c.assignee_ids || []).length).length,
+      assigned: cards.filter((c) => (c.assignee_ids || []).length > 0).length,
       all: cards.length,
     }
   }, [cards, loading, inArchive, viewerUserId])
   const filterGroups = useMemo(() => collectFilterGroups(scoped), [scoped])
   // ผู้ช่วยที่ "มีอยู่จริง" บนการ์ดที่โหลดมา + จำนวนใบที่ติด — เหตุผลเดียวกับ collectFilterGroups
   // (ไม่เอาทั้ง org มาวาง จะได้ตัวเลือกกดแล้วว่างเปล่าเต็มไปหมด)
-  const helperOptions = useMemo(() => {
+  const assigneeOptions = useMemo(() => {
     const map = new Map()
     const add = (userId, name) => {
       if (!userId) return
@@ -723,8 +728,7 @@ export default function KanbanHome() {
     for (const c of scoped) {
       // เจ้าภาพต้องอยู่ในตัวเลือกด้วย (2026-09-03) — ไม่งั้นเลือกกรองชื่อเขาไม่ได้เลย
       // ทั้งที่เขาคือคนที่รับผิดชอบใบนั้นจริงๆ (คู่กับตัวกรองข้างล่างที่นับเจ้าภาพแล้ว)
-      add(c.owner_user_id, c.owner_name)
-      for (const h of c.helpers || []) add(h.user_id, h.name)
+      for (const a of c.assignees || []) add(a.user_id, a.name)
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
@@ -797,12 +801,13 @@ export default function KanbanHome() {
       const wanted = new Set(statusFilter)
       out = out.filter((c) => wanted.has(c.status_type))
     }
-    if (helperFilter.length) {
-      const wanted = new Set(helperFilter)
+    if (assigneeFilter.length) {
+      const wanted = new Set(assigneeFilter)
       // ⭐ 2026-09-03: นับ **เจ้าภาพด้วย** ไม่ใช่แค่ผู้ช่วย — เดิมกรองชื่อคนหนึ่งแล้วไม่เจอใบที่เขา
-      //    เป็นแม่งาน (เจ้าภาพไม่มีแถวใน helpers ตามดีไซน์ตาราง) = ตัวกรองโกหกมาตลอด
+      //    เป็นแม่งาน (เจ้าภาพไม่มีแถวในตารางคนช่วยตามดีไซน์เดิม) = ตัวกรองโกหกมาตลอด
+      //    ⭐ เฟส B ปิดบั๊กนี้ที่ต้นเหตุ: เหลือลิสต์เดียว ไม่มีคนที่อยู่นอกลิสต์อีกแล้ว
       out = out.filter((c) =>
-        wanted.has(String(c.owner_user_id)) || (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
+        (c.assignee_ids || []).some((id) => wanted.has(String(id))))
     }
     if (kindFilter.length) {
       const wanted = new Set(kindFilter)
@@ -811,7 +816,7 @@ export default function KanbanHome() {
     // ⚠️ ค้นข้อความเป็น **ตัวสุดท้าย** ของสาย — ตัวเลือกในกรวย (ป้าย/คนช่วย/สถานะ/ชนิด) นับจำนวน
     //    จาก `scoped` ไม่ใช่จากตรงนี้ ถ้าเอาไปไว้ต้นสายตัวเลขในกรวยจะไม่ขยับตามคำค้น = อ่านแล้วงง
     return filterCardsByText(out, textQuery)
-  }, [scoped, labelFilter, helperFilter, statusFilter, kindFilter, textQuery])
+  }, [scoped, labelFilter, assigneeFilter, statusFilter, kindFilter, textQuery])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   /**
@@ -826,9 +831,9 @@ export default function KanbanHome() {
     () => unknownSelections(labelFilter, knownLabelIds),
     [labelFilter, knownLabelIds]
   )
-  const unknownHelpers = useMemo(
-    () => unknownSelections(helperFilter.map((id) => ({ id })), new Set(helperOptions.map((h) => h.id))),
-    [helperFilter, helperOptions]
+  const unknownAssignees = useMemo(
+    () => unknownSelections(assigneeFilter.map((id) => ({ id })), new Set(assigneeOptions.map((h) => h.id))),
+    [assigneeFilter, assigneeOptions]
   )
   // ?board= ที่ไม่มีอยู่จริง — ปุ่มกระดานจะตกไปแสดง "ทุกกระดาน" (บรรทัด boards.find(...) || allBoards)
   // ทั้งที่ยังกรองด้วย id นั้นอยู่ = กระดานว่างโดยไม่มีคำอธิบาย · รอ boards โหลดก่อนค่อยตัดสิน
@@ -839,7 +844,7 @@ export default function KanbanHome() {
   )
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
-  const selectedHelperIds = new Set(helperFilter)
+  const selectedAssigneeIds = new Set(assigneeFilter)
   const selectedStatusIds = new Set(statusFilter)
   const selectedKindIds = new Set(kindFilter)
   // ในกรุลากไม่ได้ — ต้องเอาออกจากกรุก่อนถึงจะขยับสถานะได้ (ไม่งั้นได้การ์ดที่ "เสร็จ" ทั้งที่อยู่ในกรุ)
@@ -852,8 +857,8 @@ export default function KanbanHome() {
     })
   }
 
-  function toggleHelperFilter(id) {
-    setHelperFilter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  function toggleAssigneeFilter(id) {
+    setAssigneeFilter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   function toggleStatusFilter(key) {
@@ -923,7 +928,7 @@ export default function KanbanHome() {
     }
   }
 
-  /** รับงานที่ยังไม่มีเจ้าภาพ — server ขยับสถานะ backlog → doing ให้เอง (setCardOwner) */
+  /** รับงานที่ยังไม่มีคนรับ — server ขยับสถานะ backlog → doing ให้เอง (addAssignee) */
   async function handleClaim(card) {
     setActionError('')
     setClaimingId(card.id)
@@ -1016,7 +1021,7 @@ export default function KanbanHome() {
    * สร้างการ์ดจากในกองเลย (ปุ่ม + บนหัวกอง) — พิมพ์ชื่อแล้ว Enter จบ
    *
    * ⚠️ กองที่ไม่ใช่ "รอทำ" ต้องมีเจ้าภาพ (DB CHECK: ไม่มีเจ้าภาพห้ามออกจาก backlog)
-   *    → ใช้ `assignToMe` ที่ API มีอยู่แล้ว = คนกดเป็นเจ้าภาพ
+   *    → ใช้ `assignToMe` ที่ API มีอยู่แล้ว = คนกดเป็นผู้รับผิดชอบ
    *    (ตรงกับเจตนา "ฉันกำลังเพิ่มงานที่ขั้นนี้" และเป็นทางลัดเดิมของหน้าการบ้านของฉัน)
    */
   async function createCardIn(bucketKey, title) {
@@ -1279,7 +1284,7 @@ export default function KanbanHome() {
             title={t('filter.toggleLabel')}
             aria-label={t('filter.toggleLabel')}
             className={`flex items-center justify-center h-9 w-9 shrink-0 rounded-lg border transition ${
-              filtersOpen || labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0
+              filtersOpen || labelFilter.length > 0 || assigneeFilter.length > 0 || statusFilter.length > 0
                 ? 'border-teal bg-teal/10 text-teal'
                 : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
             }`}
@@ -1471,32 +1476,32 @@ export default function KanbanHome() {
               )
             })}
 
-            {helperOptions.length > 0 && (
+            {assigneeOptions.length > 0 && (
               <div className="relative">
                 <button
-                  onClick={() => setOpenGroupIdx((v) => (v === 'helper' ? null : 'helper'))}
+                  onClick={() => setOpenGroupIdx((v) => (v === 'assignee' ? null : 'assignee'))}
                   className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[220px] ${
-                    helperFilter.length
+                    assigneeFilter.length
                       ? 'border-teal bg-teal/10 text-teal'
                       : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                   }`}
                 >
                   <span className="truncate">
-                    {t('filter.helperGroup')}
-                    {helperFilter.length > 0 &&
-                      `: ${helperOptions.filter((h) => selectedHelperIds.has(h.id)).map((h) => h.name).join(', ')}`}
+                    {t('filter.assigneeGroup')}
+                    {assigneeFilter.length > 0 &&
+                      `: ${assigneeOptions.filter((h) => selectedAssigneeIds.has(h.id)).map((h) => h.name).join(', ')}`}
                   </span>
                   <ChevronDown size={14} className="shrink-0" />
                 </button>
 
-                {openGroupIdx === 'helper' && (
+                {openGroupIdx === 'assignee' && (
                   <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
-                    {helperOptions.map((h) => {
-                      const on = selectedHelperIds.has(h.id)
+                    {assigneeOptions.map((h) => {
+                      const on = selectedAssigneeIds.has(h.id)
                       return (
                         <button
                           key={h.id}
-                          onClick={() => toggleHelperFilter(h.id)}
+                          onClick={() => toggleAssigneeFilter(h.id)}
                           className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
                             on
                               ? 'bg-teal/10 border-transparent ring-1 ring-teal text-teal'
@@ -1598,9 +1603,9 @@ export default function KanbanHome() {
               )}
             </div>
 
-            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0 || kindFilter.length > 0 || textQuery) && (
+            {(labelFilter.length > 0 || assigneeFilter.length > 0 || statusFilter.length > 0 || kindFilter.length > 0 || textQuery) && (
               <button
-                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]); setKindFilter([]); setTextQuery('') }}
+                onClick={() => { setLabelFilter([]); setAssigneeFilter([]); setStatusFilter([]); setKindFilter([]); setTextQuery('') }}
                 className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
               >
                 {t('filter.clear')}
@@ -1610,7 +1615,7 @@ export default function KanbanHome() {
         )}
       </div>
 
-      {(unknownLabels.length > 0 || unknownHelpers.length > 0 || unknownBoard) && (
+      {(unknownLabels.length > 0 || unknownAssignees.length > 0 || unknownBoard) && (
         <div className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-3 text-sm flex flex-wrap items-center gap-2">
           <AlertTriangle size={16} className="text-warm-400 dark:text-disc-muted shrink-0" />
           <span className="text-warm-500 dark:text-disc-muted">{t('filter.unknownNote')}</span>
@@ -1633,13 +1638,13 @@ export default function KanbanHome() {
               <X size={14} />
             </button>
           )}
-          {unknownHelpers.map((h) => (
+          {unknownAssignees.map((h) => (
             <button
               key={`h${h.id}`}
-              onClick={() => setHelperFilter((prev) => prev.filter((x) => String(x) !== String(h.id)))}
+              onClick={() => setAssigneeFilter((prev) => prev.filter((x) => String(x) !== String(h.id)))}
               className="flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-red-500 hover:border-red-300 dark:hover:border-red-700 transition-colors"
             >
-              {t('filter.unknownHelper', { id: String(h.id) })}
+              {t('filter.unknownAssignee', { id: String(h.id) })}
               <X size={14} />
             </button>
           ))}
@@ -1664,7 +1669,7 @@ export default function KanbanHome() {
       ) : inArchive && visible.length === 0 ? (
         // กรุว่างต้องบอกตรงๆ ไม่ใช่โชว์ 6 กองเปล่าให้เดาเอง
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
-          {(labelFilter.length || helperFilter.length || statusFilter.length) ? t('filter.noMatch') : t('empty.archived')}
+          {(labelFilter.length || assigneeFilter.length || statusFilter.length) ? t('filter.noMatch') : t('empty.archived')}
         </div>
       ) : (
         // 2 โหมด layout เท่านั้น — **ไม่มีการปัดแนวนอนที่ไหนเลย** (user เกลียดการปัด · เคยทำ snap แบบ Trello แล้วไม่เอา)
@@ -1787,7 +1792,7 @@ export default function KanbanHome() {
                   )}
                   {sorted.length === 0 && (
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">
-                      {(labelFilter.length || helperFilter.length || statusFilter.length) ? t('filter.noMatch') : t('board.emptyColumn')}
+                      {(labelFilter.length || assigneeFilter.length || statusFilter.length) ? t('filter.noMatch') : t('board.emptyColumn')}
                     </p>
                   )}
                 </div>

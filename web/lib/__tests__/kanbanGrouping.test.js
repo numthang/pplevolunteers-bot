@@ -5,13 +5,12 @@ import { dueBucket, isMyCard, groupCards, sortCards, DUE_BUCKETS } from '../kanb
 const NOW = new Date('2026-08-18T10:00:00+07:00')
 const at = (iso) => new Date(iso).toISOString()
 
-const ME = 7, OTHER = 8, HELPER = 9
+const ME = 7, OTHER = 8, MATE = 9
 
 const card = (over = {}) => ({
   id: 1,
   status_type: 'doing',
-  owner_user_id: OTHER,
-  helper_ids: [],
+  assignee_ids: [OTHER],
   due_at: null,
   priority: 0,
   created_at: at('2026-08-01T00:00:00+07:00'),
@@ -32,22 +31,23 @@ describe('dueBucket', () => {
 })
 
 // ---- isMyCard ----
-describe('isMyCard — เจ้าภาพ + คนช่วย เท่านั้น', () => {
-  it('ฉันเป็นเจ้าภาพ → ใช่', () => expect(isMyCard(card({ owner_user_id: ME }), ME)).toBe(true))
-  it('ฉันเป็นคนช่วย → ใช่', () => expect(isMyCard(card({ helper_ids: [HELPER, ME] }), ME)).toBe(true))
+describe('isMyCard — ผู้รับผิดชอบเท่านั้น', () => {
+  it('ฉันเป็นผู้รับผิดชอบคนเดียว → ใช่', () => expect(isMyCard(card({ assignee_ids: [ME] }), ME)).toBe(true))
+  // ⭐ เฟส B (2026-09-03): ไม่มี "หัวหน้า" แล้ว — อยู่ในลิสต์ตำแหน่งไหนก็เป็นของฉันเท่ากัน
+  it('ฉันเป็นคนที่ 2 ในลิสต์ → ใช่', () => expect(isMyCard(card({ assignee_ids: [MATE, ME] }), ME)).toBe(true))
   it('ของคนอื่นล้วน → ไม่ใช่', () => expect(isMyCard(card(), ME)).toBe(false))
-  // ⛔ 2026-09-03 กลับคำจาก 2026-08-18 — "งานไม่มีเจ้าภาพ = ของฉันของทุกคน" ทำให้
-  //    "ไม่มีเจ้าภาพ" แพงจนระบบยัดเจ้าภาพปลอมเข้าไป (backfill 176 ใบ + SOURCE_SQL.post)
+  // ⛔ 2026-09-03 กลับคำจาก 2026-08-18 — "งานไม่มีคนรับ = ของฉันของทุกคน" ทำให้
+  //    "ไม่มีคนรับ" แพงจนระบบยัดคนปลอมเข้าไป (backfill 176 ใบ + SOURCE_SQL.post)
   //    ของที่มาแทน = มุมมอง "ยังไม่มีคนรับ (n)" ที่มีเลขกำกับทั้งมือถือและจอใหญ่
-  it('⭐ ยังไม่มีเจ้าภาพ → **ไม่ใช่** ของฉัน (ไปอยู่มุมมอง "ยังไม่มีคนรับ" แทน)', () =>
-    expect(isMyCard(card({ owner_user_id: null, status_type: 'backlog' }), ME)).toBe(false))
-  it('id คนละชนิด (สตริง ↔ ตัวเลข) ยังตรงกัน', () => {
-    expect(isMyCard(card({ owner_user_id: '7' }), 7)).toBe(true)
-    expect(isMyCard(card({ helper_ids: ['7'] }), 7)).toBe(true)
-  })
+  it('⭐ ยังไม่มีคนรับ → **ไม่ใช่** ของฉัน (ไปอยู่มุมมอง "ยังไม่มีคนรับ" แทน)', () =>
+    expect(isMyCard(card({ assignee_ids: [], status_type: 'backlog' }), ME)).toBe(false))
+  it('id คนละชนิด (สตริง ↔ ตัวเลข) ยังตรงกัน', () =>
+    expect(isMyCard(card({ assignee_ids: ['7'] }), 7)).toBe(true))
+  it('assignee_ids ไม่มีเลยก็ไม่พัง', () =>
+    expect(isMyCard(card({ assignee_ids: undefined }), ME)).toBe(false))
   it('debug mode (userId null) → ไม่ใช่ของใครทั้งนั้น', () => {
-    expect(isMyCard(card({ owner_user_id: null }), null)).toBe(false)
-    expect(isMyCard(card({ owner_user_id: ME }), null)).toBe(false)
+    expect(isMyCard(card({ assignee_ids: [] }), null)).toBe(false)
+    expect(isMyCard(card({ assignee_ids: [ME] }), null)).toBe(false)
   })
   it('ไม่มีการ์ด → ไม่ใช่', () => expect(isMyCard(null, ME)).toBe(false))
 })

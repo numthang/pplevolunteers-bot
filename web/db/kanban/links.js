@@ -16,6 +16,9 @@ import pool from '../index.js'
 import { createCard } from './cards.js'
 import { LIVE_STATUS_SQL } from './statusSql.js'
 
+/** "การ์ดใบนี้มีคนรับหรือยัง" — เดิมคือ `c.owner_user_id IS NOT NULL` (คอลัมน์ถูกยุบทิ้งเฟส B) */
+const HAS_ASSIGNEE = `EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = c.id)`
+
 export const ENTITY_TYPES = ['case', 'post']
 
 /**
@@ -79,8 +82,8 @@ export async function linkCard(orgId, cardId, entityType, entityId, { isAuto = f
  * ⚠️ status_type ที่ค้างอยู่ในคอลัมน์คือ cache เก่า อาจไม่ตรงกับที่เพิ่งเห็นบนจอ
  *    → เขียนสถานะสดล่าสุดกลับลงคอลัมน์ก่อนถอด ไม่งั้นการ์ดเด้งกลับไปสถานะเมื่อชาติที่แล้ว
  *
- * ⛔ **การ์ดที่ไม่มีเจ้าภาพเขียนสถานะสดกลับตรงๆ ไม่ได้** — ชน CHECK `kanban_cards_owner_required`
- *    (ไม่มีเจ้าภาพ = อยู่ได้แค่ backlog/cancelled) · เคสจริง: เคสปิดแล้ว การ์ดสถานะสด = done
+ * ⛔ **การ์ดที่ไม่มีผู้รับผิดชอบเขียนสถานะสดกลับตรงๆ ไม่ได้** — ชน trigger `trg_kanban_cards_require_assignee`
+ *    (ไม่มีผู้รับผิดชอบ = อยู่ได้แค่ backlog/cancelled) · เคสจริง: เคสปิดแล้ว การ์ดสถานะสด = done
  *    แต่ไม่เคยมีใครรับ → INSERT พังตอนถอด (เจอตอน smoke test 2026-08-24)
  *    → clamp เป็น `backlog` ซึ่งเป็นความจริงที่ kanban เหลืออยู่จริงๆ หลังถอด: "ไม่มีใครถืองานใบนี้"
  *      (ถอดลิงก์แล้ว kanban ไม่รู้แล้วว่าเคสปิดไปแล้ว — ข้อมูลนั้นอยู่ที่ /case ไม่ใช่ที่นี่)
@@ -100,10 +103,10 @@ export async function unlinkCard(orgId, cardId) {
     await client.query(
       `UPDATE kanban_cards c
           SET status_type = CASE
-                WHEN c.owner_user_id IS NOT NULL              THEN ${LIVE_STATUS_SQL}
+                WHEN ${HAS_ASSIGNEE}                          THEN ${LIVE_STATUS_SQL}
                 WHEN ${LIVE_STATUS_SQL} = 'cancelled'         THEN 'cancelled'
                 ELSE 'backlog' END,
-              completed_at = CASE WHEN c.owner_user_id IS NOT NULL AND ${LIVE_STATUS_SQL} = 'done'
+              completed_at = CASE WHEN ${HAS_ASSIGNEE} AND ${LIVE_STATUS_SQL} = 'done'
                                   THEN COALESCE(c.completed_at, now()) ELSE NULL END,
               updated_at = now()
         WHERE c.org_id = $1 AND c.id = $2`,
@@ -133,20 +136,20 @@ export async function deleteCardForEntity(entityType, entityId) {
 }
 
 /**
- * ⭐ เจ้าภาพ/คนช่วยของการ์ดที่ผูกเคส = **สำเนาของ `case_assignees`** — ตัวนี้คือที่เดียวที่เขียนสำเนานั้น
+ * ⭐ ผู้รับผิดชอบของการ์ดที่ผูกเคส = **สำเนาของ `case_assignees`** — ตัวนี้คือที่เดียวที่เขียนสำเนานั้น
  *
- * ทำไมไม่อ่านสดเหมือนสถานะ (กฎเหล็กหัวไฟล์): `owner_user_id` เป็นคอลัมน์จริงที่ถูกใช้ใน
- * CHECK `kanban_cards_owner_required`, ตัวกรองของ listCards/listMyCards และ isMyCard
- * → เปลี่ยนเป็น subquery = รื้อทั้งโมดูล · ใช้ท่า **single writer + mirror ทันทีจังหวะเดียวกัน** แทน:
+ * ทำไมไม่อ่านสดเหมือนสถานะ (กฎเหล็กหัวไฟล์): ผู้รับผิดชอบถูกใช้เป็นตัวกรอง/ตัวนับของ listCards,
+ * countCardStats และ isMyCard ทั้งฝั่ง SQL และฝั่ง client → อ่านสดข้ามตารางทุกจุด = รื้อทั้งโมดูล
+ * ใช้ท่า **single writer + mirror ทันทีจังหวะเดียวกัน** แทน:
  *   `case_assignees` เป็นความจริงเสมอ · ใครจะเปลี่ยนคนต้องเขียนที่นั่นก่อน แล้วเรียกตัวนี้ทันที
  *
- * ⛔ ห้ามเขียน `kanban_cards.owner_user_id` / `kanban_card_helpers` ของการ์ดที่ผูกเคสจากที่อื่นอีก
+ * ⛔ ห้ามเขียน `kanban_card_assignees` ของการ์ดที่ผูกเคสจากที่อื่นอีก
  *    (ทางเข้าทั้งหมดต้องผ่าน `web/lib/caseAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว)
  *
- * กติกา: เจ้าภาพ = assignee คนแรก (`assigned_at, user_id`) · ที่เหลือ = คนช่วย
- * ⚠️ CHECK `kanban_cards_owner_required` — ไม่มีเจ้าภาพ = อยู่ได้แค่ backlog/cancelled
- *    → ถอด assignee คนสุดท้ายต้อง clamp status_type ด้วย (คอลัมน์นี้เป็นแค่ cache
- *      การ์ดผูกเคสแสดงสถานะสดจาก `cases.status` อยู่แล้ว — clamp จึงไม่ทำให้จอเปลี่ยน)
+ * ⭐ เฟส B (2026-09-03) ทำให้ตัวนี้ **สั้นลงครึ่งหนึ่ง**: ไม่มีเจ้าภาพให้เลือกแล้ว sync เป็น "ชุด" ตรงๆ
+ *    และไม่ต้อง clamp สถานะเอง — trigger `trg_kanban_assignees_clamp` ใน DB ทำให้ตอน COMMIT
+ *    (⚠️ นี่คือเหตุผลที่ trigger ต้องเป็น DEFERRABLE INITIALLY DEFERRED: ที่นี่ลบก่อนแล้วค่อยเพิ่ม
+ *     ระหว่างทางมีจังหวะที่เหลือ 0 แถว — trigger ธรรมดาจะดันการ์ดตกกอง "รอทำ" เงียบๆ)
  * ⚠️ ห้าม throw — แขวนท้าย action ของผู้ใช้ แบบเดียวกับ mirrorEntityCard
  *
  * @returns {Promise<boolean>} false = เคสนี้ไม่มีการ์ด (ยังไม่ถูก mirror) หรือทำไม่สำเร็จ
@@ -162,36 +165,16 @@ export async function syncCaseCardPeople(caseId) {
     if (!rows[0]) { await client.query('ROLLBACK'); return false }
     const cardId = Number(rows[0].card_id)
 
-    // เจ้าภาพ = assignee คนแรก · null เมื่อไม่เหลือใคร → clamp สถานะให้ไม่ชน CHECK
     await client.query(
-      `UPDATE kanban_cards c
-          SET owner_user_id = a.user_id,
-              status_type  = CASE WHEN a.user_id IS NOT NULL THEN c.status_type
-                                  WHEN c.status_type = 'cancelled' THEN 'cancelled'
-                                  ELSE 'backlog' END,
-              completed_at = CASE WHEN a.user_id IS NULL THEN NULL ELSE c.completed_at END,
-              updated_at   = now()
-         FROM (SELECT (SELECT user_id FROM case_assignees
-                        WHERE case_id = $2 ORDER BY assigned_at, user_id LIMIT 1) AS user_id) a
-        WHERE c.id = $1`,
-      [cardId, caseId]
-    )
-
-    // คนช่วย = assignee ที่เหลือทั้งหมด — ลบส่วนเกินก่อน แล้วเติมที่ขาด
-    await client.query(
-      `DELETE FROM kanban_card_helpers h
-        USING kanban_cards c
-        WHERE c.id = h.card_id AND h.card_id = $1
-          AND (h.user_id = c.owner_user_id
-               OR NOT EXISTS (SELECT 1 FROM case_assignees a
-                               WHERE a.case_id = $2 AND a.user_id = h.user_id))`,
+      `DELETE FROM kanban_card_assignees a
+        WHERE a.card_id = $1
+          AND NOT EXISTS (SELECT 1 FROM case_assignees ca
+                           WHERE ca.case_id = $2 AND ca.user_id = a.user_id)`,
       [cardId, caseId]
     )
     await client.query(
-      `INSERT INTO kanban_card_helpers (card_id, user_id)
-       SELECT $1, a.user_id FROM case_assignees a
-         JOIN kanban_cards c ON c.id = $1
-        WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM c.owner_user_id
+      `INSERT INTO kanban_card_assignees (card_id, user_id, assigned_at)
+       SELECT $1, ca.user_id, ca.assigned_at FROM case_assignees ca WHERE ca.case_id = $2
        ON CONFLICT DO NOTHING`,
       [cardId, caseId]
     )
@@ -216,16 +199,18 @@ export async function syncCaseCardPeople(caseId) {
  *       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดของเจ้าของคนเดียว
  *    ⛔ `archived_at IS NULL` ยังต้องอยู่ — โพสต์ที่เข้ากรุแล้วไม่ใช่งานค้าง
  *
- * ⭐ เจ้าภาพลากมาจากต้นทางให้เลย ไม่ปล่อยว่าง — การ์ดที่ไม่มีเจ้าภาพจะไปโผล่ใน "การบ้านของฉัน"
- *    ของทุกคน (isMyCard นับงานไม่มีเจ้าภาพเป็นของทุกคน) · เคส 200 ใบไม่มีเจ้าภาพ = หน้าแรกพังทั้งทีม
- *      เคส  → assignee คนแรก (คนที่เหลือกลายเป็นคนช่วย)
- *      โพสต์ → owner_user_id ตรงๆ
+ * ⭐ ผู้รับผิดชอบลากมาจากต้นทางเป็น **ชุด** (เฟส B — เดิมเลือกคนแรกเป็นเจ้าภาพแล้วที่เหลือเป็นคนช่วย)
+ *      เคส  → `case_assignees` ทั้งชุด
+ *      โพสต์ → `owner_user_id` ของโพสต์ 1 คน
+ *              ⚠️ **นี่คือบั๊กที่เฟส C มาแก้** — ค่านั้นคือ "คนนำเข้า/คนสร้าง" ไม่ใช่ผู้รับผิดชอบ
+ *              เฟส B คงพฤติกรรมเดิมไว้เพื่อไม่ให้ 2 เรื่องปนกัน · เฟส C จะเปลี่ยนเป็น `post_assignees`
+ *              และเลิกก็อปคนสร้างลงมาตรงนี้
  */
 const SOURCE_SQL = {
   case: `SELECT c.id,
                 COALESCE(NULLIF(c.title, ''), 'เรื่องร้องเรียน ' || c.ref) AS title,
-                (SELECT a.user_id FROM case_assignees a
-                  WHERE a.case_id = c.id ORDER BY a.assigned_at, a.user_id LIMIT 1) AS owner_user_id,
+                ARRAY(SELECT a.user_id FROM case_assignees a
+                       WHERE a.case_id = c.id ORDER BY a.assigned_at, a.user_id) AS assignee_ids,
                 c.created_by
            FROM cases c
           WHERE c.org_id = $1 AND c.archived_at IS NULL
@@ -235,7 +220,7 @@ const SOURCE_SQL = {
 
   post: `SELECT p.id,
                 COALESCE(NULLIF(p.title, ''), 'งานสื่อ #' || p.id) AS title,
-                p.owner_user_id,
+                ARRAY_REMOVE(ARRAY[p.owner_user_id], NULL) AS assignee_ids,
                 p.owner_user_id AS created_by
            FROM post_episodes p
           WHERE p.org_id = $1 AND p.archived_at IS NULL
@@ -267,24 +252,14 @@ export async function reconcileEntityCards(orgId, { entityType = null, createdBy
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i]
+      // ⭐ ผู้รับผิดชอบทั้งชุดลงไปพร้อมการ์ดในทรานแซกชันเดียว (createCard จัดการให้)
+      //    เดิมต้องยิง INSERT ตามทีหลังอีกรอบเพราะคอลัมน์เจ้าภาพรับได้คนเดียว — เฟส B ตัดทิ้งได้
       const cardId = await mirrorEntityCard(orgId, type, {
-        id: r.id, title: r.title, ownerUserId: r.owner_user_id, statusType,
+        id: r.id, title: r.title, assigneeIds: r.assignee_ids || [], statusType,
       }, r.created_by || createdBy)
 
       if (!cardId) stats.failed++
-      else {
-        stats.created++
-        // เคสมีผู้รับผิดชอบได้หลายคน — คนแรกเป็นเจ้าภาพ ที่เหลือลงเป็นคนช่วย
-        if (type === 'case') {
-          await pool.query(
-            `INSERT INTO kanban_card_helpers (card_id, user_id)
-             SELECT $1, a.user_id FROM case_assignees a
-              WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM $3
-             ON CONFLICT DO NOTHING`,
-            [cardId, r.id, r.owner_user_id]
-          ).catch(() => {})
-        }
-      }
+      else stats.created++
       onProgress?.({ phase: 'tick', type, done: i + 1, total: rows.length, stats })
     }
     onProgress?.({ phase: 'end', type, stats })
@@ -302,7 +277,7 @@ export async function reconcileEntityCards(orgId, { entityType = null, createdBy
  *    (แบบเดียวกับ auditLog ที่เป็น fire-and-forget) → คืน null แล้วให้ reconcile ตามเก็บทีหลัง
  *
  * @param {'case'|'post'} entityType
- * @param {object} src ข้อมูลของจริงที่ mirror มา { id, title, ownerUserId, boardId, statusType }
+ * @param {object} src ข้อมูลของจริงที่ mirror มา { id, title, assigneeIds, boardId, statusType }
  *        statusType = ค่าตั้งต้นของ cache ตอนสร้าง (เช่น 'done' สำหรับ backfill ของเก่าที่จบแล้ว)
  *        มีผลจริงเฉพาะตอนต้นทางยังเป็นสถานะที่ POST_STATUS/CASE_STATUS คืน NULL (ดู statusSql.js)
  *        ไม่งั้นสถานะสดจากต้นทางจะทับอยู่ดี — ไม่ผิดกฎเหล็ก แค่ตั้งค่าเริ่มต้นให้ตรงความจริงกว่า
@@ -324,11 +299,11 @@ export async function mirrorEntityCard(orgId, entityType, src, createdBy) {
 
     const card = await createCard(orgId, {
       title: src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ'),
-      ownerUserId: src.ownerUserId || null,
+      assigneeIds: src.assigneeIds || [],
       boardId: src.boardId || null,
       statusType: src.statusType || null,
       // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดเสมอ
-      // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น) → ปล่อยให้ createCard ตัดสิน
+      // แต่ต้องไม่ขัด trigger ของ DB (ไม่มีผู้รับผิดชอบ = อยู่ backlog เท่านั้น) → ปล่อยให้ createCard ตัดสิน
     }, by)
 
     const res = await linkCard(orgId, card.id, entityType, src.id, { isAuto: true })

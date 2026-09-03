@@ -120,12 +120,12 @@ async function createCase(data) {
 
   // ⭐ เคสทุกใบต้องมีการ์ดใน kanban (user เคาะ 2026-08-24) — คู่กับ hook ฝั่งเว็บใน web/db/cases.js
   //    fire-and-forget: kanban พังต้องไม่ทำให้รับเรื่องร้องเรียนไม่ได้ · ตาข่ายคือ reconcileEntityCards()
-  //    ⚠️ เจ้าภาพยังว่างตอนนี้เสมอ — assignee ถูกเพิ่มทีหลังผ่าน addAssignee() (ดู hook ที่นั่น)
+  //    ⚠️ ยังไม่มีผู้รับผิดชอบตอนนี้เสมอ — assignee ถูกเพิ่มทีหลังผ่าน addAssignee() (ดู hook ที่นั่น)
   //    ⚠️ สูตรชื่อสำรองต้องตรงกับฝั่งเว็บเป๊ะ (web/db/cases.js) ไม่งั้นเคสที่เกิดคนละทางได้ชื่อคนละแบบ
   mirrorEntityCardFromBot(orgId, 'case', {
     id: rows[0].id,
     title: rows[0].title || `เรื่องร้องเรียน ${rows[0].ref}`,
-    ownerUserId: null,
+    assigneeIds: [],
   }, { createdBy: createdByUserId, guildId: guild_id }).catch(() => {});
 
   return rows[0];

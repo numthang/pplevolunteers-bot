@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T05:14:04.726Z
-> Files: 1109 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T05:54:27.151Z
+> Files: 1110 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -534,6 +534,7 @@
 
 ## scripts/smoke/
 
+- `_envload.mjs` — preload สำหรับสคริปต์สโมคที่ import โมดูลฝั่ง web/ (ปกติพึ่ง Next.js โหลดตัวแปรสภาพแวดล้อมให้) (~104 tok)
 - `kanbanBot.mjs` — smoke test ฝั่งบอทของ kanban ก้อน 2 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~956 tok)
 - `kanbanCards.mjs` — smoke test ชั้น DB ของ kanban ก้อน 1 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1827 tok)
 - `kanbanLabels.mjs` — smoke test ชั้น DB ของ "คลังป้าย" kanban — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1398 tok)

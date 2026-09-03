@@ -12,14 +12,20 @@ describe('parseViewFromParams', () => {
     expect(parseViewFromParams('')).toEqual(DEFAULT_VIEW)
   })
 
+  it('รับคีย์เก่า helper= ของลิงก์ที่แชร์กันไว้ก่อน 2026-09-03', () => {
+    expect(parseViewFromParams('helper=12,45').assignee).toEqual(['12', '45'])
+    // มีทั้งคู่ = ตัวใหม่ชนะ
+    expect(parseViewFromParams('assignee=7&helper=12').assignee).toEqual(['7'])
+  })
+
   it('อ่านครบทุกตัว', () => {
-    const v = parseViewFromParams('board=3&scope=all&group=due&status=backlog,doing&kind=case&helper=12,45&label=12.88,15.4&q=ราชบุรี&sort=due_at:desc')
+    const v = parseViewFromParams('board=3&scope=all&group=due&status=backlog,doing&kind=case&assignee=12,45&label=12.88,15.4&q=ราชบุรี&sort=due_at:desc')
     expect(v.board).toBe(3)
     expect(v.scope).toBe('all')
     expect(v.group).toBe('due')
     expect(v.status).toEqual(['backlog', 'doing'])
     expect(v.kind).toEqual(['case'])
-    expect(v.helper).toEqual(['12', '45'])
+    expect(v.assignee).toEqual(['12', '45'])
     expect(v.label).toEqual([
       { field_id: '12', id: '88' },
       { field_id: '15', id: '4' },
@@ -78,7 +84,7 @@ describe('viewToQueryString', () => {
   it('ไป-กลับแล้วได้ของเดิม (round-trip)', () => {
     const view = {
       board: 3, scope: 'all', group: 'due',
-      status: ['backlog'], kind: ['case', 'post'], helper: ['12'],
+      status: ['backlog'], kind: ['case', 'post'], assignee: ['12'],
       label: [{ id: '88', field_id: '12' }], q: 'ทดสอบ',
       sort: { key: 'field_9', dir: 'desc' },
     }
