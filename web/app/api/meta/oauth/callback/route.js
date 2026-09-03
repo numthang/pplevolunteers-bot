@@ -162,28 +162,60 @@ export async function GET(req) {
       userDiscordId,
     }
 
-    for (const page of pages) {
-      // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
-      await upsertSocialRow(ctx, page.name, 'fb', page.id, page.access_token, null, null, visibility)
+    // เพจที่มีคน "อ้างเป็นบัญชีส่วนตัว" ไว้แล้ว ห้ามถูกดูดเข้าองค์กรอัตโนมัติ
+    //
+    // ป๊อปอัปเลือกเพจของ FB เป็นการ **แทนที่** ไม่ใช่เพิ่ม → ใครมีเพจส่วนตัวต้องติ๊กเพจตัวเอง
+    // ทุกครั้งที่ต่อ ไม่งั้นเพจส่วนตัวหลุดสิทธิ์ · ผลคือรอบที่กด connect "องค์กร" เพจส่วนตัว
+    // ก็ไหลเข้ามาเป็นบัญชีสาธารณะขององค์กรด้วยทุกรอบ (เจอจริง 2026-09-03: #89/#90 ซ้ำกับ #85/#86)
+    // อยากให้เพจส่วนตัวเป็นของ org จริงๆ → สลับ public/private ที่แถวเดิมใน /org/settings/social
+    const claimedPrivate = new Set()
+    if (visibility === 'public') {
+      const { rows: claimed } = await pool.query(
+        `SELECT platform, social_id FROM dc_social_accounts
+          WHERE visibility = 'private' AND COALESCE(org_id, 0) = COALESCE($1::int, 0)`,
+        [orgId]
+      )
+      for (const c of claimed) claimedPrivate.add(`${c.platform}:${c.social_id}`)
+    }
+    const skipped = []
 
+    for (const page of pages) {
       // IG row (ถ้ามี): ใช้ user_token, access_token ใส่ null
       const igRes = await fbGet(
         `https://graph.facebook.com/v22.0/${page.id}` +
         `?fields=instagram_business_account&access_token=${page.access_token}`
       )
       const igId = igRes.instagram_business_account?.id || null
-      if (igId) {
+
+      const skipFb = claimedPrivate.has(`fb:${page.id}`)
+      const skipIg = igId ? claimedPrivate.has(`ig:${igId}`) : true
+      if (skipFb && skipIg) {
+        skipped.push(page.name)
+        continue
+      }
+
+      // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
+      if (!skipFb) {
+        await upsertSocialRow(ctx, page.name, 'fb', page.id, page.access_token, null, null, visibility)
+      }
+      if (igId && !skipIg) {
         await upsertSocialRow(ctx, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, visibility)
       }
 
-      results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)
+      results.push(`✅ <b>${page.name}</b>${igId && !skipIg ? ` + Instagram` : ''}`)
     }
 
     const summary = results.map(r => `<li style="margin-bottom:8px">${r}</li>`).join('')
+    const skippedHtml = skipped.length
+      ? `<p style="color:#666">ข้าม ${skipped.length} เพจที่ตั้งเป็น <b>บัญชีส่วนตัว</b> ไว้แล้ว
+         (${skipped.join(', ')}) — ไม่ถูกเพิ่มเข้าองค์กร ถ้าต้องการให้เป็นของหน่วยงาน
+         ให้สลับเป็น "สาธารณะ" ที่แถวเดิมใน <a href="/org/settings/social">/org/settings/social</a></p>`
+      : ''
     return html('✅ Meta OAuth สำเร็จ', `
       <h1>✅ เชื่อมต่อ Meta สำเร็จ</h1>
-      <p>เชื่อมต่อ ${pages.length} Page เข้าองค์กรแล้ว:</p>
+      <p>เชื่อมต่อ ${results.length} Page เข้าองค์กรแล้ว:</p>
       <ul>${summary}</ul>
+      ${skippedHtml}
       <p><a href="/">← กลับหน้าหลัก</a></p>
     `)
   } catch (err) {
