@@ -11,98 +11,72 @@ budget_tokens: 1000
 
 ## ✅ Done
 
-**เฟส C + D เสร็จบน dev (2026-09-03) — โพสต์มีผู้รับผิดชอบหลายคนแบบเดียวกับเคส**
-`c9d64bd` เฟส C · `abc96d4` เฟส D · **แผนทั้งก้อน (A→D) จบแล้ว**
+**แผน "ยุบ `owner_user_id` ทิ้งทั้งระบบ" จบครบ A→D** — ทั้ง 3 ระบบเก็บ "คน" รูปเดียวกันแล้ว:
+`<entity>.created_by` (คนสร้าง ไม่เปลี่ยนตลอดชีวิตแถว) + `<entity>_assignees` (ผู้รับผิดชอบ หลายคน เท่ากันหมด)
 
-รายละเอียดเต็มอยู่ `md/PENDING.md §Posts` + `md/kanban/KANBAN.md §กติกา "คน"` — **อ่านที่นั่น อย่า re-derive**
+| commit | ได้อะไร |
+|---|---|
+| `a901d5b` (A) | `isMyCard()` เลิกนับงานไร้คนรับเป็น "ของทุกคน" · มุมมอง "ยังไม่มีคนรับ (n)" |
+| `dd7bb8f` `2ecaf2e` `66f4c89` (B) | kanban: `kanban_card_assignees` · ยุบ `owner_user_id` · CONSTRAINT TRIGGER 2 ตัว |
+| `c9d64bd` (C) | posts: `owner_user_id`→`created_by` · ตาราง `post_assignees` · `web/lib/postAssign.js` ประตูเดียว · `postOfCard()` ดักฝั่งบอร์ด · ช่อง "ผู้รับผิดชอบ" ใน `PostMetaPanel.jsx` |
+| `abc96d4` (D) | แท่ง lifecycle โพสต์: ไม่มีคนรับ = ไม่ขึ้นขั้นแรก |
 
-- DB: `post_episodes.owner_user_id` → **`created_by`** · ตารางใหม่ **`post_assignees`**
-  ครบสามระบบ: `<entity>.created_by` (คนสร้าง ไม่เปลี่ยน) + `<entity>_assignees` (ผู้รับผิดชอบ)
-- `web/lib/postAssign.js` = **ประตูเดียว** · `postOfCard()` ดักฝั่งบอร์ด → เขียนกลับต้นทางเสมอ
-- **⛔ ไม่ seed จากคนสร้าง** — ยกเฉพาะคนที่กดรับบนบอร์ดจริง (1 แถวจาก 969) ที่เหลือลบทิ้ง
-- **ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย** — ทั้งสองประตู 400 · seed เจ้าของตอน `promoteToOrg`
-- **3 ข้อที่กลับคำจากแพลนเดิม:** ไม่ backfill · **ไม่ ping Discord** (โพสต์ไม่มีเธรดต่อโพสต์
-  มีแค่ห้องต้นทางตะกร้า = สแปมห้องรวม) · **ต้องแตะ `postsAccess.js`** (`isOwner` ใช้ร่วมกับ
-  `post_assets` ที่ยังใช้ `owner_user_id` จริง → rename ครึ่งเดียว = fail-closed เงียบๆ)
-- **verify:** build · test 506 · สโมค 4 ชุด (ใหม่ `kanbanPostSync.mjs`) · mobileAudit
-  `/kanban` `/posts` `/posts/1046` · **เทส HTTP จริงผ่านเบราว์เซอร์ที่ล็อกอินแล้ว ครบทั้งสองทิศ**
-  (สคริปต์ one-off อยู่ scratchpad `httpPostAssign.mjs` — CDP + magic token)
+**เฟส C ที่ต้องรู้** (กติกาเต็ม: `md/kanban/KANBAN.md §กติกา "คน"` · `md/PENDING.md §Posts`)
+- ⛔ **ห้าม seed `<entity>_assignees` จาก `created_by`** — คนนำเข้า ≠ ผู้รับผิดชอบ (รากของ "เจ้าภาพปลอม 176 ใบ")
+  migration ยกเฉพาะคนที่กดรับบนบอร์ดจริง (**1 แถวจาก 969**) ที่เหลือลบทิ้ง
+- **ไม่ ping Discord ตอนมอบหมายโพสต์** (ต่างจากแพลนเดิม) — โพสต์ไม่มีเธรดต่อใบ มีแค่ห้องต้นทางตะกร้า
+- `postsAccess.isOwner()` แยกเป็น `isPostCreator()` / `isAssetOwner()` — `post_assets` ยังใช้ `owner_user_id` จริง
+- `ASSIGNEE_SOURCE.bumpsBacklog` จริงเฉพาะฝั่งโพสต์ — `POST_STATUS` คืน NULL ตอน draft = kanban เป็นเจ้าของสถานะช่วงนั้น
+- ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย (ทั้งสองประตูตอบ 400) · seed เจ้าของตอน `promoteToOrg`
+- verify: build · test 506 · สโมค 4 ชุด (ใหม่ `scripts/smoke/kanbanPostSync.mjs`) · mobileAudit `/kanban`
+  `/posts` `/posts/1046` · เทส HTTP จริงผ่านเบราว์เซอร์ที่ล็อกอินแล้ว ครบทั้งสองทิศ
 
-**เฟส B ขึ้น prod แล้ว** (user รัน migration + deploy เอง 2026-09-03)
-
----
-
-## 🔴 ค้างอยู่ — prod ครึ่งๆ อยู่ตอนนี้ (ตรวจของจริงแล้ว 2026-09-03 16:2x)
-
-**DB prod migrate ครบแล้ว แต่โค้ด prod ยังเป็นตัวก่อนเฟส C** (ยังไม่ push)
-- ✅ prod DB: `post_episodes.created_by` มีแล้ว · `owner_user_id` หายแล้ว · `post_assignees` 1 แถว ·
-  การ์ดโพสต์ไม่เหลือคนลอย 0 · `search_path` ของ trigger 2 ตัวตรึงแล้ว (บล็อก "รอบสอง" ลงไปด้วย)
-- ❌ โค้ด prod ยังอ้าง `owner_user_id`: `web/db/posts/episodes.js` 17 จุด · `web/db/kanban/links.js` 5 ·
-  `web/db/kanban/statusSql.js` 2 · `db/mediaBasket.js` 1
-- ⇒ **`/posts` และ `/kanban` ทั้งบอร์ด จะโยน 42703** (visibleLinkSql อ้างคอลัมน์นี้ = listCards ล้มทั้งก้อน)
-  · บอทเปิดตะกร้าสื่อก็ INSERT ไม่ผ่าน · ตอนตรวจยังไม่มี 42703 ใน log = ยังไม่มีใครเปิด 2 หน้านั้น
-
-**ต้องทำ (เรียงตามนี้ ห้ามสลับ):**
-1. `git push` — 4 commit local: `c9d64bd` `abc96d4` `56382bc` `7883c67` (**ต้องขออนุญาต user ก่อน**)
-2. prod: `git pull` → `npm run build` (web) → `pm2 restart pple-web pple-dcbot` — **พร้อมกันทั้งคู่**
-3. **user ยังไม่ได้กดทดสอบเอง** ทั้งเฟส B และ C — รายการอยู่ §ให้ user กด ข้างล่าง
-
-**⚠️ สิ่งที่จะเห็นบน prod หลัง deploy — เป็นของที่ตั้งใจ ไม่ใช่บั๊ก:**
-- การ์ดโพสต์เกือบพันใบขึ้นว่า **"ยังไม่มีคนรับ"** และแท่ง lifecycle ขั้นแรกว่าง
-  (968 แถวที่ก็อป "คนสร้าง" มาเป็นผู้รับผิดชอบถูกลบตอน migration — ⛔ อย่าเสนอ backfill กลับ)
-- โพสต์ที่ import แบบ `createdVia='backfill'` การ์ดจะลงกอง **"รอทำ"** ไม่ใช่ "เสร็จ" อีกต่อไป
-  (ไม่มีผู้รับผิดชอบ = `createCard` clamp กลับ backlog ตามกติกา)
+**prod ขึ้นครบแล้ว (ตรวจของจริง 2026-09-03):** DB migrate ครบทั้ง 3 บล็อก (`created_by` · `post_assignees` ·
+`search_path` ของ trigger) · โค้ดใหม่ pull ขึ้นแล้ว (`owner_user_id` เหลือ 0 จุดทุกไฟล์) · บอทรีสตาร์ตแล้ว
 
 ---
 
-## 🖐️ ให้ user กด
+## 🚀 Next quest — user กดทดสอบของจริง แล้วไล่บั๊กที่เจอ
 
-เปิด http://localhost:3100 (dev server รันค้างอยู่แล้ว · ข้อมูลจริงจาก prod)
+**deploy จบแล้ว ตรวจของจริง 09:27 UTC:** `pple-web` online (start 09:25:41) · `pple-dcbot` online ·
+`next build` ไม่รันแล้ว · port 3000 ตอบ 200 · error log สะอาดหลังรีสตาร์ต
+➜ เหลือแค่ **กดใช้จริง** · ถ้าเจอ 500 ให้เช็ค 42703 (`column … does not exist`) ก่อนอย่างอื่น —
+แปลว่ายังมีจุดที่อ้าง `owner_user_id` หลงเหลือ (`grep -rn owner_user_id web/ db/`)
 
-**เฟส C/D — /posts**
-1. เปิดโพสต์องค์กรใบหนึ่ง → การ์ด "รายละเอียด" ขวามือมีช่อง **"ผู้รับผิดชอบ"** เพิ่มคนได้
-2. เปิด /kanban หาการ์ดใบเดียวกัน → **ต้องเห็นชื่อเดียวกัน** และการ์ดออกจากกอง "รอทำ"
-3. กด "รับงาน" บนบอร์ด → กลับไป /posts **ต้องเห็นชื่อตัวเองในช่องผู้รับผิดชอบ**
-4. เปิด**ร่างส่วนตัว** → **ต้องไม่มีช่องผู้รับผิดชอบเลย** (ไม่ใช่ช่องว่าง)
-5. กด "เปิดให้ทีมเห็น" บนร่างส่วนตัว → เจ้าของกลายเป็นผู้รับผิดชอบให้เอง
+**รายการที่ user ยังไม่เคยกดเลย (เฟส B + C):**
+1. /posts เปิดโพสต์องค์กร → การ์ด "รายละเอียด" ขวามือ มีช่อง **"ผู้รับผิดชอบ"** เพิ่มคนได้
+2. /kanban การ์ดใบเดียวกัน → **เห็นชื่อเดียวกัน** และการ์ดออกจากกอง "รอทำ"
+3. กด "รับงาน" บนบอร์ด → กลับไป /posts **เห็นชื่อตัวเองในช่องผู้รับผิดชอบ**
+4. เปิด**ร่างส่วนตัว** → **ไม่มีช่องผู้รับผิดชอบเลย** (ไม่ใช่ช่องว่าง) · กด "เปิดให้ทีมเห็น" → เจ้าของกลายเป็นผู้รับผิดชอบเอง
+5. /kanban มอบหมาย 2 คนใบเดียว → ขึ้นเท่ากัน ("คนแรก +1") · กรองด้วยชื่อคนแรก **ต้องเจอ**
+6. ถอดคนสุดท้ายออก → การ์ด**เด้งกลับกอง "รอทำ" เอง** (trigger)
+7. เปิดเคสในดิสฯ ให้บอทสร้างการ์ด 1 ใบ **ต้องไม่ 500**
 
-**เฟส B — /kanban** (ยังไม่เคยกด)
-6. มอบหมาย 2 คนในการ์ดใบเดียว → ทั้งคู่ขึ้นเท่ากัน ("คนแรก +1")
-7. กรองด้วยชื่อคนแรก → **ต้องเจอ** (บั๊กเดิม)
-8. ถอดคนสุดท้ายออก → การ์ด**เด้งกลับกอง "รอทำ" เอง**
-9. **เปิดเคสในดิสฯ ให้บอทสร้างการ์ด 1 ใบ ต้องไม่ 500**
+**⚠️ 2 อย่างนี้เป็นของที่ตั้งใจ ห้ามรับเป็นบั๊ก:**
+- การ์ดโพสต์เกือบพันใบขึ้น **"ยังไม่มีคนรับ"** + แท่ง lifecycle ขั้นแรกว่าง — ⛔ **อย่าเสนอ backfill กลับ**
+- โพสต์ที่ import แบบ `createdVia='backfill'` การ์ดลงกอง **"รอทำ"** ไม่ใช่ "เสร็จ" (ไม่มีคนรับ = clamp)
 
 ---
 
 ## Context
 
-- Branch `master` · ล่าสุด `abc96d4` · **ยังไม่ push** · `md/TEAM/TEE.md` มีของ user แก้ไว้ ไม่ได้ commit
+- Branch `master` · local **ahead 1** (`45cd240` เป็น docs · ที่เหลือ push แล้ว) · `md/TEAM/TEE.md` เป็นของ user
+- prod: `ssh tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · wrap `sudo -n -u www bash -c '...'`
+  อ่านสถานะ/log ได้จริง · **รัน migration ที่ rename/DROP คอลัมน์เองไม่ได้** (classifier บล็อก)
+- dev: server ค้างที่ **:3100** (`.env` ผูกบอท "Tester") · **ห้าม `npm run build` ทับ `.next`** ตอน dev รัน
+  → ใช้ `NEXT_DIST_DIR=<scratch>` · ล็อกอินเทส: ยัด magic token ลง `org_login_tokens` (เขียนลง**ไฟล์**)
+  **curl ล็อกอินไม่ได้** (cookie เกิดจาก client-side signIn) → ต้อง headless Chrome + CDP
 - ⚠️ ข้อมูล `cases` บนเครื่อง dev เป็น **PII จริงของผู้ร้อง** (โคลนจาก prod)
-- prod: `tee@202.183.141.78` · `/www/wwwroot/pple-volunteers` · wrap `sudo -u www bash -c '...'`
-  · Claude สั่ง `pm2 restart` เองไม่ได้ · รัน migration ที่ rename/DROP คอลัมน์เองก็ไม่ได้
-- `.env` dev ผูกกับบอท **"Tester"** · ล็อกอินเทสในเบราว์เซอร์: ยัด magic token ลง `org_login_tokens`
-  ตรงๆ ⚠️ เขียน token ลง**ไฟล์** ไม่ใช่ stdout · **curl ใช้ไม่ได้** (session cookie เกิดจาก
-  client-side signIn) ต้องขับผ่าน headless Chrome + CDP
-- หนี้ i18n: `PostMetaPanel.jsx` string ใหม่ผ่าน `t()` แล้ว แต่ทั้งไฟล์/ทั้งโซน posts ยังไม่ migrate
+- หนี้ที่จงใจค้าง: ping ดิสฯ ตอนมอบหมายโพสต์ (ต้องมีเธรดต่อโพสต์ก่อน) · i18n ทั้งโซน posts
 
 ---
 
-## 🚀 Next quest — ยังไม่มี (แผน owner_user_id จบครบ A→D)
-
-ถ้าจะทำต่อ ดู `md/PENDING.md` เป็น entry point · ตัวเลือกใกล้มือ:
-- เธรดต่อโพสต์ในดิสฯ → ปลดล็อก "ping ตอนมอบหมาย" ที่เฟส C ตัดออกเพราะไม่มีเธรด
-- migrate i18n ทั้งโซน posts (7 ไฟล์ · งาน mechanical → `i18n-migrator` ทีละ 2-3 ไฟล์)
-
----
-
-## 🔧 Commands & References
+## 🔧 Commands
 
 ```bash
-cd web && npm test    ·    NEXT_DIST_DIR=<scratch> npm run build    # ห้าม build ทับ .next ตอน dev รัน
+cd web && npm test    ·    NEXT_DIST_DIR=<scratch> npm run build
 node scripts/dev/mobileAudit.mjs --routes /kanban,/posts --base http://localhost:3100
 node --import ./scripts/smoke/_envload.mjs scripts/smoke/kanbanPostSync.mjs
 #   + kanbanCards.mjs · kanbanBot.mjs · kanbanCaseSync.mjs
 openwolf find <symbol>    ·    openwolf bug search "<error>"
 ```
-📄 `/home/tee/.claude/plans/owner-user-id-wild-hinton.md` (แพลนตัวจริง — เสร็จหมดแล้ว) ·
-`md/kanban/KANBAN.md §กติกา "คน"` · `md/posts/POSTS.md §Data model` · `md/PENDING.md` · `md/WEB.md §จอมือถือ`
