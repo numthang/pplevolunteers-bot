@@ -8,8 +8,8 @@ const acc = (...perms) => ({ permissions: new Set(perms) })
 const OWNER = 10
 const OTHER = 20
 
-const personal = { owner_user_id: OWNER, visibility: 'personal' }
-const orgPost = { owner_user_id: OWNER, visibility: 'org' }
+const personal = { created_by: OWNER, visibility: 'personal' }
+const orgPost = { created_by: OWNER, visibility: 'org' }
 
 const P = pa.DEFAULT_POSTS_POLICY
 const teamRead  = pa.normalizePolicy({ read: 'team', write: 'team', approval: 'required' })

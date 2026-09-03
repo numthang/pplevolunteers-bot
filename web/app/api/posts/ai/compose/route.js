@@ -37,7 +37,7 @@ export async function POST(req) {
   if (!idea) return Response.json({ error: 'กรุณาใส่ไอเดียก่อน' }, { status: 400 })
 
   const visibility = body.visibility === 'org' ? 'org' : 'personal'
-  const draft = { visibility, owner_user_id: ctx.userId }
+  const draft = { visibility, created_by: ctx.userId }
   if (!canWritePost(draft, ctx.access, ctx.userId, ctx.policy)) {
     return Response.json({ error: 'ไม่มีสิทธิ์สร้างโพสต์' }, { status: 403 })
   }
@@ -47,7 +47,7 @@ export async function POST(req) {
   // กดซ้ำด้วยข้อความเดิมภายใน 15 นาที = คืนของที่สร้างไว้แล้ว ไม่สร้างใหม่/ไม่ยิง AI ซ้ำ
   // เช็คก่อนทุกอย่างเพื่อให้ retry เร็วและไม่กิน quota — ดูเหตุผลเต็มที่ db/posts/episodes.js: findRecentAiPosts
   const existing = await postDB.findRecentAiPosts({
-    orgId: ctx.orgId, ownerUserId: ctx.userId, sourceIdea: idea,
+    orgId: ctx.orgId, createdBy: ctx.userId, sourceIdea: idea,
   })
   if (existing.length) {
     return Response.json({
@@ -91,7 +91,7 @@ export async function POST(req) {
         const ep = String(i + 1).padStart(2, '0')
         const post = await postDB.createPost({
           orgId: ctx.orgId,
-          ownerUserId: ctx.userId,
+          createdBy: ctx.userId,
           visibility,
           category,
           title: `${seriesName} EP.${ep}: ${p.title.trim()}`,
@@ -119,7 +119,7 @@ export async function POST(req) {
   try {
     const post = await postDB.createPost({
       orgId: ctx.orgId,
-      ownerUserId: ctx.userId,
+      createdBy: ctx.userId,
       visibility,
       category,
       title: aiTitle,

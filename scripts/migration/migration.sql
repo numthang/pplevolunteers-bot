@@ -1791,3 +1791,63 @@ BEGIN
      AND NOT EXISTS (SELECT 1 FROM public.kanban_card_assignees a WHERE a.card_id = c.id);
   RETURN NULL;
 END $$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 2026-09-03 (รอบสาม) · เฟส C — posts: ยุบ `owner_user_id` ให้เป็นรูปเดียวกับอีก 2 ระบบ
+--
+-- ที่มา: แผน "ยุบ owner_user_id ทิ้งทั้งระบบ" (เฟส A/B ลงไปแล้ว)
+--   `post_episodes.owner_user_id` **ไม่เคยถูก UPDATE ที่ไหนในโค้ดเลย** → ค่าที่อยู่ในนั้นคือ
+--   "คนสร้าง" เสมอ แต่ชื่อคอลัมน์อ่านเหมือน "ผู้รับผิดชอบ" → `SOURCE_SQL.post` (web/db/kanban/links.js)
+--   ก็อปค่านี้ลงช่องเจ้าภาพของการ์ด kanban ทำให้ **คนนำเข้ากลายเป็นผู้รับผิดชอบทุกใบเงียบๆ**
+--
+-- หลังรอบนี้ทั้ง 3 ระบบมีรูปเดียวกัน:
+--   <entity>.created_by (คนสร้าง · ไม่เปลี่ยนตลอดชีวิตแถว) + ตาราง <entity>_assignees (ผู้รับผิดชอบ หลายคน เท่ากันหมด)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+ALTER TABLE post_episodes RENAME COLUMN owner_user_id TO created_by;
+
+COMMENT ON COLUMN post_episodes.created_by IS
+  'คนสร้างโพสต์ — ไม่เปลี่ยนตลอดชีวิตแถว · ให้สิทธิ์ลบ/เก็บเข้ากรุ/เห็นร่างส่วนตัว '
+  '⛔ ไม่ใช่ "ผู้รับผิดชอบ" — ผู้รับผิดชอบอยู่ตาราง post_assignees';
+
+CREATE TABLE IF NOT EXISTS post_assignees (
+  org_id      integer     NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  episode_id  bigint      NOT NULL REFERENCES post_episodes(id) ON DELETE CASCADE,
+  user_id     integer     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  assigned_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (episode_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_post_assignees_user ON post_assignees (user_id);
+
+COMMENT ON TABLE post_assignees IS
+  'ผู้รับผิดชอบงานสื่อ — หลายคนได้ ไม่มีหัวหน้า ทุกคนเท่ากัน '
+  '⛔ เขียนผ่าน web/lib/postAssign.js ทางเดียวเท่านั้น (ต้อง sync สำเนาลง kanban_card_assignees ทุกครั้ง)';
+
+-- ── ของเก่าบนการ์ด kanban ────────────────────────────────────────────────────
+-- ⛔ **ห้าม seed `post_assignees` จาก `created_by`** — นั่นคือความผิดพลาดตัวเดิมที่งานนี้มาแก้
+--    โพสต์เก่าจะกลายเป็น "ยังไม่มีผู้รับผิดชอบ" อย่างซื่อสัตย์ รอคนกดรับจริง (เฟส A ทำให้ไม่แพงแล้ว)
+--
+-- แต่ต้องแยก 2 กองก่อนล้าง (dev clone ของ prod 2026-09-03: 968 vs 1):
+--   user_id = created_by  → ค่าที่ก็อปมาอัตโนมัติ ไม่ใช่การตัดสินใจของใคร → **ทิ้ง**
+--   user_id ≠ created_by  → มีคนกด "รับงาน/มอบหมาย" บนบอร์ดจริง → **ยกขึ้นเป็นความจริงที่ต้นทาง**
+INSERT INTO post_assignees (org_id, episode_id, user_id, assigned_at)
+SELECT p.org_id, p.id, a.user_id, a.assigned_at
+  FROM kanban_card_assignees a
+  JOIN kanban_card_links l ON l.card_id = a.card_id AND l.entity_type = 'post'
+  JOIN post_episodes p     ON p.id = l.entity_id
+ WHERE a.user_id IS DISTINCT FROM p.created_by
+   AND p.org_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+-- ⭐ trigger `trg_kanban_assignees_clamp` (DEFERRABLE) จะดันการ์ดที่เหลือ 0 คนกลับกอง "รอทำ"
+--    ให้เองตอน COMMIT — ตรงนี้จึงลบได้ตรงๆ ไม่ต้อง UPDATE status_type เอง
+DELETE FROM kanban_card_assignees a
+ USING kanban_card_links l, post_episodes p
+ WHERE l.card_id = a.card_id AND l.entity_type = 'post' AND p.id = l.entity_id
+   AND NOT EXISTS (SELECT 1 FROM post_assignees pa
+                    WHERE pa.episode_id = p.id AND pa.user_id = a.user_id);
+
+COMMIT;

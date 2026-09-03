@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T06:39:59.918Z
-> Files: 1110 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T08:39:57.987Z
+> Files: 1113 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -538,6 +538,7 @@
 - `kanbanBot.mjs` — smoke test ฝั่งบอทของ kanban ก้อน 2 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~956 tok)
 - `kanbanCards.mjs` — smoke test ชั้น DB ของ kanban ก้อน 1 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1827 tok)
 - `kanbanLabels.mjs` — smoke test ชั้น DB ของ "คลังป้าย" kanban — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1398 tok)
+- `kanbanPostSync.mjs` — สโมค: ตะเข็บ post_assignees ↔ การ์ด kanban (เฟส C) (~1140 tok)
 
 ## scripts/social/
 
@@ -572,7 +573,7 @@
 - `i18n.js` — services/i18n.js — ระบบแปลภาษาของ bot (~582 tok)
 - `linkToComment.js` — แยกลิงก์ออกจาก caption (~987 tok)
 - `meilisearch.js` — INDEX_NAME: getClient, initMeilisearch, isReady + 5 more (~1182 tok)
-- `metaApi.js` — ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห (~11868 tok)
+- `metaApi.js` — ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห (~12432 tok)
 - `newsShare.js` — ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js) (~2180 tok)
 - `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~3582 tok)
 - `postsRetention.js` — services/postsRetention.js — เก็บกวาดไฟล์สื่อของ posts/ตะกร้าที่ "หมดหน้าที่แล้ว" (~831 tok)
@@ -1360,6 +1361,10 @@
 ## web/app/api/posts/[id]/ai-suggestions/
 
 - `route.js` — GET /api/posts/[id]/ai-suggestions — ข้อเสนอ AI ที่เคยขอไว้กับโพสต์นี้ (ใหม่สุดขึ้นก่อน) (~522 tok)
+
+## web/app/api/posts/[id]/assign/
+
+- `route.js` — เป้าหมายของคำสั่ง — ไม่ส่ง userId มา = ตัวเอง (~676 tok)
 
 ## web/app/api/posts/[id]/jobs/
 
@@ -2230,6 +2235,7 @@
 - `platformActiveOrg.js` — web/lib/platformActiveOrg.js — active org ต่อ session (เก็บใน cookie 'platform_org') (~234 tok)
 - `platformAuth.js` — web/lib/platformAuth.js — server helper สำหรับ platform session (คู่กับ lib/auth.js ของ PPLE) (~166 tok)
 - `platformSignIn.js` — web/lib/platformSignIn.js — client helper: trigger NextAuth (platform instance) แบบ manual (~441 tok)
+- `postAssign.js` — มอบหมาย / ถอนตัว งานสื่อ — **ทางเดียวที่ระบบอนุญาตให้เปลี่ยนผู้รับผิดชอบโพสต์** (~860 tok)
 - `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~1705 tok)
 - `postsAiQuota.js` — โควตา AI ต่อคนต่อวัน (grill ข้อ 13) — key เดียวของโปรเจกต์ ต้องกันบิลพุ่งจากสมาชิกหลักพัน (~594 tok)
 - `postsGuard.js` — postsGuard — ด่านเดียวที่ route ของ posts ใช้โหลด context + ตัดสินสิทธิ์ (~841 tok)

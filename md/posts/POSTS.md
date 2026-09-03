@@ -29,6 +29,8 @@
 ## 🔑 แนวคิดหลัก
 
 - **Core term:** `post` · **1 โพสต์ = 1 แถวใน `post_episodes`** ยืนเดี่ยว ไม่มีชุด/ลำดับตอน
+  (ชื่อตารางเป็นซากจากยุคที่มี `post_series` ซึ่งทิ้งไปแล้ว — **ไม่ rename** เคาะ 2026-09-03
+  เพราะ 315 จุดแลกกับศูนย์ประโยชน์ · ตารางลูกทุกตัวจึงใช้คีย์ `episode_id` รวมทั้ง `post_assignees`)
   จัดกลุ่มด้วยคอลัมน์ `category` (1 โพสต์ 1 หมวด) — ⛔ แนวคิด series ถูกทิ้งแล้ว 2026-07-29 เย็น ดู §Data model
 - **2 โหมดความเป็นเจ้าของ** — ต้องออกแบบตั้งแต่แรก ห้ามไปเติมทีหลัง:
   - `personal` — ร่างส่วนตัว เจ้าของเห็นคนเดียว (เช่น จุดยืนการเมือง/ค่าตอบแทน ที่ยังไม่พร้อมให้ทีมเห็น)
@@ -193,7 +195,8 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 
 | ตาราง | คอลัมน์หลัก |
 |---|---|
-| `post_episodes` | `org_id` · `owner_user_id` · `visibility` (`personal`/`org`) · **`category`** (varchar ว่างได้ = ยังไม่จัดหมวด) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote`) · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "ร่างใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `last_edited_by` · `updated_at` (ใช้ทำ optimistic lock) · archived_at |
+| `post_episodes` | `org_id` · **`created_by`** (คนสร้าง — เดิมชื่อ `owner_user_id` เปลี่ยน 2026-09-03 เฟส C · ⛔ ไม่ใช่ผู้รับผิดชอบ) · `visibility` (`personal`/`org`) · **`category`** (varchar ว่างได้ = ยังไม่จัดหมวด) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote`) · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "ร่างใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `last_edited_by` · `updated_at` (ใช้ทำ optimistic lock) · archived_at |
+| `post_assignees` | **ผู้รับผิดชอบงานสื่อ** (เฟส C 2026-09-03) · `org_id` · `episode_id` · `user_id` · `assigned_at` · PK `(episode_id, user_id)` — หลายคน ไม่มีหัวหน้า ทุกคนเท่ากัน · ⛔ เขียนผ่าน `web/lib/postAssign.js` ทางเดียว (ต้อง sync สำเนาลง `kanban_card_assignees` ทุกครั้ง) · ร่าง `personal` ไม่มีแถวในตารางนี้เลย · กติกาเต็มที่ `md/kanban/KANBAN.md §กติกา "คน"` |
 | `post_episode_media` | `episode_id` · `kind` (`upload`/`quote`) · `path` · `sort_order` · **`quote_text` · `quote_style` · `bg_path`** (เก็บ params ไม่ใช่แค่ PNG → แก้ข้อความแล้ว render ใหม่ได้) · added_by |
 | `post_revisions` | `episode_id` · title · body · `edited_by_user_id` (NULL = คนที่เข้ามาทางลิงก์) · `edited_by_name` |
 | `post_review_links` | `token` (≥32 bytes) · **`episode_id`** (1 ลิงก์ = 1 ตอน — แก้จาก series_id 2026-07-29) · created_by · `can_edit` · expires_at · revoked_at · uses |

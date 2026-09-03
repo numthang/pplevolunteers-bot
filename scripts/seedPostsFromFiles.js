@@ -50,7 +50,7 @@ function parseSeries(text) {
 
 async function upsert(ep, category) {
   const { rows: found } = await pool.query(
-    `SELECT id, title, body FROM post_episodes WHERE org_id = $1 AND owner_user_id = $2 AND title = $3 LIMIT 1`,
+    `SELECT id, title, body FROM post_episodes WHERE org_id = $1 AND created_by = $2 AND title = $3 LIMIT 1`,
     [ORG_ID, OWNER_USER_ID, ep.title]
   );
 
@@ -72,7 +72,7 @@ async function upsert(ep, category) {
   // สร้างใหม่ + snapshot แรก (เหมือน createPost() ฝั่งเว็บ)
   const { rows } = await pool.query(
     `INSERT INTO post_episodes
-       (org_id, owner_user_id, visibility, category, title, body, format, source_idea, created_via, status, last_edited_by)
+       (org_id, created_by, visibility, category, title, body, format, source_idea, created_via, status, last_edited_by)
      VALUES ($1, $2, 'personal', $3, $4, $5, 'text', $6, 'manual', 'draft', $2)
      RETURNING id`,
     [ORG_ID, OWNER_USER_ID, category, ep.title, ep.body, ep.sourceIdea]

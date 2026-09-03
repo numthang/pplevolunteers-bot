@@ -9,7 +9,7 @@
 //                  (ใช้ post_episodes.last_edited_by เป็นตัวบอกว่าเนื้อหาที่อยู่ใน DB ตอนนี้เป็นของใคร
 //                   ถ้าเดาจาก revision ล่าสุดจะจดชื่อผิด — snapshot ของ B ถูกจดเป็นของ A)
 import pool from '../index.js'
-import { mirrorEntityCard, deleteCardForEntity } from '../kanban/links.js'
+import { mirrorEntityCard, deleteCardForEntity, syncPostCardPeople } from '../kanban/links.js'
 import { displayNameSql } from '../displayName.js'
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
@@ -20,7 +20,7 @@ const LOCK = `to_char(e.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.
 const REVISION_INTERVAL_MS = 15 * 60 * 1000
 
 const COLS = `
-  e.id, e.org_id, e.owner_user_id, e.visibility, e.category, e.title, e.body, e.bodies, e.format,
+  e.id, e.org_id, e.created_by, e.visibility, e.category, e.title, e.body, e.bodies, e.format,
   e.source_idea, e.created_via, e.status, e.approved_by, e.approved_by_name, e.approved_at,
   e.last_edited_by, e.visibility_changed_at, e.archived_at, e.created_at, e.updated_at,
   e.guild_id, e.channel_id, e.channel_name,   -- มีค่า = มาจากตะกร้าดิสฯ (badge + ลิงก์กลับเข้า Discord)
@@ -29,7 +29,7 @@ const COLS = `
   --    (อยู่ในเทมเพลตสตริง — ห้ามใส่ backtick ในคอมเมนต์ SQL เด็ดขาด มันปิดสตริง)
   ${LOCK} AS lock_token`
 
-const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username)`
+const CREATOR_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username)`
 
 /**
  * โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org"
@@ -38,7 +38,7 @@ const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)
  */
 export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includePosted = false, includeAllPersonal = false, source = null, limit = 200, offset = 0 } = {}) {
   const params = [orgId, userId]
-  let where = `e.org_id = $1 AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`
+  let where = `e.org_id = $1 AND (e.visibility = 'org' OR e.created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})`
   if (!includeArchived) where += ` AND e.archived_at IS NULL`
   // "โพสต์แล้วครบทุกช่องที่คิว" (เผยแพร่จบ ไม่มีคิวค้าง) = ซ่อนจากฟีดหลักโดย default (เคาะ 2026-08-08)
   // เช็คจาก post_social_history ไม่ใช่ status ของ e — published/queued เป็น derived state คนละแกนกับ draft/review/approved
@@ -69,7 +69,7 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
   params.push(offset)
   const offsetIdx = params.length
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name,
+    `SELECT ${COLS}, ${CREATOR_NAME} AS creator_name,
             (SELECT COUNT(*) FROM post_episode_media m WHERE m.episode_id = e.id) AS media_count,
             (SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status = 'done') AS published_count,
             (SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running')) AS queued_count,
@@ -88,7 +88,7 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
                   OR lower(m.source_url) LIKE '%.png%' OR lower(m.source_url) LIKE '%.webp%')
               ORDER BY m.sort_order, m.id LIMIT 1) AS thumb_source_url
        FROM post_episodes e
-       LEFT JOIN users u ON u.id = e.owner_user_id
+       LEFT JOIN users u ON u.id = e.created_by
        LEFT JOIN dc_guilds g ON g.guild_id = e.guild_id
       WHERE ${where}
       ORDER BY e.updated_at DESC
@@ -115,7 +115,7 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
       --    ชิปจะบอก "ข่าว (200)" แล้วกดเข้าไปเจอ 3 ใบ (หรือกลับกัน)
       WHERE e.org_id = $1 AND e.archived_at IS NULL AND e.category IS NOT NULL
         AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
-        AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
+        AND (e.visibility = 'org' OR e.created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
       GROUP BY e.category
       ORDER BY MAX(e.updated_at) DESC`,
     params
@@ -136,7 +136,7 @@ export async function countPostsBySource(orgId, userId, { includeAllPersonal = f
        COUNT(*) FILTER (WHERE e.created_via = 'backfill')::int AS backfill_count
      FROM post_episodes e
      WHERE e.org_id = $1 AND e.archived_at IS NULL
-       AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
+       AND (e.visibility = 'org' OR e.created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
     [orgId, userId]
   )
   const r = rows[0]
@@ -157,7 +157,7 @@ export async function countPostsByStatus(orgId, userId, { includeAllPersonal = f
        FROM post_episodes e
       WHERE e.org_id = $1 AND e.archived_at IS NULL
         AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
-        AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
+        AND (e.visibility = 'org' OR e.created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
       GROUP BY e.status`,
     params
   )
@@ -186,7 +186,7 @@ export async function countPostsByState(orgId, userId, { includeAllPersonal = fa
      FROM post_episodes e
      WHERE e.org_id = $1
        AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
-       AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}`,
+       AND (e.visibility = 'org' OR e.created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}`,
     params
   )
   const r = rows[0]
@@ -197,9 +197,9 @@ export async function getPost(id) {
   const { rows } = await pool.query(
     // org_name — ชื่อองค์กรเจ้าของโพสต์ ใช้เป็นตัวเลือกชื่อผู้พูดในการ์ดคำคม
     // (posts เป็น org-native ไม่มี guild เสมอไป → ห้ามดึงชื่อจาก dc_guilds)
-    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name, o.name AS org_name
+    `SELECT ${COLS}, ${CREATOR_NAME} AS creator_name, o.name AS org_name
        FROM post_episodes e
-       LEFT JOIN users u ON u.id = e.owner_user_id
+       LEFT JOIN users u ON u.id = e.created_by
        LEFT JOIN orgs o ON o.id = e.org_id
       WHERE e.id = $1`,
     [id]
@@ -234,20 +234,20 @@ export async function getPostPulse(id) {
  * ได้ 20 ตอนจาก 4 ครั้งทั้งที่ตั้งใจสร้างชุดเดียว · เทียบด้วย `source_idea` เพราะเป็นข้อความดิบที่ user พิมพ์
  * (ตรงกันเป๊ะ = กดปุ่มซ้ำด้วยข้อความเดิม) · จำกัดหน้าต่างเวลาไว้ ไม่งั้นตั้งใจสร้างใหม่วันหลังจะโดนบล็อก
  */
-export async function findRecentAiPosts({ orgId, ownerUserId, sourceIdea, withinMinutes = 15 }) {
+export async function findRecentAiPosts({ orgId, createdBy, sourceIdea, withinMinutes = 15 }) {
   if (!sourceIdea) return []
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name
+    `SELECT ${COLS}, ${CREATOR_NAME} AS creator_name
        FROM post_episodes e
-       LEFT JOIN users u ON u.id = e.owner_user_id
-      WHERE e.owner_user_id = $1
+       LEFT JOIN users u ON u.id = e.created_by
+      WHERE e.created_by = $1
         AND e.org_id IS NOT DISTINCT FROM $2
         AND e.source_idea = $3
         AND e.created_via = 'ai'
         AND e.archived_at IS NULL
         AND e.created_at > now() - ($4 || ' minutes')::interval
       ORDER BY e.id ASC`,
-    [ownerUserId, orgId, sourceIdea, String(withinMinutes)]
+    [createdBy, orgId, sourceIdea, String(withinMinutes)]
   )
   return rows
 }
@@ -258,16 +258,16 @@ export async function findRecentAiPosts({ orgId, ownerUserId, sourceIdea, within
  * `originalRevision` = ฉบับที่ "มาก่อน" เนื้อหาที่กำลังบันทึก — ใช้ตอน AI เรียบเรียง (`ai/compose`)
  * เพื่อเก็บข้อความดิบที่ user พิมพ์เองไว้เป็น revision แรก แล้วค่อยตามด้วยฉบับ AI
  */
-export async function createPost({ orgId, ownerUserId, visibility = 'personal', category = null, title = null, body = null, format = null, sourceIdea = null, createdVia = 'manual', originalRevision = null }) {
+export async function createPost({ orgId, createdBy, visibility = 'personal', category = null, title = null, body = null, format = null, sourceIdea = null, createdVia = 'manual', originalRevision = null }) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const { rows } = await client.query(
       `INSERT INTO post_episodes
-         (org_id, owner_user_id, visibility, category, title, body, format, source_idea, created_via, last_edited_by)
+         (org_id, created_by, visibility, category, title, body, format, source_idea, created_via, last_edited_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $2)
        RETURNING id`,
-      [orgId, ownerUserId, visibility, category, title, body, format, sourceIdea, createdVia]
+      [orgId, createdBy, visibility, category, title, body, format, sourceIdea, createdVia]
     )
     if (originalRevision && (originalRevision.title || originalRevision.body)) {
       // ถอยเวลา 1 วินาที — ทั้ง 2 แถวอยู่ transaction เดียวจึงได้ now() เท่ากันเป๊ะ
@@ -275,26 +275,26 @@ export async function createPost({ orgId, ownerUserId, visibility = 'personal', 
       await client.query(
         `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id, created_at)
          VALUES ($1, $2, $3, $4, now() - interval '1 second')`,
-        [rows[0].id, originalRevision.title ?? null, originalRevision.body ?? null, ownerUserId]
+        [rows[0].id, originalRevision.title ?? null, originalRevision.body ?? null, createdBy]
       )
     }
     await client.query(
       `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id) VALUES ($1, $2, $3, $4)`,
-      [rows[0].id, title, body, ownerUserId]
+      [rows[0].id, title, body, createdBy]
     )
     await client.query('COMMIT')
 
     // ⭐ งานสื่อต้องมีการ์ดใน kanban **ทุกใบ รวมร่างส่วนตัว** (user กลับคำ 2026-08-24 รอบสอง)
     //    เดิมข้ามของ personal — เปิดแล้วเพราะเจ้าของอยากเห็นร่างตัวเองบนบอร์ดตัวเอง
     //    ⚠️ ไม่ใช่การเปิดให้คนอื่นเห็น — ด่านตอนอ่าน (statusSql.js visibleLinkSql) ยอมให้เฉพาะ
-    //       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดเจ้าของคนเดียว
+    //       `visibility='org'` หรือ `created_by = คนดู` → ร่างส่วนตัวขึ้นบอร์ดเจ้าของคนเดียว
     //    fire-and-forget — kanban พังต้องไม่ทำให้เขียนโพสต์ไม่ได้ (ตาข่ายคือ reconcileEntityCards)
-    //    ⚠️ assigneeIds = คนสร้าง เป็นพฤติกรรมเดิมที่ยกมาทั้งดุ้นตอนยุบ owner_user_id (เฟส B)
-    //       **มันผิดอยู่** — คนนำเข้า ≠ ผู้รับผิดชอบ · เฟส C (post_assignees) จะเลิกก็อปลงมา
+    //    ⛔ **การ์ดเกิดมาไร้ผู้รับผิดชอบเสมอ** (เฟส C 2026-09-03) — คนสร้าง ≠ ผู้รับผิดชอบ
+    //       ห้ามใส่ `assigneeIds: [createdBy]` กลับมาอีก · คนจะรับงานเองผ่าน lib/postAssign.js
     mirrorEntityCard(orgId, 'post', {
       id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`,
-      assigneeIds: ownerUserId ? [ownerUserId] : [],
-    }, ownerUserId).catch(() => {})
+      assigneeIds: [],
+    }, createdBy).catch(() => {})
 
     return await getPost(rows[0].id)
   } catch (err) {
@@ -418,7 +418,7 @@ export async function renameCategory(orgId, userId, from, to, { includeAllPerson
     `UPDATE post_episodes
         SET category = $4
       WHERE org_id = $1 AND category = $3
-        AND (visibility = 'org' OR owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
+        AND (visibility = 'org' OR created_by = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
     [orgId, userId, from, to || null]
   )
   return rowCount
@@ -491,10 +491,16 @@ export async function promoteToOrg(id, byUserId) {
   //    ปลอดภัยที่จะเรียกซ้ำ — mirrorEntityCard คืนใบเดิมถ้ามีแล้ว (links.js:234)
   //    สิ่งที่เปลี่ยนจริงตอน promote คือ **ใครเห็นการ์ด** ไม่ใช่ว่ามีการ์ดไหม (visibleLinkSql อ่านสด)
   if (post?.visibility === 'org') {
+    // ⭐ **จุดเดียวที่ seed ผู้รับผิดชอบจากคนสร้างได้** (เฟส C เคาะ 2026-09-03)
+    //    ร่างส่วนตัว = เขาลงมือเขียนเอง → ตอนเปิดให้ทีมเห็น เขาคือแม่งานจริง ไม่ใช่ "คนนำเข้า"
+    //    ต่างจากโพสต์ที่เกิดจากตะกร้าดิสฯ/import ซึ่งคนสร้างเป็นแค่คนกดปุ่ม
+    if (post.created_by) await addPostAssignee(post.id, post.org_id, post.created_by)
+    // การ์ดมีอยู่ก่อนแล้วเป็นปกติ (ร่างส่วนตัวก็มีการ์ด) → mirror ไม่ได้เขียนอะไร ต้อง sync ต่อท้ายเสมอ
+    // ⚠️ ต้องเรียงหลัง mirror ไม่ใช่ยิงคู่ขนาน — sync ที่วิ่งก่อนการ์ดเกิด จะเจอ "ไม่มีการ์ด" แล้วเงียบไป
     mirrorEntityCard(post.org_id, 'post', {
       id: post.id, title: post.title || `งานสื่อ #${post.id}`,
-      assigneeIds: post.owner_user_id ? [post.owner_user_id] : [],   // ⚠️ เฟส C จะเลิกก็อปคนสร้างลงมา
-    }, byUserId).catch(() => {})
+      assigneeIds: post.created_by ? [post.created_by] : [],
+    }, byUserId).then(() => syncPostCardPeople(post.id)).catch(() => {})
   }
   return post
 }
@@ -529,7 +535,7 @@ export async function saveRevisionOnly(episodeId, { title, body, editedByUserId 
  * ตัวเลขบนการ์ด "งานสื่อ" หน้าแรก — **นับทุกอย่างที่คนนี้เห็นได้ ไม่แบ่ง personal/org**
  * (user เคาะ 2026-08-30: "รอทำ ทั้งส่วนตัว/องค์กร")
  *
- * ⭐ เงื่อนไขการมองเห็นต้องเหมือน listPosts เป๊ะ — `visibility = 'org' OR owner_user_id = ฉัน`
+ * ⭐ เงื่อนไขการมองเห็นต้องเหมือน listPosts เป๊ะ — `visibility = 'org' OR created_by = ฉัน`
  *    เพราะสองเลขนี้ลิงก์ไป /posts?status=draft และ ?status=review ซึ่ง `filter` ค่าตั้งต้นเป็น 'all'
  *    = ไม่ส่ง visibility ไปเลย → API คืน org + personal ของฉัน · เงื่อนไขต่างเมื่อไหร่ = เลขไม่ตรงหน้า
  * ⛔ **ห้ามใส่ `visibility = 'org'` กลับมา** — เคยกรองไว้แล้วร่างส่วนตัวหายจากหน้าแรกทั้งหมด
@@ -558,7 +564,7 @@ export async function countByStatus(orgId, userId = null) {
             COUNT(*) FILTER (WHERE ${POSTED} AND ${RECENT})::int                            AS posted
        FROM post_episodes e
       WHERE e.org_id = $1
-        AND (e.visibility = 'org' OR e.owner_user_id = $2)
+        AND (e.visibility = 'org' OR e.created_by = $2)
         AND e.archived_at IS NULL
         AND e.created_via <> 'backfill'
         AND e.channel_id IS NULL`,
@@ -571,4 +577,44 @@ export async function countByStatus(orgId, userId = null) {
     review: r.review || 0,                  // → /posts?status=review
     posted: r.posted || 0,                  // → /posts?state=posted
   }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ผู้รับผิดชอบงานสื่อ (post_assignees) — เฟส C 2026-09-03
+ *
+ * ⛔ **ห้ามเรียก add/remove ตรงๆ จาก route ใดๆ** — ต้องผ่าน `web/lib/postAssign.js`
+ *    เพราะการเปลี่ยนผู้รับผิดชอบต้อง sync สำเนาลง `kanban_card_assignees` ทุกครั้ง
+ *    ไม่งั้นคนในหน้า /posts กับบนบอร์ด kanban เห็นคนละชุด (บั๊กเดิมที่งานนี้มาแก้)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** @returns {Promise<{user_id:number, discord_id:string|null, name:string, assigned_at:Date}[]>} */
+export async function getPostAssignees(episodeId, orgId) {
+  const { rows } = await pool.query(
+    `SELECT a.user_id, a.assigned_at, u.discord_id,
+            COALESCE(${displayNameSql('u', '$2')}, a.user_id::text) AS name
+       FROM post_assignees a
+       LEFT JOIN users u ON u.id = a.user_id
+      WHERE a.episode_id = $1
+      ORDER BY a.assigned_at, a.user_id`,
+    [episodeId, orgId]
+  )
+  return rows.map(r => ({ ...r, user_id: Number(r.user_id) }))
+}
+
+/** ⛔ ห้ามเรียกตรงๆ จาก route — ใช้ `lib/postAssign.js` */
+export async function addPostAssignee(episodeId, orgId, userId) {
+  await pool.query(
+    `INSERT INTO post_assignees (org_id, episode_id, user_id)
+     VALUES ($1, $2, $3) ON CONFLICT (episode_id, user_id) DO NOTHING`,
+    [orgId, episodeId, userId]
+  )
+}
+
+/** ⛔ ห้ามเรียกตรงๆ จาก route — ใช้ `lib/postAssign.js` */
+export async function removePostAssignee(episodeId, userId) {
+  await pool.query(
+    `DELETE FROM post_assignees WHERE episode_id = $1 AND user_id = $2`,
+    [episodeId, userId]
+  )
 }

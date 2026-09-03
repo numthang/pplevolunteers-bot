@@ -136,15 +136,15 @@ export async function deleteCardForEntity(entityType, entityId) {
 }
 
 /**
- * ⭐ ผู้รับผิดชอบของการ์ดที่ผูกเคส = **สำเนาของ `case_assignees`** — ตัวนี้คือที่เดียวที่เขียนสำเนานั้น
+ * ⭐ ผู้รับผิดชอบของการ์ดที่ผูกของจริง = **สำเนาของ `<entity>_assignees`** — ที่เดียวที่เขียนสำเนานั้น
  *
  * ทำไมไม่อ่านสดเหมือนสถานะ (กฎเหล็กหัวไฟล์): ผู้รับผิดชอบถูกใช้เป็นตัวกรอง/ตัวนับของ listCards,
  * countCardStats และ isMyCard ทั้งฝั่ง SQL และฝั่ง client → อ่านสดข้ามตารางทุกจุด = รื้อทั้งโมดูล
  * ใช้ท่า **single writer + mirror ทันทีจังหวะเดียวกัน** แทน:
  *   `case_assignees` เป็นความจริงเสมอ · ใครจะเปลี่ยนคนต้องเขียนที่นั่นก่อน แล้วเรียกตัวนี้ทันที
  *
- * ⛔ ห้ามเขียน `kanban_card_assignees` ของการ์ดที่ผูกเคสจากที่อื่นอีก
- *    (ทางเข้าทั้งหมดต้องผ่าน `web/lib/caseAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว)
+ * ⛔ ห้ามเขียน `kanban_card_assignees` ของการ์ดที่ผูกของจริงจากที่อื่นอีก
+ *    (ทางเข้าทั้งหมดต้องผ่าน `web/lib/caseAssign.js` / `web/lib/postAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว)
  *
  * ⭐ เฟส B (2026-09-03) ทำให้ตัวนี้ **สั้นลงครึ่งหนึ่ง**: ไม่มีเจ้าภาพให้เลือกแล้ว sync เป็น "ชุด" ตรงๆ
  *    และไม่ต้อง clamp สถานะเอง — trigger `trg_kanban_assignees_clamp` ใน DB ทำให้ตอน COMMIT
@@ -154,13 +154,40 @@ export async function deleteCardForEntity(entityType, entityId) {
  *
  * @returns {Promise<boolean>} false = เคสนี้ไม่มีการ์ด (ยังไม่ถูก mirror) หรือทำไม่สำเร็จ
  */
-export async function syncCaseCardPeople(caseId) {
+export const syncCaseCardPeople = (caseId) => syncEntityCardPeople('case', caseId)
+
+/**
+ * ⭐ คู่แฝดฝั่งโพสต์ (เฟส C 2026-09-03) — สำเนาของ `post_assignees`
+ * ⛔ ทางเข้าทั้งหมดต้องผ่าน `web/lib/postAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว
+ */
+export const syncPostCardPeople = (episodeId) => syncEntityCardPeople('post', episodeId)
+
+/**
+ * ตัวจริงของทั้งสองตัวข้างบน — เขียนรวมกันเพราะ **ท่าเดียวกันเป๊ะ** ต่างแค่ตารางต้นทาง
+ * (เคยเป็นบทเรียนของโมดูลนี้เอง: logic clamp ที่ก็อปไว้ 2 ที่ เพี้ยนกันเงียบๆ จนต้องยกลง DB เฟส B)
+ */
+/**
+ * `bumpsBacklog` — มีคนรับแล้วให้ดันการ์ดออกจากกอง "รอทำ" เอง
+ *
+ * ⭐ **จริงเฉพาะฝั่งโพสต์** ไม่ใช่ความไม่สม่ำเสมอ: สถานะการ์ดที่ผูกเคสอ่านสดจาก `cases.status`
+ *    เสมอ (CASE_STATUS) คอลัมน์ `status_type` จึงไม่มีผลกับจอเลย · แต่โพสต์ที่ยัง `draft`
+ *    ทำให้ POST_STATUS คืน NULL โดยตั้งใจ = **kanban เป็นเจ้าของสถานะช่วงนั้นจริงๆ**
+ *    (ดูเหตุผลเต็มที่ statusSql.js §POST_STATUS) → ไม่ดันเอง = มอบหมายคนแล้วการ์ดยังค้าง "รอทำ"
+ *    ซึ่งเป็นพฤติกรรมที่ `cards.addAssignee` เคยทำให้อยู่แล้วก่อนเฟส C จะพาโพสต์มาเข้าประตูนี้
+ */
+const ASSIGNEE_SOURCE = {
+  case: { table: 'case_assignees',  key: 'case_id',    bumpsBacklog: false },
+  post: { table: 'post_assignees',  key: 'episode_id', bumpsBacklog: true },
+}
+
+async function syncEntityCardPeople(entityType, entityId) {
+  const src = ASSIGNEE_SOURCE[entityType]
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const { rows } = await client.query(
-      `SELECT card_id FROM kanban_card_links WHERE entity_type = 'case' AND entity_id = $1 FOR UPDATE`,
-      [caseId]
+      `SELECT card_id FROM kanban_card_links WHERE entity_type = $1 AND entity_id = $2 FOR UPDATE`,
+      [entityType, entityId]
     )
     if (!rows[0]) { await client.query('ROLLBACK'); return false }
     const cardId = Number(rows[0].card_id)
@@ -168,21 +195,29 @@ export async function syncCaseCardPeople(caseId) {
     await client.query(
       `DELETE FROM kanban_card_assignees a
         WHERE a.card_id = $1
-          AND NOT EXISTS (SELECT 1 FROM case_assignees ca
-                           WHERE ca.case_id = $2 AND ca.user_id = a.user_id)`,
-      [cardId, caseId]
+          AND NOT EXISTS (SELECT 1 FROM ${src.table} s
+                           WHERE s.${src.key} = $2 AND s.user_id = a.user_id)`,
+      [cardId, entityId]
     )
     await client.query(
       `INSERT INTO kanban_card_assignees (card_id, user_id, assigned_at)
-       SELECT $1, ca.user_id, ca.assigned_at FROM case_assignees ca WHERE ca.case_id = $2
+       SELECT $1, s.user_id, s.assigned_at FROM ${src.table} s WHERE s.${src.key} = $2
        ON CONFLICT DO NOTHING`,
-      [cardId, caseId]
+      [cardId, entityId]
     )
+    if (src.bumpsBacklog) {
+      await client.query(
+        `UPDATE kanban_cards SET status_type = 'doing', updated_at = now()
+          WHERE id = $1 AND status_type = 'backlog'
+            AND EXISTS (SELECT 1 FROM kanban_card_assignees a WHERE a.card_id = $1)`,
+        [cardId]
+      )
+    }
     await client.query('COMMIT')
     return true
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
-    console.error('[kanban] syncCaseCardPeople ล้มเหลว case', caseId, e.message)
+    console.error(`[kanban] syncEntityCardPeople ล้มเหลว ${entityType}`, entityId, e.message)
     return false
   } finally {
     client.release()
@@ -196,15 +231,16 @@ export async function syncCaseCardPeople(caseId) {
  *    เดิมกรองเฉพาะ 'org' ด้วยเหตุผล "กินเลข K ทิ้งเปล่า" — เหตุผลนั้นตกไปแล้ว เพราะการ์ดที่ผูก
  *    ของจริงโชว์เลขต้นทาง ไม่ได้โชว์ K-n ผลจริงคือแค่เลข K ของการบ้านธรรมดากระโดดถี่ขึ้น
  *    ⚠️ **ไม่ใช่การเปิดให้คนอื่นเห็น** — ด่านตอนอ่าน (statusSql.js visibleLinkSql) ยอมให้เฉพาะ
- *       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดของเจ้าของคนเดียว
+ *       `visibility='org'` หรือ `created_by = คนดู` → ร่างส่วนตัวขึ้นบอร์ดของเจ้าของคนเดียว
  *    ⛔ `archived_at IS NULL` ยังต้องอยู่ — โพสต์ที่เข้ากรุแล้วไม่ใช่งานค้าง
  *
  * ⭐ ผู้รับผิดชอบลากมาจากต้นทางเป็น **ชุด** (เฟส B — เดิมเลือกคนแรกเป็นเจ้าภาพแล้วที่เหลือเป็นคนช่วย)
  *      เคส  → `case_assignees` ทั้งชุด
- *      โพสต์ → `owner_user_id` ของโพสต์ 1 คน
- *              ⚠️ **นี่คือบั๊กที่เฟส C มาแก้** — ค่านั้นคือ "คนนำเข้า/คนสร้าง" ไม่ใช่ผู้รับผิดชอบ
- *              เฟส B คงพฤติกรรมเดิมไว้เพื่อไม่ให้ 2 เรื่องปนกัน · เฟส C จะเปลี่ยนเป็น `post_assignees`
- *              และเลิกก็อปคนสร้างลงมาตรงนี้
+ *      โพสต์ → `post_assignees` ทั้งชุด
+ *    ⛔ **ห้ามเอา `created_by` มาใส่ช่องผู้รับผิดชอบอีก** (เฟส C 2026-09-03 ตัดทิ้งไปแล้ว)
+ *       เดิมก็อป `p.owner_user_id` ลงมา = "คนนำเข้า" กลายเป็น "ผู้รับผิดชอบ" ทุกใบเงียบๆ
+ *       (176 ใบบน prod ที่ user ต้องไล่ถอนเอง) · โพสต์ที่ยังไม่มีใครรับต้องขึ้นว่า "ยังไม่มีคนรับ"
+ *       อย่างซื่อสัตย์ — ไม่แพงแล้วตั้งแต่เฟส A (งานไร้คนรับเลิกเป็น "ของทุกคน")
  */
 const SOURCE_SQL = {
   case: `SELECT c.id,
@@ -220,8 +256,9 @@ const SOURCE_SQL = {
 
   post: `SELECT p.id,
                 COALESCE(NULLIF(p.title, ''), 'งานสื่อ #' || p.id) AS title,
-                ARRAY_REMOVE(ARRAY[p.owner_user_id], NULL) AS assignee_ids,
-                p.owner_user_id AS created_by
+                ARRAY(SELECT a.user_id FROM post_assignees a
+                       WHERE a.episode_id = p.id ORDER BY a.assigned_at, a.user_id) AS assignee_ids,
+                p.created_by
            FROM post_episodes p
           WHERE p.org_id = $1 AND p.archived_at IS NULL
             AND NOT EXISTS (SELECT 1 FROM kanban_card_links l

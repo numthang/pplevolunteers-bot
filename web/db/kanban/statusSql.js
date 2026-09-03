@@ -80,7 +80,7 @@ export const LINK_JSON_SQL = `(
  *            ชื่อเรื่อง/รายละเอียดเป็น PII ของผู้ร้อง หลุดข้ามจังหวัดไม่ได้
  *   - โพสต์ → `visibility='personal'` = ของเจ้าของคนเดียว **คนอื่นห้ามเห็นเด็ดขาด**
  *            ⭐ ตั้งแต่ 2026-08-24 (รอบสอง) ร่างส่วนตัว **มีการ์ด** แล้ว → ท่อน
- *            `OR p.owner_user_id = $pUser` ข้างล่างเลิกเป็น dead code กลายเป็น**ด่านจริง**
+ *            `OR p.created_by = $pUser` ข้างล่างเลิกเป็น dead code กลายเป็น**ด่านจริง**
  *            ที่กันร่างส่วนตัวของคนอื่นไม่ให้โผล่บนบอร์ด · แก้ท่อนนั้นเมื่อไหร่ = รั่วทันที
  *
  * **fail closed**: ส่ง scope มาไม่ครบ → ซ่อนการ์ดที่ผูกทุกใบ (ยอมให้เห็นน้อยไป ไม่ยอมให้หลุด)
@@ -102,6 +102,6 @@ export function visibleLinkSql(pUser, pCases, pProvinces) {
            (l.entity_type = 'post' AND EXISTS (
               SELECT 1 FROM post_episodes p
                WHERE p.id = l.entity_id AND p.org_id = c.org_id AND p.archived_at IS NULL
-                 AND (p.visibility = 'org' OR p.owner_user_id = $${pUser}::int)))
+                 AND (p.visibility = 'org' OR p.created_by = $${pUser}::int)))
          ))`
 }

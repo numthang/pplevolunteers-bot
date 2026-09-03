@@ -70,7 +70,7 @@ const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`$
     // 8) invariant ที่ DB บังคับ: 1 ห้อง เปิดได้ใบเดียว
     let blocked = false;
     await pool.query(
-      `INSERT INTO post_episodes (org_id, owner_user_id, visibility, created_via, status, guild_id, channel_id)
+      `INSERT INTO post_episodes (org_id, created_by, visibility, created_via, status, guild_id, channel_id)
        VALUES (NULL, NULL, 'org', 'manual', 'draft', $1, $2)`, [GUILD, CH1]
     ).catch(err => { blocked = err.code === '23505'; });
     ok('DB บล็อกตะกร้าเปิดใบที่ 2 ของห้องเดียวกัน', blocked);

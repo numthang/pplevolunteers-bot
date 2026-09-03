@@ -26,17 +26,17 @@ const { mirrorEntityCardFromBot } = require('./kanbanCards');
  */
 async function createImportedPost({ guildId, addedByDiscordId, category = null, title, body, sourceIdea, channelId = null, channelName = null, createdVia = 'ai', createdAt = null }) {
   const orgId = await orgIdOfGuild(guildId);
-  const ownerUserId = await userIdByDiscord(addedByDiscordId);
+  const createdBy = await userIdByDiscord(addedByDiscordId);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO post_episodes
-         (org_id, owner_user_id, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, channel_name, last_edited_by, created_at)
+         (org_id, created_by, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, channel_name, last_edited_by, created_at)
        VALUES ($1, $2, 'org', $3, $4, $5, $6, $10, 'draft', $7, $8, $9, $2, COALESCE($11, NOW()))
        RETURNING *`,
-      [orgId, ownerUserId, category, title, body, sourceIdea, guildId, channelId, channelName, createdVia, createdAt]
+      [orgId, createdBy, category, title, body, sourceIdea, guildId, channelId, channelName, createdVia, createdAt]
     );
     const post = rows[0];
 
@@ -44,11 +44,11 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     await client.query(
       `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id, created_at)
        VALUES ($1, NULL, $2, $3, now() - interval '1 second')`,
-      [post.id, sourceIdea, ownerUserId]
+      [post.id, sourceIdea, createdBy]
     );
     await client.query(
       `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id) VALUES ($1, $2, $3, $4)`,
-      [post.id, title, body, ownerUserId]
+      [post.id, title, body, createdBy]
     );
 
     await client.query('COMMIT');
@@ -61,11 +61,12 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     //    ⭐ ของ backfill = งานเก่าที่จบไปแล้ว → การ์ดลงกอง "เสร็จแล้ว" ตั้งแต่สร้าง
     //       (ได้ผลจริงเพราะโพสต์เป็น draft → POST_STATUS คืน NULL → ใช้ค่านี้)
     mirrorEntityCardFromBot(orgId, 'post', {
-      // ⚠️ ownerUserId ของโพสต์ = "คนนำเข้า" ไม่ใช่ผู้รับผิดชอบจริง — คงพฤติกรรมเดิมไว้ก่อน
-      //    เฟส C (post_assignees) จะเลิกก็อปคนสร้างลงมาตรงนี้ · ต้องแก้คู่กับ SOURCE_SQL.post
-      id: post.id, title: post.title, assigneeIds: ownerUserId ? [ownerUserId] : [],
+      // ⛔ **การ์ดเกิดมาไร้ผู้รับผิดชอบเสมอ** (เฟส C 2026-09-03) — คนนำเข้า ≠ ผู้รับผิดชอบ
+      //    ⚠️ ผลข้างเคียงที่ตั้งใจ: `statusType: 'done'` ข้างล่างจะถูก createCard clamp กลับเป็น
+      //       'backlog' (ไม่มีคนรับ = ออกจาก backlog ไม่ได้) → ของ backfill ลงกอง "รอทำ" ไม่ใช่ "เสร็จ"
+      id: post.id, title: post.title, assigneeIds: [],
     }, {
-      createdBy: ownerUserId, guildId,
+      createdBy: createdBy, guildId,
       statusType: createdVia === 'backfill' ? 'done' : null,
     }).catch(() => {});
 

@@ -6236,6 +6236,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-03T06:35:05.821Z"
+    },
+    {
+      "id": "bug-350",
+      "timestamp": "2026-09-03T08:24:43.632Z",
+      "error_message": "Missing error handling in function()",
+      "file": "services/metaApi.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: /**; * publish container ของ Threads แบบทนจังหวะ",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-03T08:26:05.473Z"
+    },
+    {
+      "id": "bug-351",
+      "timestamp": "2026-09-03T08:31:18.498Z",
+      "error_message": "Missing error handling in function()",
+      "file": "services/metaApi.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T08:31:18.498Z"
     }
   ]
 }

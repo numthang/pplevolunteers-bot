@@ -67,15 +67,15 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
     return found.id;
   }
 
-  const ownerUserId = await userIdOf(addedBy);
+  const createdBy = await userIdOf(addedBy);
   const { rows } = await pool.query(
-    `INSERT INTO post_episodes (org_id, owner_user_id, visibility, channel_name, created_via, status, guild_id, channel_id)
+    `INSERT INTO post_episodes (org_id, created_by, visibility, channel_name, created_via, status, guild_id, channel_id)
      SELECT g.org_id, $3, 'org', $4, 'manual', 'draft', $1, $2
        FROM (SELECT $1::varchar AS gid) x
        LEFT JOIN dc_guilds g ON g.guild_id = x.gid
      ON CONFLICT DO NOTHING
      RETURNING id, org_id`,
-    [guildId, channelId, ownerUserId, channelName || null]
+    [guildId, channelId, createdBy, channelName || null]
   );
   if (rows[0]) {
     // ⭐ งานสื่อทุกใบต้องมีการ์ดใน kanban — ตะกร้าคือทางที่ใช้บ่อยที่สุดของงานสื่อฝั่งบอท
@@ -86,9 +86,9 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
     //    (LEFT JOIN dc_guilds ข้างบน) → ไม่มี org ก็ไม่มีกระดานให้ลง ข้ามไปเลย
     if (rows[0].org_id) {
       mirrorEntityCardFromBot(rows[0].org_id, 'post', {
-        // ⚠️ เฟส C จะเลิกก็อปคนสร้างลงเป็นผู้รับผิดชอบ (ดู postsImport.js ที่เดียวกัน)
-        id: rows[0].id, title: channelName || null, assigneeIds: ownerUserId ? [ownerUserId] : [],
-      }, { createdBy: ownerUserId, guildId }).catch(() => {});
+        // ⛔ **การ์ดเกิดมาไร้ผู้รับผิดชอบเสมอ** (เฟส C 2026-09-03) — คนเปิดตะกร้า ≠ ผู้รับผิดชอบ
+        id: rows[0].id, title: channelName || null, assigneeIds: [],
+      }, { createdBy: createdBy, guildId }).catch(() => {});
     }
     return rows[0].id;
   }

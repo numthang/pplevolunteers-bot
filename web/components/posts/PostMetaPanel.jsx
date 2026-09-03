@@ -3,18 +3,27 @@
 // การ์ด "รายละเอียด" คอลัมน์ขวา — หมวด / ห้องต้นทาง / สถานะ / เจ้าของ / การมองเห็น
 // แยกออกมาจาก PostMediaPanel ตอนยุบหน้าตะกร้าสื่อ (2026-07-30): แผงสื่อย้ายลงล่างกว้าง 100%
 // แต่ข้อมูลพวกนี้ยังต้องอยู่ข้างบนคู่กับการ์ด "เผยแพร่"
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, Users, Send, ThumbsUp, Undo2, Pencil, X } from 'lucide-react'
 import CategoryPicker from './CategoryPicker.jsx'
+// ⭐ ผู้รับผิดชอบงานสื่อ (เฟส C 2026-09-03) — ลอก block เดียวกับหน้าเคส (CaseMetaEditor.jsx)
+//    picker ตัวเดียวกับการ์ด kanban · ค้นคนใน org ผ่าน /api/kanban/people ตัวเดิม
+//    t ของกล่องนี้ต้องมาจาก namespace 'kanban' เพราะ string ภายในกล่องอยู่ที่นั่น
+import TagCombobox from '@/components/kanban/TagCombobox.jsx'
 
 const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
 const OUTLINE = 'border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
 
 export default function PostMetaPanel({ id }) {
+  const t = useTranslations('posts.meta')
+  const tk = useTranslations('kanban')   // string ภายใน TagCombobox (ผู้รับผิดชอบ) อยู่ namespace นี้
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [post, setPost] = useState(null)
   const [can, setCan] = useState({})
+  const [assignees, setAssignees] = useState([])
+  const [assignError, setAssignError] = useState('')
   const [statusBusy, setStatusBusy] = useState(false)
   const [promoteLoading, setPromoteLoading] = useState(false)
   const [promoteError, setPromoteError] = useState('')
@@ -34,6 +43,7 @@ export default function PostMetaPanel({ id }) {
       if (!res.ok) { setLoadError(data.error || 'โหลดโพสต์ไม่สำเร็จ'); setLoading(false); return }
       setPost(data.data.post)
       setCan(data.data.can || {})
+      setAssignees(data.data.assignees || [])
     } catch {
       setLoadError('โหลดโพสต์ไม่สำเร็จ')
     } finally {
@@ -53,6 +63,48 @@ export default function PostMetaPanel({ id }) {
     } catch { /* เลือกหมวดยังพิมพ์เองได้ แค่ไม่มีลิสต์เดิมให้เลือกซ้ำ */ }
   }
   useEffect(() => { loadCategories() }, [])
+
+  /** ค้นคนใน org ให้ picker ผู้รับผิดชอบ — endpoint เดิมที่หน้าเคสกับการ์ด kanban ใช้ */
+  const searchPeople = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) return []
+    const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.people || []).map((p) => ({
+      id: String(p.userId), name: p.name, sub: p.username ? `@${p.username}` : null,
+    }))
+  }, [])
+
+  /**
+   * combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน → ยิงตาม diff
+   * (ทรงเดียวกับ commitAssignees ใน CaseMetaEditor.jsx) ผ่าน /api/posts/[id]/assign
+   * ซึ่ง sync การ์ด kanban + audit ให้แล้วที่ lib/postAssign.js
+   */
+  async function commitAssignees(ids) {
+    setAssignError('')
+    const before = new Set(assignees.map((a) => String(a.user_id)))
+    const after = new Set(ids.map(String))
+    const added = [...after].filter((x) => !before.has(x))
+    const removed = [...before].filter((x) => !after.has(x))
+    try {
+      for (const [list, method] of [[added, 'POST'], [removed, 'DELETE']]) {
+        for (const uid of list) {
+          const res = await fetch(`/api/posts/${id}/assign`, {
+            method, headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: Number(uid) }),
+          })
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}))
+            setAssignError(d.error || t('assignFailed'))
+            return
+          }
+        }
+      }
+      load()
+    } catch {
+      setAssignError(t('assignFailed'))
+    }
+  }
 
   // กล่องแก้ไข/ลบชื่อหมวด — ปิดได้ 3 ทาง เหมือนกล่องอื่นในแอปนี้
   useEffect(() => {
@@ -208,9 +260,36 @@ export default function PostMetaPanel({ id }) {
         </div>
 
         <div className="flex justify-between">
-          <span className="text-warm-500 dark:text-disc-muted">เจ้าของ</span>
-          <span className="text-warm-900 dark:text-disc-text">{post.owner_name || '—'}</span>
+          <span className="text-warm-500 dark:text-disc-muted">{t('creatorLabel')}</span>
+          <span className="text-warm-900 dark:text-disc-text">{post.creator_name || '—'}</span>
         </div>
+
+        {/* ⛔ ร่างส่วนตัวไม่มีแถวนี้เลย — ไม่ใช่ "ว่าง" แต่เป็นของที่ยังไม่ใช่งานของทีม
+            (ฝั่ง API ก็ปฏิเสธ 400 ถ้ายิงมา — ดู lib/postAssign.js) */}
+        {post.visibility === 'org' && (
+          <div className="flex justify-between gap-3">
+            <span className="text-warm-500 dark:text-disc-muted shrink-0">{t('assigneesLabel')}</span>
+            {can.assign ? (
+              <div className="min-w-0 flex-1">
+                <TagCombobox
+                  type="multi_select"
+                  numericIds={false}
+                  source={{ mode: 'search', search: searchPeople }}
+                  placeholder={t('noAssignees')}
+                  value={assignees.map((a) => ({ id: String(a.user_id), name: a.name }))}
+                  onCommit={commitAssignees}
+                  onError={setAssignError}
+                  t={tk}
+                />
+              </div>
+            ) : (
+              <span className={`text-right ${assignees.length === 0 ? 'text-warm-500 dark:text-disc-muted' : 'text-warm-900 dark:text-disc-text'}`}>
+                {assignees.length === 0 ? t('noAssignees') : assignees.map((a) => a.name).join(', ')}
+              </span>
+            )}
+          </div>
+        )}
+        {assignError && <p className="text-sm text-red-500">{assignError}</p>}
         <div className="flex justify-between">
           <span className="text-warm-500 dark:text-disc-muted">การมองเห็น</span>
           <span className="text-warm-900 dark:text-disc-text">{post.visibility === 'org' ? 'องค์กร' : 'ส่วนตัว'}</span>

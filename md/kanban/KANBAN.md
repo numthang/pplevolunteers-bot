@@ -125,14 +125,23 @@
 |---|---|---|
 | cases | `created_by` | `case_assignees` ← แม่แบบ |
 | kanban_cards | `created_by` | `kanban_card_assignees` ← เฟส B (2026-09-03) |
-| post_episodes | `created_by` | `post_assignees` ← เฟส C (ยังไม่ทำ) |
+| post_episodes | `created_by` | `post_assignees` ← เฟส C (2026-09-03) |
 
 1. คอลัมน์ "คน" บนแถวหลัก **มีได้ตัวเดียวคือ `created_by`** = คนสร้าง ไม่เปลี่ยนตลอดชีวิตแถว
    ให้สิทธิ์ **ลบ/เก็บเข้ากรุ**
 2. ผู้รับผิดชอบอยู่ในตาราง `<entity>_assignees (…, user_id, assigned_at)` เสมอ — **หลายคน ไม่มีหัวหน้า**
-3. เขียนตารางนั้นผ่าน **service ตัวเดียว** (`caseAssign.js` · `postAssign.js` ของเฟส C)
+3. เขียนตารางนั้นผ่าน **service ตัวเดียว** (`web/lib/caseAssign.js` · `web/lib/postAssign.js`)
 4. ⛔ ไม่แตะ `dc_social_accounts.owner_user_id` / `post_assets.owner_user_id` — สองตัวนั้น `owner`
    แปลว่า "เจ้าของบัญชี/ไฟล์ส่วนตัว" จริงๆ ชื่อไม่ได้โกหก
+
+**⛔ ห้าม seed `<entity>_assignees` จาก `created_by`** — คนสร้าง ≠ ผู้รับผิดชอบ (นี่คือโรคที่งานนี้มาแก้)
+ของเก่าที่ยังไม่มีใครรับต้องขึ้นว่า "ยังไม่มีคนรับ" อย่างซื่อสัตย์ · **ข้อยกเว้นเดียว**: ตอนโพสต์สลับ
+`personal → org` (`promoteToOrg`) seed เจ้าของร่างได้ — เขาลงมือเขียนเอง ไม่ใช่แค่กดปุ่มนำเข้า
+
+**⭐ สถานะการ์ดตอนมีคนรับ ต่างกันระหว่างเคสกับโพสต์ (ตั้งใจ)** — `ASSIGNEE_SOURCE.bumpsBacklog`
+ใน `links.js`: การ์ดที่ผูก**เคส**อ่านสถานะสดจาก `cases.status` เสมอ คอลัมน์ `status_type` ไม่มีผลกับจอ ·
+แต่โพสต์ที่ยัง `draft` ทำให้ `POST_STATUS` คืน NULL โดยตั้งใจ = **kanban เป็นเจ้าของสถานะช่วงนั้นจริง**
+→ ฝั่งโพสต์จึงต้องดันการ์ดออกจาก backlog เองตอนมีคนรับ ไม่งั้นมอบหมายแล้วการ์ดค้างกอง "รอทำ"
 
 **invariant ที่ DB บังคับ (เดิมเป็น CHECK บนคอลัมน์ ตอนนี้เป็น trigger):**
 `ไม่มีผู้รับผิดชอบ ⟺ อยู่ได้แค่ backlog/cancelled` · บังคับด้วย 2 ตัวคู่กัน

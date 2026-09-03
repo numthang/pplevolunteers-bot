@@ -1,5 +1,6 @@
 import { postContext, editorName } from '@/lib/postsGuard.js'
 import { canEditPost, canWritePost, canDeletePost, canPublishPost, canApprove, canRequestChanges, canPromoteToOrg } from '@/lib/postsAccess.js'
+import { canAssignPost } from '@/lib/postAssign.js'
 import * as postDB from '@/db/posts/episodes.js'
 import { listMedia } from '@/db/posts/media.js'
 
@@ -21,8 +22,12 @@ export async function GET(req, { params }) {
       approve: canApprove(ctx.access),
       requestChanges: canRequestChanges(ctx.post, ctx.access, ctx.userId, ctx.policy),
       promote: canPromoteToOrg(ctx.post, ctx.access, ctx.userId, usage),
+      // มอบหมาย/ถอดคนอื่นได้ = เขียนโพสต์ใบนี้ได้ · ร่างส่วนตัวไม่มีผู้รับผิดชอบเลย (lib/postAssign.js)
+      assign: canAssignPost(ctx.post) && canWritePost(ctx.post, ctx.access, ctx.userId, ctx.policy),
     }
-    return Response.json({ success: true, data: { post: ctx.post, media, can } })
+    // ร่างส่วนตัวคืนลิสต์ว่างเสมอ — ไม่ใช่แค่ซ่อนช่อง แต่ของจริงก็ไม่มีแถวในตาราง
+    const assignees = canAssignPost(ctx.post) ? await postDB.getPostAssignees(ctx.post.id, ctx.orgId) : []
+    return Response.json({ success: true, data: { post: ctx.post, media, can, assignees } })
   } catch (error) {
     console.error('[GET /api/posts/[id]]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })

@@ -50,7 +50,7 @@ export async function POST(req) {
   const body = await req.json().catch(() => ({}))
   const visibility = body.visibility === 'org' ? 'org' : 'personal'
 
-  const draft = { visibility, owner_user_id: ctx.userId }
+  const draft = { visibility, created_by: ctx.userId }
   if (!canWritePost(draft, ctx.access, ctx.userId, ctx.policy)) {
     return Response.json({ error: 'ไม่มีสิทธิ์สร้างโพสต์' }, { status: 403 })
   }
@@ -58,7 +58,7 @@ export async function POST(req) {
   try {
     const post = await postDB.createPost({
       orgId: ctx.orgId,
-      ownerUserId: ctx.userId,
+      createdBy: ctx.userId,
       visibility,
       category: body.category || null,
       title: body.title || null,

@@ -1872,7 +1872,11 @@
       "list": "All posts",
       "new": "New post",
       "detail": "Edit post",
-      "library": "Image library"
+      "library": "Image library",
+      "creatorLabel": "Created by",
+      "assigneesLabel": "Assignees",
+      "noAssignees": "No assignees yet",
+      "assignFailed": "Could not change assignees"
     },
     "imageEditor": {
       "title": "Edit image",

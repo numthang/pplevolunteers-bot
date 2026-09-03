@@ -147,7 +147,7 @@ export async function getMedia(id) {
 export async function getMediaWithPost(id) {
   const { rows } = await pool.query(
     `SELECT m.id, m.episode_id, m.kind, m.path, m.quote_text, m.quote_style, m.bg_path,
-            e.org_id, e.owner_user_id, e.visibility, e.status
+            e.org_id, e.created_by, e.visibility, e.status
        FROM post_episode_media m
        JOIN post_episodes e ON e.id = m.episode_id
       WHERE m.id = $1`,
