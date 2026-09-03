@@ -798,6 +798,19 @@ user ทัก: "ผมต้องมาเจอเองแล้วต้อ
   นับเฉพาะเคสที่ยังไม่ปิด) · แปะได้เฉพาะ facet ที่นับจากฝั่งเดียวกับที่กำลังดู (จังหวัด/ประเภท) · ที่เหลือใช้บรรทัด
   "พบ N เรื่อง" ที่นับจากผลลัพธ์จริงเสมอ — /case เปลี่ยนจาก dropdown เดียวมีเลข → 5 dropdown อิสระ + บรรทัดสรุป (2026-09-01)
 
+- **`curl` ล็อกอินเว็บนี้ไม่ได้** — หน้า `/org/verify` เรียก `signIn()` ฝั่ง client แล้ว next-auth
+  ตั้ง session cookie จาก JS · curl -c ได้ jar เปล่าเสมอ → ต้องขับ headless Chrome + CDP
+  (`--headless=new --remote-debugging-port=…` แล้ว `Runtime.evaluate` ยิง `fetch()` ในหน้า)
+  ท่านี้เทส API ที่ต้องมี session ได้จริง · ตัวอย่างเต็มดู `scripts/dev/mobileAudit.mjs` §login
+- **สโมคที่ import โมดูลของ Next ต้องผ่าน `scripts/smoke/_envload.mjs`** — มันลง `registerHooks`
+  แปลง alias `@/x` → `web/x` ให้แล้ว (เพิ่ม 2026-09-03) ไม่งั้น ERR_MODULE_NOT_FOUND ทันที
+  ที่โมดูลไหนใน chain ใช้ alias · **อย่าแก้ด้วยการเปลี่ยน lib เป็น relative import** — ตัว
+  `db/auditLog.js` ก็ใช้ alias ต่ออีกทอด ไล่ไม่จบ
+- **`POST_STATUS` คืน NULL ตอน `draft` = kanban เป็นเจ้าของสถานะช่วงนั้นจริง** (statusSql.js)
+  → ต่างจากเคสที่อ่านสดจาก `cases.status` เสมอ · ผลตามมา: ฝั่งโพสต์ต้องดันการ์ดออกจาก backlog
+  เองตอนมีคนรับ (`ASSIGNEE_SOURCE.bumpsBacklog` ใน links.js) ไม่งั้นมอบหมายแล้วการ์ดค้าง "รอทำ"
+  ⚠️ อย่าสรุปว่า "การ์ดที่ผูกของจริงไม่เก็บสถานะเอง" แปลว่าคอลัมน์ไม่มีผลกับจอ — จริงเฉพาะฝั่งเคส
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
@@ -1493,6 +1506,17 @@ Enter เอง · จะลงมือได้ต่อเมื่อเข�
 
 - **ธงที่กั้น effect อื่นไว้รอ state ต้องเป็น `useState` ไม่ใช่ `useRef`** — ref เปลี่ยนค่าทันที แต่ `setState` ที่เรียกคู่กันยังไม่มีผลจนถึง render ถัดไป → effect ตัวถัดไปใน commit เดียวกันเห็น "ธงผ่านแล้ว แต่ข้อมูลยังเป็นค่าตั้งต้น" (bug-196 · URL filter ของ kanban หายทันทีที่เปิด)
 - **เทส UI บนเครื่องนี้ทำได้โดยไม่ต้องลง playwright** — `google-chrome --headless=new --remote-debugging-port=9222` แล้วขับด้วย CDP ผ่าน `globalThis.WebSocket` ที่ Node 24 มีในตัว (ไม่ต้องมี dependency) · cookie ล็อกอินดึงจาก jar ของ curl ได้ แต่ **ต้องไม่กรองบรรทัด `#HttpOnly_` ทิ้ง** ไม่งั้นไม่ได้ session แล้วจะโดนเด้งไปหน้า login โดยดูเหมือนโค้ดพัง
+
+- **rename คอลัมน์ที่มีฟังก์ชันสิทธิ์ใช้ร่วมกับตารางอื่น = fail-closed เงียบๆ** — `postsAccess.isOwner()`
+  ตัวเดียวถูกใช้ทั้งกับ `post_episodes` และ `post_assets` · rename แค่ฝั่งโพสต์แล้วไม่แยกฟังก์ชัน
+  = `asset.created_by` เป็น undefined → เจ้าของเปิดไฟล์ส่วนตัวตัวเองไม่ได้ **โดยไม่มี error ให้เห็น**
+  ➜ ก่อน rename คอลัมน์ ต้อง grep หาว่าฟังก์ชันที่อ่านมันถูกเรียกด้วย "แถวจากตารางอื่น" ไหม (2026-09-03)
+- **ห้าม seed ตาราง `<entity>_assignees` จาก `created_by`** — คนสร้าง/คนนำเข้า ≠ ผู้รับผิดชอบ
+  นี่คือรากของ "เจ้าภาพปลอม 176 ใบ" ที่ user ต้องไล่ถอนเองบน prod · ของเก่าที่ยังไม่มีใครรับ
+  ต้องขึ้นว่า "ยังไม่มีคนรับ" อย่างซื่อสัตย์ · **ข้อยกเว้นเดียว**: `promoteToOrg` (เจ้าของร่างเขียนเอง)
+- **อย่าเชื่อว่า `channel_id` ของโพสต์คือเธรดต่อโพสต์** — มันคือ**ห้องต้นทางของตะกร้าสื่อ**
+  (`ensureOpenEpisode` เปิดตะกร้าใหม่ในห้องเดิมได้เรื่อยๆ) · เลข distinct สูงเพราะห้องเยอะ ไม่ใช่เพราะ
+  เป็นเธรดต่อใบ ➜ ping ตอนมอบหมาย = สแปมห้องรวมทีมสื่อ (เฟส C จึงตัดออก ต่างจากที่แพลนเคาะไว้)
 
 ## Decision Log
 
