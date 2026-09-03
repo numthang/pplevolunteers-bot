@@ -171,21 +171,26 @@ export async function GET(req) {
     // แยก 2 กรณี: แถวส่วนตัว "ของคนที่กำลังต่ออยู่" → อัปเดตโทเคนให้ในรอบเดียวกัน (เขาเพิ่งติ๊ก
     // ให้สิทธิ์เพจนั้นมาแล้ว ไม่ควรต้องกด reconnect ซ้ำอีกรอบ) · ของ "คนอื่น" → ไม่แตะเลย
     // (โทเคนของคนอื่นต้องมาจาก OAuth ของเจ้าตัวเอง ไม่ใช่ยืมสิทธิ์ของคนที่บังเอิญเป็นแอดมินเพจเดียวกัน)
-    const mine = new Map()      // 'platform:social_id' → [row id, ...] ของฉัน
-    const othersClaimed = new Set()
-    if (visibility === 'public') {
-      const { rows: claimed } = await pool.query(
-        `SELECT id, platform, social_id, owner_user_id, user_discord_id
+    //
+    // ⚠️ ต้องกันทั้ง **สองทาง** — ไม่งั้นแค่ย้ายอาการไปอีกฝั่ง:
+    //    ปุ่ม "องค์กร" ดูดเพจส่วนตัวเข้า org · ปุ่ม "ส่วนตัว" ดูดเพจ org มาเป็นของตัวเอง
+    const mine = new Map()          // 'platform:social_id' → [row id] ของคนที่กำลังต่อ (แถว private)
+    const othersPrivate = new Set() // แถว private ของคนอื่น — ห้ามแตะ
+    const orgPublic = new Set()     // แถว public ของ org — ปุ่มส่วนตัวห้ามทำสำเนา
+    {
+      const { rows: existing } = await pool.query(
+        `SELECT id, platform, social_id, visibility, owner_user_id, user_discord_id
            FROM dc_social_accounts
-          WHERE visibility = 'private' AND COALESCE(org_id, 0) = COALESCE($1::int, 0)`,
+          WHERE COALESCE(org_id, 0) = COALESCE($1::int, 0)`,
         [orgId]
       )
-      for (const c of claimed) {
+      for (const c of existing) {
         const key = `${c.platform}:${c.social_id}`
+        if (c.visibility === 'public') { orgPublic.add(key); continue }
         const isMine = (ctx.ownerUserId != null && c.owner_user_id === ctx.ownerUserId)
           || (c.owner_user_id == null && !!userDiscordId && c.user_discord_id === userDiscordId)
         if (isMine) mine.set(key, [...(mine.get(key) || []), c.id])
-        else othersClaimed.add(key)
+        else othersPrivate.add(key)
       }
     }
 
@@ -214,20 +219,30 @@ export async function GET(req) {
       const fbKey = `fb:${page.id}`
       const igKey = igId ? `ig:${igId}` : null
 
-      // ของฉันเอง → เติมโทเคนใหม่ให้แถวส่วนตัว แล้วไม่สร้างแถวสาธารณะซ้ำ
       const myFbRows = mine.get(fbKey)
       const myIgRows = igKey ? mine.get(igKey) : null
-      if (myFbRows || myIgRows) {
-        await refreshTokens(myFbRows, page.access_token, null, null)
-        await refreshTokens(myIgRows, null, longRes.access_token, userTokenExpiresAt)
-        refreshed.push(page.name)
-        continue
-      }
 
-      // ของคนอื่นที่เขาตั้งเป็นส่วนตัวไว้ → ไม่แตะ ไม่ดูดเข้า org
-      if (othersClaimed.has(fbKey) || (igKey && othersClaimed.has(igKey))) {
-        skipped.push(page.name)
-        continue
+      if (visibility === 'public') {
+        // เพจส่วนตัวของฉันเอง → เติมโทเคนใหม่ให้แถวเดิม แล้วไม่สร้างแถวสาธารณะซ้ำ
+        if (myFbRows || myIgRows) {
+          await refreshTokens(myFbRows, page.access_token, null, null)
+          await refreshTokens(myIgRows, null, longRes.access_token, userTokenExpiresAt)
+          refreshed.push(page.name)
+          continue
+        }
+        // ของคนอื่นที่เขาตั้งเป็นส่วนตัวไว้ → ไม่แตะ ไม่ดูดเข้า org
+        if (othersPrivate.has(fbKey) || (igKey && othersPrivate.has(igKey))) {
+          skipped.push(page.name)
+          continue
+        }
+      } else {
+        // ปุ่ม "ส่วนตัว": เพจที่เป็นบัญชีขององค์กรอยู่แล้ว ห้ามทำสำเนามาเป็นของตัวเอง
+        // (ถ้าเป็นเพจส่วนตัวของเราด้วย ให้ตกไปเข้า upsert ปกติ = อัปเดตแถวเดิมของเรา)
+        const isOrgPage = orgPublic.has(fbKey) || (igKey && orgPublic.has(igKey))
+        if (isOrgPage && !myFbRows && !myIgRows) {
+          skipped.push(page.name)
+          continue
+        }
       }
 
       // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
@@ -246,8 +261,10 @@ export async function GET(req) {
          ที่แถวเดิมใน <a href="/org/settings/social">/org/settings/social</a></p>`
       : ''
     const skippedHtml = skipped.length
-      ? `<p style="color:#666">ข้าม ${skipped.length} เพจที่ <b>คนอื่นตั้งเป็นบัญชีส่วนตัว</b> ไว้
-         (${skipped.join(', ')}) — โทเคนของบัญชีส่วนตัวต้องมาจากการเชื่อมต่อของเจ้าตัวเอง</p>`
+      ? `<p style="color:#666">ข้าม ${skipped.length} เพจที่เป็นของอีกฝั่งอยู่แล้ว (${skipped.join(', ')})
+         — ${visibility === 'public'
+             ? 'คนอื่นตั้งไว้เป็นบัญชีส่วนตัว โทเคนต้องมาจากการเชื่อมต่อของเจ้าตัวเอง'
+             : 'เป็นบัญชีขององค์กรอยู่แล้ว จึงไม่ทำสำเนามาเป็นบัญชีส่วนตัว'}</p>`
       : ''
     return html('✅ Meta OAuth สำเร็จ', `
       <h1>✅ เชื่อมต่อ Meta สำเร็จ</h1>
