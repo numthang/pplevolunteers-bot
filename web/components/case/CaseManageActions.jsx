@@ -3,34 +3,39 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
+import { STATUS_LABELS, SELECTABLE_STATUSES, NEEDS_PUBLIC_NOTE, NEEDS_REJECT_REASON } from '@/lib/caseOptionsClient.js'
 import useAutoGrow from '@/lib/useAutoGrow.js'
 import CaseSaveBadge from '@/components/case/CaseSaveBadge.jsx'
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const btnCls = 'px-4 py-2 rounded-lg text-base font-semibold transition disabled:opacity-50'
 
-const NEEDS_REASON = ['closed', 'rejected']
-const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
-
 /**
  * การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ
  * ⛔ ปุ่มลบ/เอาออกจากกรุ **ย้ายไปอยู่ท้ายการ์ดเนื้อหา** แล้ว (CaseDeleteButton — วางแบบเดียวกับ /posts/[id])
  *    อย่าเอากลับมาปนกับปุ่มทำงานประจำวันตรงนี้
  * ⛔ ปุ่ม "ร่างหนังสือร้องเรียน" ก็ย้ายไปรวมกับ AI dropdown ที่ CaseAiActions แล้ว (2026-09-01)
+ *
+ * @param {string}      status         สถานะจริงใน DB ตอนนี้
+ * @param {string|null} currentReason  `cases.close_reason` จริงใน DB — **ต้องส่งมาเสมอ**
+ *   ⭐ เดิมช่องเหตุผลตั้งต้นเป็น `reasons[0]` ("แก้ไขสำเร็จ") ทุกครั้งที่เปิดหน้า ไม่เคยผูกกับของจริง
+ *      → เคสที่ปิดไปแล้วด้วยเหตุผลอื่นกลับมาโชว์เหตุผลผิด (user เจอเอง 2026-09-04: เคสเป็น
+ *        "ไม่รับดำเนินการ · ข้อมูลไม่พอ" แต่ฟอร์มโชว์ "แก้ไขสำเร็จ") · ห้ามกลับไปใช้ reasons[0] เฉยๆ อีก
  */
-export default function CaseManageActions({ refId, status, isAssigned, closeReasons }) {
+export default function CaseManageActions({ refId, status, isAssigned, rejectReasons, currentReason = null }) {
   const t = useTranslations('case')
   const router = useRouter()
   const [busy, setBusy] = useState(false)
 
   // status
   const [newStatus, setNewStatus] = useState(status)
-  const [closeReason, setCloseReason] = useState(closeReasons[0])
+  const [closeReason, setCloseReason] = useState(
+    rejectReasons.includes(currentReason) ? currentReason : rejectReasons[0],
+  )
   const [publicNote, setPublicNote] = useState('')
   const [statusSaveState, setStatusSaveState] = useState('idle')   // idle | saving | saved
   const [statusError, setStatusError] = useState('')
-  const noteRef = useAutoGrow(publicNote)
+  const noteRef = useAutoGrow(publicNote)   // ref ตัวนี้ชี้ที่ <textarea> ตรงๆ → ใช้ focus() ได้เลย
 
   async function call(url, body, method = 'POST') {
     setBusy(true)
@@ -49,12 +54,12 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
   /**
    * เปลี่ยนสถานะแล้วบันทึกทันที — ไม่มีปุ่ม "อัปเดตสถานะ" อีกแล้ว (user 2026-08-31)
    *
-   * ⚠️ ยกเว้น closed/rejected: server บังคับ close_reason + public_note (status/route.js:21)
+   * ⚠️ ยกเว้นสถานะจบเคส (resolved/rejected): server บังคับ public_note (+ close_reason ถ้า rejected)
    *    และ public_note กลายเป็น **timeline สาธารณะ** ที่ผู้ร้องเรียนเห็น → autosave ตอนพิมพ์
    *    = โพสต์สาธารณะงอกทีละท่อนทุก 800ms · เคสนี้จึงยังต้องกดยืนยัน 1 ครั้ง
    */
   async function saveStatus(next) {
-    const needsReason = NEEDS_REASON.includes(next)
+    const needsReason = NEEDS_REJECT_REASON.includes(next)
     setStatusError('')
     setStatusSaveState('saving')
     setBusy(true)
@@ -65,7 +70,7 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
         body: JSON.stringify({
           status: next,
           close_reason: needsReason ? closeReason : undefined,
-          public_note: needsReason ? publicNote : undefined,
+          public_note: NEEDS_PUBLIC_NOTE.includes(next) ? publicNote : undefined,
         }),
       })
       const d = await res.json().catch(() => ({}))
@@ -75,7 +80,7 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
         setNewStatus(status)   // เซฟไม่ผ่าน = ช่องต้องกลับไปตรงกับของจริงใน DB
         return
       }
-      if (needsReason) setPublicNote('')
+      if (NEEDS_PUBLIC_NOTE.includes(next)) setPublicNote('')
       setStatusSaveState('saved')
       setTimeout(() => setStatusSaveState(s => (s === 'saved' ? 'idle' : s)), 1500)
       router.refresh()
@@ -91,11 +96,31 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
   function pickStatus(next) {
     setNewStatus(next)
     setStatusError('')
-    // ปิด/ไม่รับเรื่อง → รอเหตุผล + ข้อความถึงผู้ร้องเรียนก่อน · ที่เหลือบันทึกเลย
-    if (!NEEDS_REASON.includes(next) && next !== status) saveStatus(next)
+    // จบเคส → รอข้อความถึงผู้ร้องเรียนก่อน (+ เหตุผลถ้าไม่รับ) · ที่เหลือบันทึกเลย
+    if (!NEEDS_PUBLIC_NOTE.includes(next) && next !== status) saveStatus(next)
   }
 
-  const needsReason = NEEDS_REASON.includes(newStatus)
+  /**
+   * ⭐ ปุ่มยืนยัน **กดได้เสมอ** แล้วค่อยฟ้อง — ห้ามกลับไปใช้ `disabled` เงียบๆ อีก (2026-09-04)
+   *    ของเดิม `disabled={busy || !publicNote.trim()}` ทำให้คนกดแล้วไม่มีอะไรเกิดขึ้น
+   *    ไม่มีข้อความบอกว่าต้องพิมพ์อะไรก่อน · ยิ่งสถานะอื่นเลือกแล้วเซฟทันที คนใช้ยิ่งนึกว่าเลือกเสร็จแล้วจบ
+   */
+  function confirmStatus() {
+    if (!publicNote.trim()) {
+      setStatusError(t('actions.publicNoteRequired'))
+      noteRef.current?.focus()
+      return
+    }
+    saveStatus(newStatus)
+  }
+
+  const needsNote = NEEDS_PUBLIC_NOTE.includes(newStatus)
+  const needsReason = NEEDS_REJECT_REASON.includes(newStatus)
+  // เคสเก่าที่ยังเป็น `closed` (เลิกใช้แล้ว) ต้องมี option ของตัวเองใน select ไม่งั้น React จะโชว์
+  // ตัวแรกของรายการแทน = เจ้าหน้าที่เห็นสถานะผิด แล้วเผลอเซฟทับเป็น "รับเรื่องแล้ว"
+  const statusOptions = SELECTABLE_STATUSES.includes(status)
+    ? SELECTABLE_STATUSES
+    : [status, ...SELECTABLE_STATUSES]
 
   return (
     <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 space-y-5">
@@ -117,16 +142,22 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
           <CaseSaveBadge saveState={statusSaveState} error={statusError} />
         </div>
         <select value={newStatus} onChange={e => pickStatus(e.target.value)} disabled={busy} className={inputCls}>
-          {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+          {statusOptions.map(s => (
+            <option key={s} value={s} disabled={!SELECTABLE_STATUSES.includes(s)}>
+              {STATUS_LABELS[s]}{SELECTABLE_STATUSES.includes(s) ? '' : ` — ${t('actions.retiredStatusSuffix')}`}
+            </option>
+          ))}
         </select>
 
-        {/* ปิด/ไม่รับเรื่องเท่านั้นที่ยังมีปุ่ม — เพราะข้อความนี้ถูกส่งออกให้ผู้ร้องเรียนเห็น
+        {/* สถานะจบเคสเท่านั้นที่ยังมีปุ่ม — เพราะข้อความนี้ถูกส่งออกให้ผู้ร้องเรียนเห็น
             ต้องเขียนจบก่อนแล้วค่อยกด ไม่ใช่ autosave ทีละท่อนระหว่างพิมพ์ */}
-        {needsReason && (
+        {needsNote && (
           <div className="mt-3 space-y-3">
-            <select value={closeReason} onChange={e => setCloseReason(e.target.value)} className={inputCls}>
-              {closeReasons.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            {needsReason && (
+              <select value={closeReason} onChange={e => setCloseReason(e.target.value)} className={inputCls}>
+                {rejectReasons.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            )}
             <textarea
               ref={noteRef}
               value={publicNote}
@@ -135,7 +166,7 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
               className={`${inputCls} resize-none overflow-hidden min-h-[72px]`}
               placeholder={t('actions.publicNotePlaceholder')}
             />
-            <button onClick={() => saveStatus(newStatus)} disabled={busy || !publicNote.trim()}
+            <button onClick={confirmStatus} disabled={busy}
               className={`${btnCls} w-full bg-brand-orange text-white hover:bg-brand-orange-light`}>
               {STATUS_LABELS[newStatus]}
             </button>

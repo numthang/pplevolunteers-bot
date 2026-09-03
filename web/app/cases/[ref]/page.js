@@ -7,7 +7,7 @@ import { canAccessCaseProvince, canManageCases, isAdmin } from '@/lib/caseAccess
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
 import { smsConfigured } from '@/lib/sendSms.js'
-import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES, ALL_PROVINCES } from '@/lib/caseOptions.js'
+import { statusLabel, CASE_REJECT_REASONS, CASE_CATEGORIES, ALL_PROVINCES } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
 import CaseAiActions from '@/components/case/CaseAiActions.jsx'
 import CaseTimeline from '@/components/case/CaseTimeline.jsx'
@@ -125,7 +125,8 @@ export default async function CaseManageDetail({ params }) {
             refId={c.ref}
             status={c.status}
             isAssigned={isAssigned}
-            closeReasons={CASE_CLOSE_REASONS}
+            rejectReasons={CASE_REJECT_REASONS}
+            currentReason={c.close_reason}
           />
 
           <div className={cardCls}>

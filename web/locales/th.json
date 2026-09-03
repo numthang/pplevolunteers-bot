@@ -680,7 +680,9 @@
       "archive": "เก็บเข้ากรุ",
       "deleteCaseButton": "ลบ",
       "restoreCaseButton": "เอาออกจากกรุ",
-      "restoring": "กำลังเอาออกจากกรุ…"
+      "restoring": "กำลังเอาออกจากกรุ…",
+      "publicNoteRequired": "ต้องเขียนข้อความแจ้งผู้ร้องเรียนก่อน จึงจะบันทึกสถานะนี้ได้",
+      "retiredStatusSuffix": "เลิกใช้แล้ว"
     },
     "timeline": {
       "saveFailedMsg": "บันทึกไม่สำเร็จ",
@@ -715,7 +717,8 @@
       "receivedAtLabel": "รับเรื่องเมื่อ",
       "progressHeading": "ความคืบหน้า",
       "noUpdatesYet": "ยังไม่มีอัปเดตจากทีมงาน",
-      "aiSummaryTag": "· AI สรุป"
+      "aiSummaryTag": "· AI สรุป",
+      "closeReasonLabel": "เหตุผล"
     },
     "landing": {
       "metaTitle": "ศูนย์รับเรื่องร้องเรียน",

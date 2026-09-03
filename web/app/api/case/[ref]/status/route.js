@@ -1,11 +1,11 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { updateStatus, addTimelineEvents } from '@/db/cases.js'
 import { postToThread, caseRefLink } from '@/lib/caseDiscord.js'
-import { statusLabel, CASE_CLOSE_REASONS } from '@/lib/caseOptions.js'
+import { statusLabel, CASE_REJECT_REASONS, SELECTABLE_STATUSES, NEEDS_PUBLIC_NOTE, NEEDS_REJECT_REASON } from '@/lib/caseOptions.js'
 import { logAction } from '@/db/auditLog.js'
 
-const VALID_STATUS = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
-const NEEDS_REASON = ['closed', 'rejected']
+// ⛔ `closed` ไม่อยู่ใน SELECTABLE_STATUSES แล้ว = ตั้งใหม่ไม่ได้ (เคสเก่าที่ยังเป็น closed อ่านได้ปกติ)
+const VALID_STATUS = SELECTABLE_STATUSES
 
 /** POST /api/case/[ref]/status — เปลี่ยนสถานะ { status, close_reason?, public_note? } */
 export async function POST(req, { params }) {
@@ -17,17 +17,20 @@ export async function POST(req, { params }) {
   const { status, close_reason, public_note } = await req.json().catch(() => ({}))
   if (!VALID_STATUS.includes(status)) return Response.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 })
 
-  // ปิด/ไม่รับ → ต้องมีเหตุผล + public note อธิบายให้ผู้ร้องเรียน
-  if (NEEDS_REASON.includes(status)) {
-    if (!close_reason || !CASE_CLOSE_REASONS.includes(close_reason)) {
-      return Response.json({ error: 'กรุณาเลือกเหตุผลในการปิดเรื่อง' }, { status: 400 })
+  // ⭐ จบเคสทุกทาง (แก้ไขแล้ว/ไม่รับดำเนินการ) ต้องมีข้อความแจ้งผู้ร้องเรียนเสมอ (2026-09-04)
+  //    เดิม `resolved` เซฟเงียบไม่ต้องมีอะไรเลย → ผู้ร้องไม่เคยรู้ว่าเคสตัวเองจบแล้วหรือจบยังไง
+  //    และ /complaint/[ref] ไม่ได้โชว์ close_reason ด้วย → public note คือช่องทางเดียวจริงๆ
+  const needsReason = NEEDS_REJECT_REASON.includes(status)
+  if (NEEDS_PUBLIC_NOTE.includes(status)) {
+    if (needsReason && (!close_reason || !CASE_REJECT_REASONS.includes(close_reason))) {
+      return Response.json({ error: 'กรุณาเลือกเหตุผลที่ไม่รับดำเนินการ' }, { status: 400 })
     }
     if (!public_note?.trim()) {
       return Response.json({ error: 'กรุณาเขียนข้อความแจ้งผู้ร้องเรียน (public note)' }, { status: 400 })
     }
   }
 
-  await updateStatus(caseRow.id, status, NEEDS_REASON.includes(status) ? close_reason : null)
+  await updateStatus(caseRow.id, status, needsReason ? close_reason : null)
 
   if (public_note?.trim()) {
     await addTimelineEvents(caseRow.id, orgId, [{
@@ -38,7 +41,7 @@ export async function POST(req, { params }) {
 
   // แจ้งในเธรดของเคส
   if (caseRow.discord_thread_id) {
-    const reasonTxt = NEEDS_REASON.includes(status) ? ` (${close_reason})` : ''
+    const reasonTxt = needsReason ? ` (${close_reason})` : ''
     await postToThread(caseRow.discord_thread_id, `🔄 สถานะเคส ${caseRefLink(caseRow.ref)} → **${statusLabel(status)}**${reasonTxt}`)
   }
 

@@ -19,6 +19,8 @@ const CASE_STATUS = `CASE cs.status
         WHEN 'open'        THEN 'backlog'
         WHEN 'in_progress' THEN 'doing'
         WHEN 'resolved'    THEN 'done'
+        -- 'closed' = สถานะเลิกใช้ 2026-09-04 (ยุบเข้า resolved) แต่ยังมีเคสเก่าค้างอยู่ ~16 ใบ
+        -- ⛔ ห้ามลบบรรทัดนี้จนกว่าจะไม่เหลือแถว closed จริง ไม่งั้นการ์ดพวกนั้นตกไปใช้ค่า cache
         WHEN 'closed'      THEN 'done'
         WHEN 'rejected'    THEN 'done'
         ELSE NULL END`

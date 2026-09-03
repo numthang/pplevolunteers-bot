@@ -61,6 +61,13 @@ export default async function CaseTrackPage({ params }) {
           </>)}
           <dt className="text-gray-400 dark:text-disc-muted">{t('track.receivedAtLabel')}</dt>
           <dd className="text-gray-900 dark:text-disc-text">{fmtDate(c.created_at)}</dd>
+          {/* ⭐ close_reason ถูก query มาตั้งแต่แรก (getCaseByRefPublic) แต่ไม่เคยแสดง — ผู้ร้องจึงไม่เคย
+              รู้เหตุผลที่เคสถูกปิด/ไม่รับ ทั้งที่เป็นข้อมูลที่บังคับให้เจ้าหน้าที่เลือก (แก้ 2026-09-04)
+              เป็น enum คงที่จาก config/case-options.json ไม่มี PII */}
+          {c.close_reason && (<>
+            <dt className="text-gray-400 dark:text-disc-muted">{t('track.closeReasonLabel')}</dt>
+            <dd className="text-gray-900 dark:text-disc-text">{c.close_reason}</dd>
+          </>)}
         </dl>
       </div>
 

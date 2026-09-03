@@ -680,7 +680,9 @@
       "archive": "Archive",
       "deleteCaseButton": "Delete this case",
       "restoreCaseButton": "Restore from archive",
-      "restoring": "Restoring…"
+      "restoring": "Restoring…",
+      "publicNoteRequired": "Write a message to the complainant before saving this status",
+      "retiredStatusSuffix": "retired"
     },
     "timeline": {
       "saveFailedMsg": "Failed to save",
@@ -715,7 +717,8 @@
       "receivedAtLabel": "Received on",
       "progressHeading": "Progress",
       "noUpdatesYet": "No updates from the team yet",
-      "aiSummaryTag": "· AI summary"
+      "aiSummaryTag": "· AI summary",
+      "closeReasonLabel": "Reason"
     },
     "landing": {
       "metaTitle": "Complaint Center",
