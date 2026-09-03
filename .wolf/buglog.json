@@ -6211,15 +6211,15 @@
       "error_message": "Significant refactor of route.js",
       "file": "web/app/api/meta/oauth/callback/route.js",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 23→55 lines (3 removed) | Also: const skipFb = claimedPrivate.has(`fb:${page.id}`); const skipIg = igId ? claimedPrivate.has(`ig:${igI | Also: ? `<p style=\"color:#666\">ข้าม ${skipped.length} เพ; (${skipped.join(', ')}) — ไม่ถูกเพิ่มเข้าองค์กร ถ้",
+      "fix": "Rewrote 23→55 lines (3 removed) | Also: const skipFb = claimedPrivate.has(`fb:${page.id}`); const skipIg = igId ? claimedPrivate.has(`ig:${igI | Also: ? `<p style=\"color:#666\">ข้าม ${skipped.length} เพ; (${skipped.join(', ')}) — ไม่ถูกเพิ่มเข้าองค์กร ถ้ | Also: const mine = new Map()      // 'platform:social_id; const othersClaimed = new Set() | Also: // ของฉันเอง → เติมโทเคนใหม่ให้แถวส่วนตัว แล้วไม่ส; if (othersClaimed.has(fbKey) || (igKey && othersCl | Also: ? `<p style=\"color:#666\">ข้าม ${skipped.length} เพ; (${skipped.join(', ')}) — โทเคนของบัญชีส่วนตัวต้อง",
       "tags": [
         "auto-detected",
         "refactor",
         "js"
       ],
       "related_bugs": [],
-      "occurrences": 3,
-      "last_seen": "2026-09-03T06:35:43.345Z"
+      "occurrences": 6,
+      "last_seen": "2026-09-03T06:39:59.961Z"
     },
     {
       "id": "bug-349",

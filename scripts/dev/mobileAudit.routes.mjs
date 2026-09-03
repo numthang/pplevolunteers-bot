@@ -25,7 +25,7 @@ export const ROUTES = [
   },
   { path: '/' },
   { path: '/dashboard' },
-  { path: '/case' },
+  { path: '/cases' },   // ⚠️ '/case' เป็น 404 — audit เดินผ่านหน้า 404 แล้วรายงาน "ผ่าน" (แก้ 2026-09-03)
   { path: '/calling' },
   { path: '/finance' },
   { path: '/posts' },

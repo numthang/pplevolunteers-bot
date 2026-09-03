@@ -1748,3 +1748,46 @@ CREATE CONSTRAINT TRIGGER trg_kanban_assignees_clamp
 COMMIT;
 
 -- production ทำถึงตรงนี้
+
+
+-- 2026-09-03 (รอบสอง) · ตรึง search_path ของ 2 ฟังก์ชัน trigger ที่เพิ่งสร้างข้างบน
+--
+-- ⚠️ บั๊กจริงที่เจอตอน restore dump: `pg_dump` ใส่ `set_config('search_path','',false)` ไว้หัวไฟล์เสมอ
+--    ฟังก์ชัน plpgsql ที่ไม่ได้ตรึง search_path จะรับค่านั้นมาด้วย → พอ trigger ยิงตอน COMMIT
+--    มันหา `kanban_cards` ไม่เจอ แล้วโยน 42P01 "relation does not exist" ทั้งทรานแซกชัน
+--    → โหลด dump ที่มีตาราง kanban เข้าฐานไหนก็ตามจะพังหมด (รวมทั้งกู้ prod จาก backup)
+--
+-- แก้ 2 ชั้นคู่กัน: ตรึง `SET search_path` ที่ตัวฟังก์ชัน + เขียนชื่อตารางแบบ schema-qualified
+-- (ตัว trigger ไม่ต้องสร้างใหม่ — CREATE OR REPLACE เปลี่ยนตัวฟังก์ชันให้ทั้ง 2 ตัวที่ผูกอยู่แล้ว)
+
+CREATE OR REPLACE FUNCTION kanban_card_require_assignee() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.kanban_cards c
+     WHERE c.id = NEW.id
+       AND c.status_type NOT IN ('backlog', 'cancelled')
+       AND NOT EXISTS (SELECT 1 FROM public.kanban_card_assignees a WHERE a.card_id = c.id)
+  ) THEN
+    RAISE EXCEPTION 'การ์ด kanban id=% ไม่มีผู้รับผิดชอบ จึงอยู่ได้แค่สถานะ backlog หรือ cancelled', NEW.id
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+
+CREATE OR REPLACE FUNCTION kanban_card_clamp_unassigned() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  UPDATE public.kanban_cards c
+     SET status_type  = 'backlog',
+         completed_at = NULL,
+         updated_at   = now()
+   WHERE c.id = OLD.card_id
+     AND c.status_type NOT IN ('backlog', 'cancelled')
+     AND NOT EXISTS (SELECT 1 FROM public.kanban_card_assignees a WHERE a.card_id = c.id);
+  RETURN NULL;
+END $$;
