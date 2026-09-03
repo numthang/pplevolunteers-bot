@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-02T19:31:35.465Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T05:14:04.726Z
 > Files: 1109 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2267,7 +2267,7 @@
 - `geography.test.js` — ---- province grant ---- (~817 tok)
 - `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3668 tok)
 - `kanbanFieldValue.test.js` — Declares res (~1567 tok)
-- `kanbanGrouping.test.js` — นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน (~1605 tok)
+- `kanbanGrouping.test.js` — นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน (~1677 tok)
 - `kanbanLabelFilter.test.js` — ป้ายตัวอย่าง — ชื่อกลุ่มมาจากของจริงบน dev (สายงาน 12 · พื้นที่ 9 · อุปกรณ์ 8) (~1424 tok)
 - `kanbanSort.test.js` — Declares at (~1058 tok)
 - `kanbanTextFilter.test.js` — Declares card (~942 tok)

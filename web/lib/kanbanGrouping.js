@@ -58,16 +58,21 @@ export function defaultDueForBucket(bucket, now = new Date()) {
 }
 
 /**
- * "ของฉัน" — เจ้าภาพ หรือคนช่วย **บวกงานที่ยังไม่มีใครรับ**
+ * "ของฉัน" — เจ้าภาพ หรือคนช่วย **เท่านั้น**
  *
- * ⭐ ที่ต้องรวมงานไม่มีเจ้าภาพเข้ามาด้วย (user เคาะ 2026-08-18): ตัวกรองตั้งต้นคือ "ของฉัน"
- *    ถ้ากองรอทำไม่โผล่ตรงนี้ = ไม่มีใครเห็นงานที่โยนเข้ากอง งานจะค้างเงียบตลอดกาล
- * ⚠️ debug mode ("View as role") userId เป็น null → ไม่ใช่ของใครเลย เหลือเฉพาะงานที่ไม่มีเจ้าภาพ
+ * ⛔ 2026-09-03 กลับคำจากที่เคาะไว้ 2026-08-18 (เดิม: งานไม่มีเจ้าภาพ = ของฉันของทุกคน)
+ *    เจตนาเดิมถูก — กองรอทำต้องมีคนเห็น ไม่งั้นงานค้างเงียบ — แต่ผลข้างเคียงคือ
+ *    **"ไม่มีเจ้าภาพ" แพงจนระบบต้องยัดเจ้าภาพปลอมเข้าไป**: backfillCaseThreads.js เซ็ต
+ *    assignee = เจ้าของกระทู้ 176 ใบรวดเดียว (user ต้องไล่ถอนเองบน prod) และ SOURCE_SQL.post
+ *    ก็อป owner ของโพสต์ลงช่องเจ้าภาพทุกใบ = "คนนำเข้า" กลายเป็น "ผู้รับผิดชอบ"
+ *
+ * ⭐ ของที่มาแทน: มุมมอง "ยังไม่มีคนรับ (n)" ในแถบ "แสดง" — เป็นกองของตัวเองที่มีตัวเลขกำกับ
+ *    ทั้งบนมือถือและจอใหญ่ (ดู Segmented ใน KanbanHome.jsx) → งานรอคนรับยังเห็นได้ชัด
+ *    โดยไม่ต้องปนเข้าหน้าแรกของทุกคน
+ * ⚠️ debug mode ("View as role") userId เป็น null → ไม่ใช่ของใครทั้งนั้น
  */
 export function isMyCard(card, userId) {
-  if (!card) return false
-  if (card.owner_user_id == null) return true
-  if (!userId) return false
+  if (!card || !userId) return false
   if (String(card.owner_user_id) === String(userId)) return true
   return (card.helper_ids || []).some((id) => String(id) === String(userId))
 }

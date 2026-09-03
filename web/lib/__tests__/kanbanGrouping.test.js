@@ -32,18 +32,21 @@ describe('dueBucket', () => {
 })
 
 // ---- isMyCard ----
-describe('isMyCard — เจ้าภาพ + คนช่วย + งานที่ยังไม่มีใครรับ', () => {
+describe('isMyCard — เจ้าภาพ + คนช่วย เท่านั้น', () => {
   it('ฉันเป็นเจ้าภาพ → ใช่', () => expect(isMyCard(card({ owner_user_id: ME }), ME)).toBe(true))
   it('ฉันเป็นคนช่วย → ใช่', () => expect(isMyCard(card({ helper_ids: [HELPER, ME] }), ME)).toBe(true))
   it('ของคนอื่นล้วน → ไม่ใช่', () => expect(isMyCard(card(), ME)).toBe(false))
-  it('⭐ ยังไม่มีเจ้าภาพ → ใช่เสมอ (ไม่งั้นงานรอรับค้างเงียบ)', () =>
-    expect(isMyCard(card({ owner_user_id: null, status_type: 'backlog' }), ME)).toBe(true))
+  // ⛔ 2026-09-03 กลับคำจาก 2026-08-18 — "งานไม่มีเจ้าภาพ = ของฉันของทุกคน" ทำให้
+  //    "ไม่มีเจ้าภาพ" แพงจนระบบยัดเจ้าภาพปลอมเข้าไป (backfill 176 ใบ + SOURCE_SQL.post)
+  //    ของที่มาแทน = มุมมอง "ยังไม่มีคนรับ (n)" ที่มีเลขกำกับทั้งมือถือและจอใหญ่
+  it('⭐ ยังไม่มีเจ้าภาพ → **ไม่ใช่** ของฉัน (ไปอยู่มุมมอง "ยังไม่มีคนรับ" แทน)', () =>
+    expect(isMyCard(card({ owner_user_id: null, status_type: 'backlog' }), ME)).toBe(false))
   it('id คนละชนิด (สตริง ↔ ตัวเลข) ยังตรงกัน', () => {
     expect(isMyCard(card({ owner_user_id: '7' }), 7)).toBe(true)
     expect(isMyCard(card({ helper_ids: ['7'] }), 7)).toBe(true)
   })
-  it('debug mode (userId null) → เห็นเฉพาะงานที่ไม่มีเจ้าภาพ', () => {
-    expect(isMyCard(card({ owner_user_id: null }), null)).toBe(true)
+  it('debug mode (userId null) → ไม่ใช่ของใครทั้งนั้น', () => {
+    expect(isMyCard(card({ owner_user_id: null }), null)).toBe(false)
     expect(isMyCard(card({ owner_user_id: ME }), null)).toBe(false)
   })
   it('ไม่มีการ์ด → ไม่ใช่', () => expect(isMyCard(null, ME)).toBe(false))

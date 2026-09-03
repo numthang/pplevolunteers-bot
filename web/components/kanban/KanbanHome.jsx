@@ -116,6 +116,8 @@ function Segmented({ options, value, onChange, label, counts, t }) {
         ))}
       </select>
 
+      {/* ⭐ จอใหญ่ก็ต้องเห็นตัวเลข (2026-09-03) — ตั้งแต่ isMyCard เลิกนับงานไร้เจ้าภาพเป็น "ของฉัน"
+          มุมมอง "ยังไม่มีคนรับ" คือที่เดียวที่งานรอคนรับโผล่ ถ้าไม่มีเลขกำกับ = งานค้างเงียบเหมือนเดิม */}
       <div className="hidden sm:inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
         {options.map((o) => (
           <button
@@ -127,7 +129,7 @@ function Segmented({ options, value, onChange, label, counts, t }) {
                 : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
             }`}
           >
-            {o.label}
+            {withCount(o)}
           </button>
         ))}
       </div>
@@ -712,12 +714,17 @@ export default function KanbanHome() {
   // (ไม่เอาทั้ง org มาวาง จะได้ตัวเลือกกดแล้วว่างเปล่าเต็มไปหมด)
   const helperOptions = useMemo(() => {
     const map = new Map()
+    const add = (userId, name) => {
+      if (!userId) return
+      const id = String(userId)
+      if (!map.has(id)) map.set(id, { id, name: name || '', count: 0 })
+      map.get(id).count++
+    }
     for (const c of scoped) {
-      for (const h of c.helpers || []) {
-        const id = String(h.user_id)
-        if (!map.has(id)) map.set(id, { id, name: h.name, count: 0 })
-        map.get(id).count++
-      }
+      // เจ้าภาพต้องอยู่ในตัวเลือกด้วย (2026-09-03) — ไม่งั้นเลือกกรองชื่อเขาไม่ได้เลย
+      // ทั้งที่เขาคือคนที่รับผิดชอบใบนั้นจริงๆ (คู่กับตัวกรองข้างล่างที่นับเจ้าภาพแล้ว)
+      add(c.owner_user_id, c.owner_name)
+      for (const h of c.helpers || []) add(h.user_id, h.name)
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
@@ -792,7 +799,10 @@ export default function KanbanHome() {
     }
     if (helperFilter.length) {
       const wanted = new Set(helperFilter)
-      out = out.filter((c) => (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
+      // ⭐ 2026-09-03: นับ **เจ้าภาพด้วย** ไม่ใช่แค่ผู้ช่วย — เดิมกรองชื่อคนหนึ่งแล้วไม่เจอใบที่เขา
+      //    เป็นแม่งาน (เจ้าภาพไม่มีแถวใน helpers ตามดีไซน์ตาราง) = ตัวกรองโกหกมาตลอด
+      out = out.filter((c) =>
+        wanted.has(String(c.owner_user_id)) || (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
     }
     if (kindFilter.length) {
       const wanted = new Set(kindFilter)
