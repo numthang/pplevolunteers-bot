@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T06:43:28.392Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T07:02:06.080Z
 > Files: 1124 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -1738,7 +1738,7 @@
 
 ## web/app/docs/
 
-- `layout.js` — Next.js layout (~148 tok)
+- `layout.js` — ⛔ ยกเว้น `/docs/sign/*` จาก requireFeature — **ห้ามเอาออกโดยไม่อ่านย่อหน้านี้** (~468 tok)
 - `page.js` — Next.js page component (~1354 tok)
 
 ## web/app/docs/[id]/
@@ -2110,7 +2110,7 @@
 - `index.js` — Declares g (~121 tok)
 - `orgAiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI (~1029 tok)
 - `orgchart.js` — ผังทีมฝั่งเว็บ: CTE เดียวคืน group→role→top5 คนแอคทีฟ (dc_orgchart_config × org_members.roles × dc_activity_*) · join activity ผ่าน users.discord_id เพราะ activity ยังเป็น snowflake (~1200 tok)
-- `orgConfig.js` — web/db/orgConfig.js — org-level KV config (org_config table) (~463 tok)
+- `orgConfig.js` — web/db/orgConfig.js — org-level KV config (org_config table) (~784 tok)
 - `orgInviteLinks.js` — Invite link เข้า org แบบ Notion — ลิงก์เดียวแชร์ได้ ใครเปิด+login ก็เข้าร่วม (~1234 tok)
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~2663 tok)
 - `orgMembers.js` — web/db/orgMembers.js — org core: identity (users by email) + org membership (org_members) (~3302 tok)

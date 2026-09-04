@@ -6692,6 +6692,39 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-04T05:51:31.517712Z"
+    },
+    {
+      "id": "bug-378",
+      "timestamp": "2026-09-04T07:01:33.484Z",
+      "error_message": "Significant refactor of orgConfig.js",
+      "file": "web/db/orgConfig.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→12 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T07:01:33.484Z"
+    },
+    {
+      "id": "bug-379",
+      "timestamp": "2026-09-04T07:20:16.837Z",
+      "error_message": "หน้า /docs ทุกหน้าล้นขอบจอมือถือ 10px (mobileAudit: หน้ากว้าง 385px เกินจอ 375px)",
+      "file": "web/app/docs/layout.js",
+      "root_cause": "layout ดึง negative margin -mx-3 (12px) เพื่อกินเต็มจอ แต่ <main> ใน app/layout.js เป็น px-1 sm:px-4 (4px บนมือถือ) — ดึงกลับเกินข้างละ 8px · เดิม root เป็น px-3 จึงตรงกัน พอเปลี่ยนเป็น px-1 ทีหลัง ไม่มีใครตามแก้ layout ลูก",
+      "fix": "เปลี่ยนเป็น -mx-1 sm:-mx-4 ให้ตรงกับ padding ของ root main เป๊ะ · web/app/calling/layout.js มีบรรทัดเดียวกันเป๊ะ ยังไม่ได้แก้ (นอกขอบเขตงานที่ทำอยู่)",
+      "tags": [
+        "mobile",
+        "layout",
+        "tailwind",
+        "docs",
+        "negative-margin"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T07:20:16.837Z"
     }
   ]
 }
