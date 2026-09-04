@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T04:47:53.693Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T06:43:28.392Z
 > Files: 1124 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~3501 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~48709 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~50395 tok)
 - `WEB.md` — Web App — Next.js Frontend (~6698 tok)
 
 ## md/archive/
@@ -1911,7 +1911,7 @@
 
 ## web/app/posts/[id]/
 
-- `page.js` — ชื่อแท็บ = ชื่อโพสต์ (เหมือน /docs/[id] ที่ใช้ชื่ออีเวนต์) (~564 tok)
+- `page.js` — ชื่อแท็บ = ชื่อโพสต์ (เหมือน /docs/[id] ที่ใช้ชื่ออีเวนต์) (~540 tok)
 
 ## web/app/posts/library/
 
@@ -2194,7 +2194,7 @@
 - `callingFields.js` — ฟิลด์ที่มาจากตาราง cache_pple_member โดยตรง (~668 tok)
 - `callingSignals.js` — Shared signal config for calling logs and interaction logs (~260 tok)
 - `callingStatusColors.js` — Exports CALL_STATUS_COLORS (~193 tok)
-- `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~334 tok)
+- `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~379 tok)
 - `caseAttachmentSync.js` — นำเข้าไฟล์แนบ (รูป/เสียง) จากเธรด Discord ของเคส → case_attachments (~1149 tok)
 - `caseDiscord.js` — Web → Discord REST (Bot token) — สร้าง forum thread + โพสต์ noti ในเธรดของเคส (~1095 tok)
 - `caseGate.js` — Gate helper สำหรับ caseworker action APIs — รวม auth + permission + scope ไว้ที่เดียว (~547 tok)
@@ -2286,7 +2286,7 @@
 - `_rolesToAccess.js` — Test fixture — แปลงชื่อ role (guild อาสาประชาชน) → access object (~915 tok)
 - `authIdentity.live.test.js` — Live check (ต่อ DB จริง) — resolveUserByDiscord + phone login resolution (~1357 tok)
 - `callingAccess.test.js` — access fn รับ access object (จาก DB) — test เคสเขียนด้วย "ชื่อ role" ของ guild อาสาประชาชน (~2117 tok)
-- `caseAccess.test.js` — caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ (~582 tok)
+- `caseAccess.test.js` — caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ (~378 tok)
 - `financeAccess.test.js` — Declares canViewAccount (~2368 tok)
 - `geography.test.js` — ---- province grant ---- (~817 tok)
 - `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3668 tok)

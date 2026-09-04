@@ -652,6 +652,28 @@ user ถามตอนกรอกฟอร์มแก้ไขข้อมู
 **ตอนนี้ยังไม่มีผล** (บอร์ดเดียว open_to_org + UI ซ่อน) แต่เปิดกลับมาเมื่อไหร่ = สิทธิ์บอร์ดเป็นแค่การซ่อนชื่อ ไม่ใช่การกันจริง
 · ทางแก้: ทำแบบเดียวกับด่านการ์ดที่ผูกของจริง — **กรองใน SQL** ไม่ใช่กรองใน JS หลังดึงมาแล้ว
 
+### ✅ เคาะแล้ว + ทำแล้ว 2026-09-04 (จาก user ถามว่าทำไม `?scope=unassigned` เห็นการ์ดน้อยกว่า) — เปิดสิทธิ์เคสให้เท่ากันหมดทั้ง org
+
+ต้นเหตุที่ user เจอ: การ์ดที่ผูกเคสถูก**ซ่อนทั้งใบ**ใน kanban ถ้าคนดูไม่มีสิทธิ์จังหวัดของเคสนั้น (`caseProvinces` ใน `kanbanGuard.js`)
+คุยกันแล้วพบว่าต่อให้เปิดฝั่ง kanban อย่างเดียวก็ไม่พอ — กด "รับงาน" ได้ แต่เปิดเคสจริงที่ `/cases/[ref]` ก็ยังโดน
+`canManageCases`/`canAccessCaseProvince` บล็อกซ้ำอยู่ดี (คนละด่านกับ kanban) → user เคาะตรงๆ ว่า **"ให้สิทธิ์เท่ากันหมด
+ทุกคนต้องรับงานได้"** ไม่มี caseworker tier แยกแล้วตอนนี้ ("caseworker อาจมีสิทธิ์บางอย่างต่างออกไป แต่ตอนนี้ยังไม่มี")
+
+**ทำแล้ว:** แก้ที่ [`web/lib/caseAccess.js`](../web/lib/caseAccess.js) จุดเดียว — `canManageCases()` / `canAccessCaseProvince()`
+คืน `true` เสมอ, `getUserScope()` คืน `null` เสมอ (ไม่ reuse จาก `callingAccess.js` ตรงๆ อีกต่อไป — cases กับ calling
+แยก policy กันแล้ว ห้าม import `getUserScope` จาก callingAccess กลับมาที่ caseAccess อีก) ผลคือเปิดทั้ง 2 ชั้นพร้อมกัน
+โดยไม่ต้องแตะ kanban เลย เพราะ `kanbanGuard.js` เรียก `canManageCases`/`getUserScope` จาก `caseAccess.js` อยู่แล้ว
+· เทสอัปเดตแล้วที่ [`caseAccess.test.js`](../web/lib/__tests__/caseAccess.test.js) — `npm test` ผ่านทั้ง 504 เทส
+
+**ข้อยกเว้นเดียวที่ยังคงไว้:** ร่างโพสต์ส่วนตัว (`post_episodes.visibility='personal'`) ยังซ่อนทั้งใบเหมือนเดิม
+(`statusSql.js`) เพราะเป็นความเป็นส่วนตัว**รายคน** ไม่ใช่เรื่องสิทธิ์กลุ่ม/บอร์ด
+
+**ยังไม่ deploy prod** — ต้อง build+restart web ตามขั้นตอน §Production ปกติ
+
+**future (ยังไม่ทำ):** ถ้าวันหน้ามีบอร์ด/จังหวัดที่ 2 ที่ต้องแยกสิทธิ์จริง (เช่น ไม่อยากให้บอร์ดจังหวัด ก. เห็นเคสจังหวัด ข.)
+ให้กลับมาผูก scope กับ **สิทธิ์เห็นบอร์ด** (`canViewBoard`) แทนที่จะ hardcode จังหวัดกลับเข้า `caseAccess.js`
+ดู dead-code 2 ข้อที่ต้องอุดก่อนข้างบน (`canViewBoard` ข้อ 2-3 · `listCards` ไม่มีด่านบอร์ด)
+
 ## 🗂️ Kanban ก้อน 4-5 — ✅ ทำแล้ว 2026-08-24 (local · ยังไม่ push/deploy)
 
 เคส + งานสื่อ **ทุกใบ** มีการ์ดใน kanban แล้ว · ดีไซน์+เหตุผลที่กลับคำอยู่ [md/kanban/KANBAN.md §กลับคำ](kanban/KANBAN.md)
