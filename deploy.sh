@@ -7,6 +7,9 @@
 # ./deploy.sh --production --guild <guildId>         → deploy production ไป guild ที่ระบุ
 # ./deploy.sh --production --bot-only                → deploy production เฉพาะ bot (ไม่ build web)
 #
+# โหมด --production รัน `npm run migrate up` ให้เองก่อน restart ทุกตัว (ล้ม = หยุด deploy)
+# ไม่ต้องรัน migration แยกอีกแล้ว · โหมด local ไม่แตะ DB ให้ — รันเองเมื่อจำเป็น
+#
 # Known Guild IDs:
 #   อาสาประชาชน  : 1340903354037178410  (ค่า default ใน .env)
 #   ราชบุรี      : 1111998833652678757
@@ -51,6 +54,18 @@ git reset --hard origin/master
 
 # Bot
 npm install --omit=dev
+
+# DB schema ต้องขึ้นก่อนโค้ดที่ใช้มันเสมอ — วางไว้ก่อน restart ทุกตัว
+# ⛔ ล้ม = หยุด deploy ทั้งก้อน ห้าม build/restart ต่อ: โค้ดใหม่ทับ schema เก่า = พังเงียบ
+#    (หาเหตุยากกว่า deploy ค้างกลางคันเยอะ) · ของเดิมยังรันอยู่ = ยังตรงกับ schema เดิม
+# ℹ️ node-pg-migrate อยู่ใน dependencies (ไม่ใช่ devDependencies) จึงรอด --omit=dev ข้างบน
+# ℹ️ ไม่มี migration ค้าง = ตอบ "No migrations to run!" แล้ว exit 0 ตามปกติ ไม่ต้องแยกเคส
+echo "🗄️  migrate…"
+if ! npm run migrate up; then
+  echo "❌ migration ล้ม — หยุด deploy (บอท/เว็บยังเป็นตัวเก่าที่ตรงกับ schema เดิม)"
+  exit 1
+fi
+
 # guild-level เท่านั้น — ห้ามกลับไปใช้ --global
 # global กับ guild-level อยู่คนละ scope Discord ไม่ merge ให้ ถ้ามีทั้งคู่ = เมนูเบิ้ลทุก client
 # แถม global รอ propagate ถึง 1 ชม. ส่วน guild-level เปลี่ยนทันที
