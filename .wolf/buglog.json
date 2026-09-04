@@ -6609,6 +6609,39 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-03T17:51:39.554Z"
+    },
+    {
+      "id": "bug-20260904013000",
+      "timestamp": "2026-09-04T01:30:00+07:00",
+      "error_message": "ฟอร์มจัดการเคสโชว์เหตุผลผิด — เคสเป็น 'ไม่รับดำเนินการ · ข้อมูลไม่พอ' แต่ช่องเหตุผลโชว์ 'แก้ไขสำเร็จ'",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "useState(closeReasons[0]) — ช่องเหตุผลตั้งต้นเป็นตัวแรกของ list ทุกครั้งที่ component mount ไม่เคยรับค่า cases.close_reason จริงจาก server เลย (page.js ส่งมาแค่ list ตัวเลือก) พอเปิดหน้าเคสที่ปิดไปแล้ว ฟอร์มจึงโชว์ค่า default ไม่ใช่ค่าที่บันทึกไว้ ทำให้ดูเหมือนระบบเซฟผิด ทั้งที่ DB ถูก · ซ้ำร้ายถ้าพิมพ์โน้ตแล้วกดยืนยันซ้ำจะเขียนทับเหตุผลที่ถูกด้วยค่า default",
+      "fix": "ส่ง currentReason={c.close_reason} เข้า component แล้ว prefill state จากค่านั้น (fallback เป็น rejectReasons[0] เมื่อค่าเดิมไม่อยู่ใน list) · แยก list เหตุผลของ rejected ออกจาก closed และตัด 'แก้ไขสำเร็จ' ทิ้ง · เลิกใช้สถานะ closed ทั้งชุด (ซ้ำกับ resolved)",
+      "tags": [
+        "cases",
+        "react-state",
+        "form-prefill",
+        "status",
+        "prod"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-04"
+    },
+    {
+      "id": "bug-20260904013500",
+      "timestamp": "2026-09-04T01:35:00+07:00",
+      "error_message": "ปุ่มยืนยันเปลี่ยนสถานะเคสกดแล้วไม่มีอะไรเกิดขึ้น ไม่มีข้อความบอกเหตุผล",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "disabled={busy || !publicNote.trim()} — ปุ่มถูก disable เงียบๆ เมื่อยังไม่ได้พิมพ์ข้อความแจ้งผู้ร้องเรียน มีแค่ opacity-50 เป็นสัญญาณ ไม่มีข้อความอธิบาย · ยิ่งสถานะอื่นเลือกแล้ว autosave ทันที คนใช้ยิ่งเข้าใจว่าเลือกเสร็จแล้วจบ",
+      "fix": "ปุ่มกดได้เสมอ (disabled={busy} อย่างเดียว) → validate ตอนกด → setStatusError(t('actions.publicNoteRequired')) + noteRef.current?.focus()",
+      "tags": [
+        "cases",
+        "ux",
+        "silent-failure",
+        "form-validation"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-04"
     }
   ]
 }
