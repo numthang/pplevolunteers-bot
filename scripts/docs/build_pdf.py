@@ -31,10 +31,17 @@ def main():
     if not images:
         sys.exit(1)
 
-    # Write to temp file first, then rename — makes the final write atomic
-    tmp = output + '.tmp'
-    images[0].save(tmp, format='PDF', save_all=True, append_images=images[1:], resolution=150)
-    os.replace(tmp, output)
+    # Write to temp file first, then rename — atomic swap, and tmp path is unique per run
+    # (เดิมใช้ output + '.tmp' คงที่ — อัพหลายรูปติดกันยิง build พร้อมกันหลายโปรเซส เขียนทับไฟล์ tmp เดียวกัน
+    #  ได้ PDF พัง (xref เพี้ยน) เจอ 2026-09-04 — ทุกโปรเซสต้องมี tmp เป็นของตัวเอง)
+    fd, tmp = tempfile.mkstemp(suffix='.pdf.tmp', dir=os.path.dirname(output) or '.')
+    os.close(fd)
+    try:
+        images[0].save(tmp, format='PDF', save_all=True, append_images=images[1:], resolution=150)
+        os.replace(tmp, output)
+    except Exception:
+        os.remove(tmp)
+        raise
 
 if __name__ == '__main__':
     main()
