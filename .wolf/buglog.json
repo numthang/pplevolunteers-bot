@@ -6658,6 +6658,40 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-04T02:38:44.582Z"
+    },
+    {
+      "id": "bug-376",
+      "timestamp": "2026-09-04T04:47:53.753Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "dark: text-disc-muted\" title={`${done → text-disc-muted shrink-0\">{pct",
+      "fix": "Changed dark: text-disc-muted\" title={`${done → text-disc-muted shrink-0\">{pct",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T04:47:53.753Z"
+    },
+    {
+      "id": "bug-377",
+      "timestamp": "2026-09-04T05:51:31.517712Z",
+      "error_message": "ร่างส่วนตัวยังไม่มีผู้รับผิดชอบ — เปิดให้ทีมเห็นก่อน (กดรับงานบนโพสต์ส่วนตัวไม่ได้)",
+      "file": "web/lib/postAssign.js",
+      "root_cause": "canAssignPost() ตัวเดียวตอบสองคำถามพร้อมกัน — 'ใส่คนอื่นได้ไหม' กับ 'ตัวเองรับได้ไหม' → ร่างส่วนตัวโดนบล็อกทั้งคู่ ทั้งที่การ์ดร่างส่วนตัวมีคนเห็นคนเดียวคือเจ้าของ (statusSql.js visibleLinkSql) เซตผู้รับผิดชอบจึงเป็นได้แค่ {} หรือ {เจ้าของ} · ความเป็นเจ้าของงานถูกเลื่อนไปเดาเอาตอน promoteToOrg แทน (seed created_by อัตโนมัติ)",
+      "fix": "แยกเป็น canAssignPost (คนอื่น · ต้อง visibility=org) + canSelfAssignPost (ตัวเอง · org หรือร่างส่วนตัวของตัวเอง) และรวมด่านไว้ที่ postAssignBlock() ตัวเดียวให้ทั้ง 3 ประตูเรียก · ถอด auto-seed created_by ออกจาก promoteToOrg · ⚠️ ต้องแก้ GET /api/posts/[id] ที่ gate 'ลิสต์ผู้รับผิดชอบ' ด้วย canAssignPost ด้วย ไม่งั้นกดรับติดจริงแต่ UI ยังขึ้นว่ายังไม่มีผู้รับผิดชอบ",
+      "tags": [
+        "posts",
+        "kanban",
+        "assignees",
+        "visibility",
+        "access-control"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T05:51:31.517712Z"
     }
   ]
 }

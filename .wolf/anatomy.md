@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T02:39:35.944Z
-> Files: 1122 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T04:47:53.693Z
+> Files: 1124 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -72,7 +72,7 @@
 - `_bottest2.js` — Declares caseDb (~357 tok)
 - `.claudeignore` (~4 tok)
 - `.gitignore` — Git ignore rules (~150 tok)
-- `CLAUDE.md` — OpenWolf (~3307 tok)
+- `CLAUDE.md` — OpenWolf (~3439 tok)
 - `deploy-commands.js` — deploy-commands.js (~1310 tok)
 - `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~870 tok)
 - `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
@@ -364,6 +364,7 @@
 - `1788456742523_backfill-completed-at-for-published-non-backfill-post-cards.sql` — Up Migration (~364 tok)
 - `1788470000000_retire-closed-status-merge-into-resolved.sql` — Up Migration (~574 tok)
 - `1788479000000_move-remaining-closed-cases-to-rejected.sql` — Up Migration (~395 tok)
+- `1788490304371_correct-completed-at-to-created-at-for-backfilled-resolved-rejected-cases.sql` — Up Migration (~373 tok)
 
 ## org core (platformfor.org identity/
 
@@ -479,6 +480,7 @@
 ## scripts/kanban/
 
 - `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1315 tok)
+- `fixBackfilledCaseCompletedAt.mjs` — แก้ `completed_at` ของการ์ด kanban ที่ผูก **เคสเก่าที่นำเข้าจากกระทู้ Discord** ให้เป็นวันตั้งเรื่อง (~810 tok)
 - `syncCaseAssignees.mjs` — กวาดเจ้าภาพ/คนช่วยของการ์ดที่ผูกเคสให้ตรงกับ `case_assignees` — **รันครั้งเดียวตอน deploy** (~1089 tok)
 
 ## scripts/media/
@@ -2034,7 +2036,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~26848 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~26892 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~809 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)

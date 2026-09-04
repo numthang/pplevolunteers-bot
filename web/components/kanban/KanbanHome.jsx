@@ -193,6 +193,7 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
   const checklistFields = (card.fields || []).filter((f) => f.type === 'checklist')
   const total = checklistFields.reduce((sum, f) => sum + (f.value || []).length, 0)
   const done = checklistFields.reduce((sum, f) => sum + (f.value || []).filter((i) => i.done).length, 0)
+  const pct = total ? Math.round((done / total) * 100) : 0
   // แท่งความคืบหน้า lifecycle ของเคส/โพสต์ที่ผูกไว้ (user สั่ง 2026-09-03) — คนละอันกับเช็คลิสต์ข้างบน
   // ใช้ card.status_type ที่คำนวณสดจากต้นทางอยู่แล้ว (LIVE_STATUS_SQL) ไม่ต้องต่อ SQL เพิ่ม
   // เคสมีแค่ 3 ขั้นจริง (open/in_progress/ปิด) ส่วนโพสต์ backlog กับ doing ก่อนส่งตรวจนับเป็นขั้นเดียวกัน
@@ -366,6 +367,7 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         <div className="flex items-center gap-1.5 text-warm-500 dark:text-disc-muted" title={`${done}/${total}`}>
           <ListChecks size={16} className="shrink-0" />
           <ChecklistBar done={done} total={total} className="flex-1" />
+          <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">{pct}%</span>
         </div>
       )}
 

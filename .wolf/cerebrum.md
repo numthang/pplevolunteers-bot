@@ -853,6 +853,21 @@ sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git pull -q origin maste
 งานประเภท "ตามเก็บค่าที่งอกผิดเรื่อยๆ" ต้องเป็น `scripts/` (เช่น `scripts/kanban/fixBackfilledCaseCompletedAt.mjs`
 — `completed_at` ของการ์ดเคสเก่าที่ทีมทยอยปิดย้อนหลัง เกิดใหม่ทุกครั้งที่ปิดเพิ่ม)
 
+### ผู้รับผิดชอบของโพสต์ — "ใครเห็น" ไม่ใช่ "ใครทำ" (เคาะ 2026-09-04)
+
+- **ร่างส่วนตัว: เจ้าของกดรับงานเองได้ · ใส่คนอื่นไม่ได้** — `canAssignPost` (คนอื่น) vs
+  `canSelfAssignPost` (ตัวเอง) ใน `web/lib/postAssign.js` · ด่านรวมคือ `postAssignBlock()`
+  ที่ทั้ง 3 ประตูต้องเรียก (`/api/posts/[id]/assign`, kanban `/assignees`, kanban PATCH claim)
+  → แก้ข้อความ error ที่เดียวจบ
+- ⛔ **`promoteToOrg` ห้าม seed `created_by` เป็นผู้รับผิดชอบ** (ถอดทิ้ง 2026-09-04) —
+  เดิมเป็นข้อยกเว้นเดียวที่เหลือของกฎ "ห้ามเอา created_by มาใส่ช่องผู้รับผิดชอบ"
+  (`db/kanban/links.js` §SOURCE_SQL) · เหตุผล: เปิดร่างให้ทีมเห็นเพราะอยากให้**คนอื่น**
+  เขียนต่อก็เป็นเรื่องปกติ + แอดมิน promote ร่างของคนอื่นได้ → seed = เดาเจตนาผิด
+- ⚠️ **`GET /api/posts/[id]` gate ลิสต์ผู้รับผิดชอบด้วย** ไม่ใช่แค่ `can.assign` —
+  แก้ด่านเขียนอย่างเดียวจะได้อาการ "กดติดจริงแต่ UI ยังขึ้นว่ายังไม่มีผู้รับผิดชอบ"
+- **แถวผู้รับผิดชอบใน `PostMetaPanel` ต้องเป็นสองบรรทัดและอยู่ล่างสุดของบล็อก** —
+  `flex justify-between` คู่ label|value แตกทันทีเมื่อมีชื่อไทยหลายคน (user เจอเอง)
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
