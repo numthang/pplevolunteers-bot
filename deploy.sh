@@ -64,7 +64,7 @@ git reset --hard origin/master
 step "git pull"
 
 # Bot
-npm install --omit=dev
+npm install --omit=dev --no-audit --no-fund
 step "npm install (bot)"
 
 # DB schema ต้องขึ้นก่อนโค้ดที่ใช้มันเสมอ — วางไว้ก่อน restart ทุกตัว
@@ -92,7 +92,7 @@ if [ "$BOT_ONLY" = "false" ]; then
   # Web — หยุด web ก่อน build เพื่อคืน RAM (กัน OOM: web เก่า + next build กิน RAM พร้อมกัน)
   pm2 stop pple-web 2>/dev/null || true
   cd web
-  npm install --omit=dev
+  npm install --omit=dev --no-audit --no-fund
   step "npm install (web)"
   npm run build
   step "next build"

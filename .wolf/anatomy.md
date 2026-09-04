@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T07:02:06.080Z
-> Files: 1124 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T11:24:46.632Z
+> Files: 1127 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -74,7 +74,7 @@
 - `.gitignore` — Git ignore rules (~150 tok)
 - `CLAUDE.md` — OpenWolf (~3439 tok)
 - `deploy-commands.js` — deploy-commands.js (~1310 tok)
-- `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~870 tok)
+- `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~1250 tok)
 - `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
 - `index.js` — index.js (~9292 tok)
 - `NOTE.md` (~1073 tok)
@@ -463,10 +463,12 @@
 
 ## scripts/docs/
 
+- `build_pdf.py` — main (~403 tok)
 - `crop_document.py` — order_points, four_point_transform, fit_to_a4, looks_like_paper (~2010 tok)
 - `inspect-pdf-fields.js` — Inspect PDF templates — แสดง page size + form fields (ถ้ามี) (~458 tok)
 - `make-doc-template.js` — แปลง 1.1-ใบสำคัญรับเงินค่าสถานที่.docx → template พร้อม {{placeholder}} (~2068 tok)
 - `make-doc-templates.js` — แปลง docx ต้นฉบับ → template พร้อม {{placeholder}} สำหรับ docxtemplater (~2489 tok)
+- `rebuildRegistrationPdf.mjs` — Rebuild แนบท้าย 3 PDF ของโปรเจกต์ใหม่จากไฟล์แนบที่มีอยู่ — ใช้ตอน PDF เดิมพัง (~385 tok)
 
 ## scripts/finance/
 
@@ -981,7 +983,7 @@
 
 ## web/app/api/docs/events/[eventId]/attachments/
 
-- `route.js` — POST /api/docs/events/[eventId]/attachments (~908 tok)
+- `route.js` — POST /api/docs/events/[eventId]/attachments (~912 tok)
 
 ## web/app/api/docs/external-payees/
 
@@ -1045,7 +1047,7 @@
 
 ## web/app/api/docs/projects/[id]/attachments/
 
-- `route.js` — GET /api/docs/projects/[id]/attachments (~699 tok)
+- `route.js` — GET /api/docs/projects/[id]/attachments (~700 tok)
 
 ## web/app/api/docs/projects/[id]/attachments/[attId]/
 
@@ -2013,8 +2015,9 @@
 
 - `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9800 tok)
 - `DocEntryList.jsx` — ALL_ITEMS (~8054 tok)
+- `DocImageCropper.jsx` — crop + rotate ภาพตาม croppedAreaPixels → JPEG blob (~1737 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
-- `DocProjectView.jsx` — THAI_MONTHS (~11828 tok)
+- `DocProjectView.jsx` — THAI_MONTHS (~8556 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
 - `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
@@ -2207,7 +2210,7 @@
 - `cookingMatch.js` — Cooking (/cooking) — pure meal-matching logic. No IO; caller passes data. (~1684 tok)
 - `cookingMenu.js` — Pure sanitizer สำหรับ payload เมนูที่ผู้ใช้ส่งมา (add/edit/import). ไม่มี IO. (~377 tok)
 - `cookingOwner.js` — /cooking เข้าใช้ได้โดยไม่ต้อง login — owner = discord id (PPLE) → identity email (users.id) → anonym (~397 tok)
-- `cropDocument.js` — เก็บ**ต้นฉบับ**ไว้คู่กับไฟล์ที่ครอบแล้วเสมอ (`<uuid>.orig.<ext>`) (~1015 tok)
+- `cropDocument.js` — บันทึกรูปที่ผู้ใช้ครอบเอง (จาก DocImageCropper — เป็น JPEG อยู่แล้ว) ไม่มี auto-crop อีกต่อไป (~739 tok)
 - `dateFormat.js` — dateFormat.js — Thai date formatting helpers (พ.ศ.) (~393 tok)
 - `debugCombos.js` — view-as-role combos — preview ว่าแต่ละ role เห็นอะไร (resolve ผ่าน dc_guild_roles จริง) (~314 tok)
 - `discordChannels.js` — ลิสต์ห้องของ guild ผ่าน Discord REST (Bot token) — ให้หน้า settings เลือกห้องจาก "ชื่อ" ไม่ใช่ ID 19 (~642 tok)
@@ -2344,8 +2347,8 @@
 
 ## web/locales/
 
-- `en.json` (~26513 tok)
-- `th.json` (~25344 tok)
+- `en.json` (~27196 tok)
+- `th.json` (~26003 tok)
 
 ## web/public/media-temp/
 

@@ -3,7 +3,6 @@ My Tasks and bug issue
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 - ระบบแบ่งกองเงินช่วงเปิดบริจาค ทำให้มันเข้ากองเงินใหม่ๆ อัตโนมัติตามช่วงเวลา, ตอนนี้กองเงินพอกด filter กองเงิน แล้วไม่มีให้ย้อนกลับมาดูทั้งกอง
-- รัน scripts/kanban/fixBackfilledCaseCompletedAt.mjs ตอนพิยะโดมอัพเดทเคสหมดแล้ว
 
 # PLATFOR{m}.ORG
 - platfor.org

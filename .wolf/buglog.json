@@ -6725,6 +6725,150 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-04T07:20:16.837Z"
+    },
+    {
+      "id": "bug-380",
+      "timestamp": "2026-09-04T10:45:59.664Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/docs/DocProjectView.jsx",
+      "root_cause": "dark: text-disc-muted mb-2\">{t('projectView.act.comingSoonNotice') → text-disc-muted uppercase tracking-widest mb-1\">{t('projectView.act.uploadSectionTitle')",
+      "fix": "Changed dark: text-disc-muted mb-2\">{t('projectView.act.comingSoonNotice') → text-disc-muted uppercase tracking-widest mb-1\">{t('projectView.act.uploadSectionTitle')",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T10:45:59.664Z"
+    },
+    {
+      "id": "bug-381",
+      "timestamp": "2026-09-04T10:46:48.303Z",
+      "error_message": "Significant refactor of DocProjectView.jsx",
+      "file": "web/components/docs/DocProjectView.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→3 lines (2 removed) | Also: function itemLabel(itemType) {; return ALL_ITEMS.includes(itemType) ? t(`entryList | Also: function handler(e) {; if (dropdownRef.current && !dropdownRef.current.co",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-04T10:47:47.671Z"
+    },
+    {
+      "id": "bug-382",
+      "timestamp": "2026-09-04T10:48:47.197Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/docs/DocProjectView.jsx",
+      "root_cause": "Had 'manual'",
+      "fix": "Changed to 'act'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T10:48:47.197Z"
+    },
+    {
+      "id": "bug-383",
+      "timestamp": "2026-09-04T10:53:55.915Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/lib/cropDocument.js",
+      "root_cause": "Had 'crop_document.py'",
+      "fix": "Changed to 'build_pdf.py'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T10:53:55.915Z"
+    },
+    {
+      "id": "bug-384",
+      "timestamp": "2026-09-04T10:54:13.633Z",
+      "error_message": "Significant refactor of cropDocument.js",
+      "file": "web/lib/cropDocument.js",
+      "root_cause": "24 lines replaced/restructured",
+      "fix": "Rewrote 37→11 lines (24 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T10:54:13.633Z"
+    },
+    {
+      "id": "bug-385",
+      "timestamp": "2026-09-04T10:54:35.184Z",
+      "error_message": "Wrong reference: cropAndSave should be saveAttachmentImage",
+      "file": "web/app/api/docs/events/[eventId]/attachments/route.js",
+      "root_cause": "Used \"cropAndSave\" instead of \"saveAttachmentImage\"",
+      "fix": "Changed cropAndSave → saveAttachmentImage",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-09-04T10:55:04.940Z"
+    },
+    {
+      "id": "bug-386",
+      "timestamp": "2026-09-04T10:58:01.926Z",
+      "error_message": "Missing await",
+      "file": "web/components/docs/DocProjectView.jsx",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T10:58:01.926Z"
+    },
+    {
+      "id": "bug-387",
+      "timestamp": "2026-09-04T11:08:20.313Z",
+      "error_message": "Missing error handling in build_pdf.py",
+      "file": "scripts/docs/build_pdf.py",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "py"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T11:08:20.313Z"
+    },
+    {
+      "id": "bug-388",
+      "timestamp": "2026-09-04T11:24:35.389Z",
+      "error_message": "Significant refactor of DocImageCropper.jsx",
+      "file": "web/components/docs/DocImageCropper.jsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 13→5 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T11:24:35.389Z"
     }
   ]
 }
