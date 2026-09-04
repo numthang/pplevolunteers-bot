@@ -5,6 +5,9 @@ import { useTranslations } from 'next-intl'
 import Cropper from 'react-easy-crop'
 import { X, RotateCw, ZoomIn } from 'lucide-react'
 
+// A4 แนวตั้ง — เอกสารแนบท้าย 3 เป็นกระดาษ A4 เสมอ (เหมือน CARD_ASPECT ใน IdCardCropper)
+const A4_ASPECT = 210 / 297
+
 function createImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -46,16 +49,8 @@ export default function DocImageCropper({ src, onCancel, onCropped }) {
   const [rotate90, setRotate90] = useState(0)   // ปุ่มหมุน 90° — แก้ไฟล์วางผิดด้าน
   const [fineRotate, setFineRotate] = useState(0) // slider ±45° — แก้ภาพเบี้ยว/เอียง
   const rotation = rotate90 + fineRotate
-  const [aspect, setAspect]     = useState(null)
   const [areaPixels, setAreaPixels] = useState(null)
   const [busy, setBusy]         = useState(false)
-
-  // อัตราส่วนกรอบเริ่มต้น = อัตราส่วนรูปจริง (ให้ผู้ใช้ซูม/เลื่อนเองแบบอิสระ ไม่ล็อกสัดส่วนตายตัว)
-  useEffect(() => {
-    let cancelled = false
-    createImage(src).then(img => { if (!cancelled) setAspect((img.naturalWidth || 1) / (img.naturalHeight || 1)) })
-    return () => { cancelled = true }
-  }, [src])
 
   const onComplete = useCallback((_area, areaPx) => setAreaPixels(areaPx), [])
 
@@ -90,20 +85,18 @@ export default function DocImageCropper({ src, onCancel, onCropped }) {
         </div>
 
         <div className="relative h-[360px] bg-black">
-          {aspect && (
-            <Cropper
-              image={src}
-              crop={crop}
-              zoom={zoom}
-              rotation={rotation}
-              aspect={aspect}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onRotationChange={r => setFineRotate(r - rotate90)}
-              onCropComplete={onComplete}
-              showGrid
-            />
-          )}
+          <Cropper
+            image={src}
+            crop={crop}
+            zoom={zoom}
+            rotation={rotation}
+            aspect={A4_ASPECT}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onRotationChange={r => setFineRotate(r - rotate90)}
+            onCropComplete={onComplete}
+            showGrid
+          />
         </div>
 
         <div className="px-5 py-3 space-y-3">
