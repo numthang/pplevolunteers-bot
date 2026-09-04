@@ -13,6 +13,8 @@ import {
   checkStatusTransition, formatRef, canPurge, isLinkedCard, LINK_KIND_LABEL,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
+import * as attDB from '@/db/kanban/attachments.js'
+import { deleteKanbanFiles } from '@/lib/kanbanUploads.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
 import { assignPost, postOfCard, postAssignBlock } from '@/lib/postAssign.js'
 
@@ -166,8 +168,12 @@ export async function DELETE(req, { params }) {
 
   if (new URL(req.url).searchParams.get('purge') === '1') {
     if (!canPurge(ctx.access)) return err(403, 'ลบถาวรได้เฉพาะแอดมิน')
+    // ⚠️ ต้องอ่าน path ไฟล์ **ก่อน** ลบ — แถวหายเองด้วย ON DELETE CASCADE แล้วไม่มีใครรู้ว่าไฟล์ไหนเป็นของใคร
+    //    (ไม่มี gc ในโฟลเดอร์ uploads/kanban — ปล่อยไว้ = ไฟล์ค้างดิสก์ถาวรทั้งที่คนกดลบเพราะอยากให้มันหาย)
+    const filePaths = await attDB.listCardFilePaths(ctx.orgId, ctx.card.id)
     const ok = await cardDB.deleteCard(ctx.orgId, ctx.card.id)
     if (!ok) return err(404, 'ไม่พบKANBANใบนี้')
+    await deleteKanbanFiles(filePaths)   // ห้าม throw — การ์ดถูกลบไปแล้ว
     return Response.json({ ok: true, purged: true })
   }
 

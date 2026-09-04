@@ -2220,6 +2220,14 @@
       "open": "Open",
       "titleLocked": "The title comes from the {kind} — edit it there and the card follows",
       "statusHint": "Status comes from the {kind} — change it there and the card moves on its own"
+    },
+    "attachments": {
+      "title": "Images",
+      "add": "Add image",
+      "remove": "Remove image",
+      "imageAlt": "Attachment {n}",
+      "uploadFailed": "Upload failed",
+      "deleteFailed": "Delete failed"
     }
   },
   "team": {

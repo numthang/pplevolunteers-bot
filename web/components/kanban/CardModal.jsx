@@ -23,6 +23,7 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
+import CardAttachmentsBox from './CardAttachmentsBox.jsx'
 import PersonProfileModal from '../org/PersonProfileModal.jsx'
 
 const AUTOSAVE_MS = 800
@@ -605,6 +606,14 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   // ต่อเข้า state ตรงๆ — ห้ามเรียก load() เพราะจะเขียนทับช่องที่ยังพิมพ์ค้างไม่ได้เซฟ
                   setCard((prev) => ({ ...prev, fields: [...(prev.fields || []), field] }))
                 }}
+                t={t}
+              />
+
+              {/* รูปแนบ — ใต้ "ข้อมูลของทีม" · การ์ดที่ import จากกระทู้ดิสฯ จะมีรูปมาให้แล้ว */}
+              <CardAttachmentsBox
+                cardId={cardId}
+                readOnly={readOnly}
+                onError={setActionError}
                 t={t}
               />
 
