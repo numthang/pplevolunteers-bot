@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-03T17:53:40.211Z
-> Files: 1120 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T02:39:35.944Z
+> Files: 1122 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -363,6 +363,7 @@
 - `1788454524874_backfill-completed-at-for-done-case-cards.sql` — Up Migration (~295 tok)
 - `1788456742523_backfill-completed-at-for-published-non-backfill-post-cards.sql` — Up Migration (~364 tok)
 - `1788470000000_retire-closed-status-merge-into-resolved.sql` — Up Migration (~574 tok)
+- `1788479000000_move-remaining-closed-cases-to-rejected.sql` — Up Migration (~395 tok)
 
 ## org core (platformfor.org identity/
 
@@ -1688,6 +1689,10 @@
 
 - `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2149 tok)
 
+## web/app/complaint/
+
+- `page.js` — Next.js page component (~862 tok)
+
 ## web/app/complaint/[ref]/
 
 - `page.js` — Next.js page component (~1356 tok)
@@ -2097,7 +2102,7 @@
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `botStatus.jsbotStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
 - `caseLetterConfig.js` — หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter (~507 tok)
-- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~8882 tok)
+- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~9075 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)

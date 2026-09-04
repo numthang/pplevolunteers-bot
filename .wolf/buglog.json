@@ -6642,6 +6642,22 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-04"
+    },
+    {
+      "id": "bug-375",
+      "timestamp": "2026-09-04T02:38:44.582Z",
+      "error_message": "Significant refactor of cases.js",
+      "file": "web/db/cases.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→16 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T02:38:44.582Z"
     }
   ]
 }

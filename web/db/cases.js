@@ -283,9 +283,21 @@ export async function advanceAttachmentWatermark(caseId, expectedId, newId, clie
  * ⛔ resolved/closed/rejected ไม่อยู่ในนี้ · แก้ตรงนี้ที่เดียวแล้วทั้งหน้าแรกและ /case ตามกันเอง
  */
 export const ACTIVE_STATUSES = ['open', 'in_progress']
-export const DONE_STATUSES = ['resolved', 'closed']   // ⛔ rejected (ตีกลับ) ไม่นับเป็น "เสร็จ"
+
+/**
+ * "จบแล้ว" — ไม่ต้องมีใครทำอะไรกับเคสนี้ต่อ
+ *
+ * ⭐ `rejected` **นับเป็นเสร็จ** (แก้ 2026-09-04) — เดิมไม่อยู่ทั้งใน ACTIVE และ DONE
+ *    = เคสที่ไม่รับดำเนินการ **หายไปจากทั้งสองตัวกรอง** เห็นได้เฉพาะตอนดู "ทั้งหมด" (20 ใบบน prod)
+ *    ระบบเดียวกันยังตอบคนละอย่างด้วย: kanban แม็ป rejected → 'done' มาตั้งแต่ 2026-09-02
+ *    (statusSql.js) และ CaseRow ก็ให้ 100% (`closed || rejected`) มีแต่ตรงนี้ที่หลุด
+ * ⚠️ คนละเรื่องกับ "แก้ไขแล้ว" บนหน้า /complaint สาธารณะ — อันนั้นคือ**คำโฆษณาว่าแก้สำเร็จ**
+ *    ต้องนับเฉพาะ `resolved` เท่านั้น ห้ามเอา rejected ไปรวม (ดู app/complaint/page.js)
+ * ⚠️ `closed` เลิกใช้แล้ว (ยุบเข้า resolved 2026-09-04) เหลือไว้กันเคสเก่าตกหล่นเฉยๆ
+ */
+export const DONE_STATUSES = ['resolved', 'rejected', 'closed']
 export const ACTIVE = 'active'   // ค่าพิเศษของ ?status= ใน URL → open + in_progress
-export const DONE = 'done'       // ค่าพิเศษของ ?status= ใน URL → resolved + closed
+export const DONE = 'done'       // ค่าพิเศษของ ?status= ใน URL → resolved + rejected (+ closed เก่า)
 export const NO_CATEGORY = '__none__'   // ค่าพิเศษของ ?category= ใน URL → ยังไม่ระบุประเภท
 const setSql = (arr) => `'{${arr.join(',')}}'`
 

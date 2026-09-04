@@ -23,7 +23,11 @@ export default async function CasePublicHome() {
   const cards = [
     { key: 'total', label: t('landing.totalLabel'), value: total },
     { key: 'in_progress', label: statusLabel('in_progress'), value: counts.in_progress || 0 },
-    { key: 'resolved', label: statusLabel('resolved'), value: (counts.resolved || 0) + (counts.closed || 0) },
+    // ⛔ นับเฉพาะ `resolved` — ตัวเลขนี้คือ "แก้ไขแล้ว" ที่ประชาชนอ่าน = คำโฆษณาว่าแก้สำเร็จ
+    //    เดิมบวก `closed` เข้ามาด้วย ทั้งที่ครึ่งหนึ่งของ closed เป็นเคสที่ปิดเพราะข้อมูลไม่พอ/
+    //    นอกเหนืออำนาจ = ไม่ได้แก้เลย (82 ใบ ทั้งที่แก้จริง 66) · ห้ามเอา rejected มารวมด้วยเด็ดขาด
+    //    ⚠️ คนละชุดกับ DONE_STATUSES ใน db/cases.js ที่แปลว่า "จบแล้ว" ในมุมคนทำงาน
+    { key: 'resolved', label: statusLabel('resolved'), value: counts.resolved || 0 },
   ]
 
   return (
