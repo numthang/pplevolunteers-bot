@@ -2285,5 +2285,58 @@
       "mine": "Assigned to me",
       "assigned": "All assigned"
     }
+  },
+  "kanbanImport": {
+    "meta": {
+      "title": "Import forum threads"
+    },
+    "title": "Import forum threads",
+    "subtitle": "Pick real work from the workgroup / district / members forums and turn it into cards",
+    "adminOnly": "Admins only",
+    "loadFailed": "Could not load the list",
+    "saveFailed": "Could not save",
+    "empty": "Nothing here",
+    "status": {
+      "pending": "To review",
+      "skipped": "Skipped",
+      "imported": "Imported"
+    },
+    "channel": {
+      "all": "All forums",
+      "workgroup": "Workgroup",
+      "district": "District",
+      "members": "Members"
+    },
+    "bulk": {
+      "selected": "{n} selected",
+      "skip": "Skip all",
+      "clear": "Clear selection",
+      "applyHint": "Tap a chip to apply it to every selected thread",
+      "import": "Import {n}"
+    },
+    "row": {
+      "isProject": "Looks like work",
+      "isChat": "Discussion thread",
+      "eventDate": "Event on {date}",
+      "noEventDate": "Posted {date} (no event date found)",
+      "author": "by {name}",
+      "messages": "{n} messages",
+      "openThread": "Open thread",
+      "maybeDuplicate": "Possible duplicate of {ref} “{title}” ({pct}% similar)",
+      "detailPlaceholder": "Detail for the card",
+      "workstreams": "Workstream",
+      "areas": "Area",
+      "assignee": "Assignee",
+      "noAssignee": "— none —",
+      "guessed": "AI guess",
+      "guessedHint": "Guessed by AI, not confirmed by a person — edit freely",
+      "skip": "Skip",
+      "unskip": "Restore",
+      "imported": "Imported"
+    },
+    "result": {
+      "done": "Imported {n}",
+      "failed": "{n} failed"
+    }
   }
 }
