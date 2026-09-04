@@ -135,6 +135,32 @@ commit `dd7bb8f` + `2ecaf2e` · migration รันบน dev แล้ว · **
 - ⚠️ การ์ดที่ไม่มีเจ้าภาพโผล่ใน "การบ้านของฉัน" ของ**ทุกคน** (`lib/kanbanGrouping.js` isMyCard)
   → backfill ตอนสร้างตารางต้องก็อป `owner_user_id` เดิมมาก่อน ไม่ใช่ปล่อยว่างยกแผง
 
+## 🧹 หลังทีมไล่ปิดเคสเก่าเสร็จ — รัน `fixBackfilledCaseCompletedAt` (ค้างไว้ตั้งใจ 2026-09-04)
+
+ทีมกำลังไล่ปิดเคสเก่าที่ import จากกระทู้ Discord ย้อนหลัง 3 ปี ทีละใบผ่านหน้า `/cases`
+ทุกครั้งที่กด `resolved`/`rejected` → `db/cases.js:updateStatus()` เซ็ต `completed_at = now()`
+ให้การ์ด kanban → เคสปี 2023 ไปกองบนสุดของช่อง "เสร็จ" เหมือนเพิ่งทำเสร็จวันนี้
+
+**user เคาะ: รอทีเดียวตอนทีมอัปเดตจนหมดแล้วค่อยรัน** (ไม่ใช่รันตอนนี้แล้วต้องรันอีกเรื่อยๆ)
+
+```bash
+# ดูก่อนว่าจะแก้กี่ใบ
+node -r dotenv/config scripts/kanban/fixBackfilledCaseCompletedAt.mjs --dry
+
+# รันจริงบน production (ใส่ --env-file ตาม convention ของ scripts ตัวอื่น)
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && \
+  node --env-file=.env scripts/kanban/fixBackfilledCaseCompletedAt.mjs'
+```
+
+- ⭐ **รันซ้ำได้** — ตั้งใจทำเป็น script ไม่ใช่ migration เพราะปัญหางอกใหม่ทุกครั้งที่ปิดเคสเก่าเพิ่ม
+  (ของเดิมเคยเป็น `migrations/1788490304371_correct-completed-at-…` ซึ่ง **รันบน dev ไปแล้ว**
+  จึงใช้ซ้ำไม่ได้อีก · ไฟล์นั้นยัง untracked อยู่ **ห้าม commit** จะได้ไม่ไปรันบน prod เป็น one-shot)
+- ⛔ **ห้ามแก้ `updateStatus()`** — `now()` ถูกแล้วสำหรับเคสจริงที่ใช้เวลาทำจริง ที่ผิดคือช่วง backfill
+- ระหว่างนี้อาการที่เห็นคือ **การเรียงลำดับกอง "เสร็จ" เพี้ยน** เท่านั้น ข้อมูลไม่เสีย
+- prod ตรวจแล้ว 2026-09-04 ตี 4: การ์ดเคสเก่าที่ปิดแล้ว 100 ใบ `completed_at` ถูกครบ 100/100
+
+---
+
 ## 🔗 ประวัติโพสต์ควรผูกกับ `social_id` ไม่ใช่เลขแถว (user เสนอ 2026-09-02 · ยังไม่ทำ)
 
 **ที่มา:** เปลี่ยนรหัสผ่าน FB → token ตายยกชุด → reconnect ได้แถวซ้ำใน `dc_social_accounts`
