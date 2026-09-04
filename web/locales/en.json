@@ -1201,9 +1201,7 @@
       "openLink": {
         "blockedTitle": "Can't sign yet",
         "blockedHint": "This form is missing recipient details (name / ID number / address). Ask the admin who sent you this link to fill them in, then open the same link again.",
-        "lockedTitle": "Already signed",
-        "lockedHint": "The signature has been recorded and can't be overwritten. Ask an admin to unlock it if you need to sign again.",
-        "signedBannerLocked": "· an admin must unlock it before re-signing"
+        "lockedNote": "Already signed — ask an admin to unlock it to sign again"
       }
     },
     "externalPayee": {

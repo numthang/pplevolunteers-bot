@@ -560,8 +560,12 @@ export default function SignPage({ params }) {
   // canInteract นำหน้าทุกอย่าง — strict + ไม่ใช่เจ้าตัว ห้ามมีแม้แต่ช่องให้วาด
   // sigLocked ตัดทุกอย่างทิ้ง — ห้ามโชว์ช่องวาดให้เซ็นจนเสร็จแล้วค่อยเด้ง 409 ตอนกดส่ง
   // (`done` = เพิ่งเซ็นจบในจอนี้ ไม่ใช่ล็อกที่ต้องแจ้ง — แถวนั้นเป็นของเขาเอง)
-  const canSign = canInteract && !(sigLocked && !done) &&
+  // "ดูใบได้" กับ "เซ็นได้" คนละเรื่อง — ใบที่ล็อกแล้วยังต้องเห็น preview พร้อมลายเซ็น
+  // เหมือนตอนเจ้าตัวเซ็นเอง (คนเปิดลิงก์มาดูว่าเซ็นไปหรือยัง/ลายเซ็นขึ้นถูกไหม เป็นเรื่องปกติ)
+  // ต่างกันแค่ปุ่มส่งที่ปิดไว้ · เดิมล็อกแล้วซ่อนทั้ง preview ทั้งช่องเซ็น เหลือแต่การ์ดข้อความ
+  const canViewDoc = canInteract &&
     (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone || openLink) && !needsRecipientInfo && !openLinkBlocked
+  const canSign = canViewDoc && !(sigLocked && !done)
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
@@ -575,10 +579,11 @@ export default function SignPage({ params }) {
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
               <CheckCircle size={18} className="shrink-0" /> {t('sign.signedBanner')}
-              {/* "เซ็นใหม่ทับได้" ไม่จริงเมื่อใบถูกล็อก (เซ็นผ่านลิงก์มาแล้ว) — บอกทางออกแทน */}
-              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">
-                {sigLocked && !done ? t('sign.openLink.signedBannerLocked') : t('sign.signedBannerNote')}
-              </span>
+              {/* "เซ็นใหม่ทับได้" ไม่จริงเมื่อใบถูกล็อก — ตัดคำนั้นทิ้งไปเฉยๆ
+                  เหตุผลที่เซ็นทับไม่ได้อยู่ใต้ปุ่มส่งแล้ว (sign.openLink.lockedNote) ไม่ต้องบอกซ้ำ 2 ที่ */}
+              {!(sigLocked && !done) && (
+                <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">{t('sign.signedBannerNote')}</span>
+              )}
             </span>
             <a
               href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
@@ -665,14 +670,6 @@ export default function SignPage({ params }) {
           </div>
         )}
 
-        {/* เซ็นผ่านลิงก์ไปแล้ว → ล็อก (signEntry) · ต้องบอกก่อนวาด ไม่ใช่ไปเด้ง 409 ตอนกดส่ง */}
-        {sigLocked && !done && (
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
-            <CheckCircle size={32} className="mx-auto text-green-500 mb-3" />
-            <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.openLink.lockedTitle')}</p>
-            <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.openLink.lockedHint')}</p>
-          </div>
-        )}
 
         {/* การ์ดเดียวจบ: รูปบัตร + ข้อมูลผู้รับ — หน้าตาเดียวกันทั้งตอนแนบครั้งแรกและตอนแก้ไข
             เดิมแยก 3 การ์ดคนละหน้าตาทั้งที่เป็นงานเดียวกัน (ฟอร์มกรอก · ป้าย "บันทึกแล้ว" · การ์ดรูปบัตร)
@@ -832,7 +829,7 @@ export default function SignPage({ params }) {
           </div>
         )}
         {/* Document preview (after can sign) */}
-        {canSign && (
+        {canViewDoc && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -888,8 +885,8 @@ export default function SignPage({ params }) {
           </div>
         )}
 
-        {/* Signature canvas */}
-        {canSign && (
+        {/* Signature canvas — ใบที่ล็อกแล้วยังโชว์ช่องไว้ แต่ปุ่มส่งปิด (ดูหมายเหตุ canViewDoc) */}
+        {canViewDoc && (
           <>
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-3">
@@ -929,11 +926,14 @@ export default function SignPage({ params }) {
 
             <button
               onClick={handleSubmit}
-              disabled={!hasDrawn || submitting}
+              disabled={!hasDrawn || submitting || !canSign}
               className="w-full bg-orange text-white py-3.5 rounded-xl text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
             >
               {submitting ? t('sign.submit.saving') : isSigned ? t('sign.submit.resign') : signerRole === 'payer' ? t('sign.submit.confirmPayment') : t('sign.submit.confirmSignature')}
             </button>
+            {!canSign && (
+              <p className="text-sm text-warm-500 dark:text-disc-muted text-center -mt-2">{t('sign.openLink.lockedNote')}</p>
+            )}
           </>
         )}
 
