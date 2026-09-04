@@ -806,7 +806,6 @@
         "equipment": "Equipment",
         "photo": "Photography"
       },
-      "viewAllPending": "View all pending items: {url}",
       "recipientRequired": "Please specify a recipient before saving",
       "confirmResetRecipientSignature": "This item has already been signed. Changing the recipient will reset the signature — confirm?",
       "confirmResetSignatureOnEdit": "This item has already been signed. Editing its details/amount will reset the signature (the receipt content will differ from what was signed) — confirm?",

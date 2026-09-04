@@ -37,7 +37,7 @@ function calcSpeakerAmount(hours, type) {
   return calcSpeakerCeiling({ hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60), isGovOfficer: type === 'government' })
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentUserId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince }) {
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentUserId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince, signPolicy = 'strict' }) {
   const t = useTranslations('docs')
   function itemLabel(itemType) {
     return ALL_ITEMS.includes(itemType) ? t(`entryList.itemLabels.${itemType}`) : itemType
@@ -786,6 +786,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         currentUserId={currentUserId}
         onChange={setEntries}
         eligiblePayers={eligiblePayers}
+        signPolicy={signPolicy}
         recentMembers={recentMembers}
       />
 

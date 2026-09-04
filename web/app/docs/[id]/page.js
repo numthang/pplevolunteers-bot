@@ -6,6 +6,7 @@ import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getDocProjectByEventId, getActEventById } from '@/db/docs/projects.js'
 import { getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
+import { getDocsSignPolicy } from '@/db/orgConfig.js'
 import DocProjectView from '@/components/docs/DocProjectView'
 
 // [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id
@@ -64,6 +65,7 @@ export default async function DocProjectPage({ params }) {
       participantCount={eventMeta?.participant_count ?? null}
       actEventId={eventMeta?.act_event_id ?? null}
       eventProvince={eventMeta?.province ?? null}
+      signPolicy={await getDocsSignPolicy(orgId)}
     />
   )
 }

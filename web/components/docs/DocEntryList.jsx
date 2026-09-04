@@ -21,7 +21,7 @@ const selectCls = inputCls + ' appearance-none pr-6'
 // label หัวแถวใน edit form — fixed width ให้ input ทุกแถวเริ่มชิดกันเป๊ะ (ผู้จ่าย/ระยะทาง/ผู้รับ ยาวไม่เท่ากัน)
 const rowLabelCls = 'text-xs text-warm-600 dark:text-disc-text w-16 shrink-0'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], recentMembers = [] }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], recentMembers = [], signPolicy = 'strict' }) {
   const t = useTranslations('docs')
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
@@ -35,18 +35,29 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     return ALL_ITEMS.includes(type) ? t(`entryList.itemLabels.${type}`) : type
   }
 
+  /**
+   * ข้อความที่ก๊อปไปแปะให้คนเซ็น — เอาแต่ลิงก์ของเขา ไม่มีอย่างอื่นเกะกะ
+   *
+   * `openExternalBrowser=1` (พารามิเตอร์ของ LINE ที่สั่งให้เปิดเบราว์เซอร์หลักแทนมินิเบราว์เซอร์)
+   * ใส่เฉพาะลิงก์ที่ **ต้องล็อกอิน** เท่านั้น — เหตุผลทั้งหมดที่ต้องพาคนออกจากมินิเบราว์เซอร์
+   * (cookie ไม่อยู่ยาว · OAuth callback หลงทาง · Google บล็อก embedded webview) เป็นเรื่อง
+   * ล็อกอินล้วนๆ · โหมด open ไม่ต้องล็อกอิน = ไม่มีเหตุผลเหลือ ใส่ไปก็รก URL เปล่าๆ
+   *   - ลิงก์ผู้รับ + โหมด open  → ไม่ใส่
+   *   - ลิงก์ผู้รับ + strict/flexible → ใส่ (ยังต้องล็อกอิน ปัญหาเดิมยังอยู่)
+   *   - ลิงก์ผู้จ่าย → ใส่เสมอ (บังคับล็อกอินทุกโหมด — ลายเซ็นผู้จ่าย = อนุมัติจ่ายขององค์กร)
+   */
   function copySignLinks(type, groupItems, groupKey, recipientName) {
     const origin = window.location.origin
+    const needsLogin = type !== 'recipient' || signPolicy !== 'open'
     const lines = groupItems
       .map(e => {
         const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
         if (!token) return null
-        return `${recipientName} ${itemLabel(e.item_type)} ${externalBrowserUrl(`${origin}/docs/sign/${token}`)}`
+        const url = `${origin}/docs/sign/${token}`
+        return `${recipientName} ${itemLabel(e.item_type)} ${needsLogin ? externalBrowserUrl(url) : url}`
       })
       .filter(Boolean)
     if (!lines.length) return
-    const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
-    lines.push(`\n${t('entryList.viewAllPending', { url: externalBrowserUrl(`${origin}/docs/pending?tab=${pendingTab}`) })}`)
     navigator.clipboard.writeText(lines.join('\n'))
     setCopiedKey(`${type}-${groupKey}`)
     setTimeout(() => setCopiedKey(null), 2000)
