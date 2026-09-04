@@ -2317,8 +2317,6 @@
     "row": {
       "isProject": "Looks like work",
       "isChat": "Discussion thread",
-      "eventDate": "Event on {date}",
-      "noEventDate": "Posted {date} (no event date found)",
       "author": "by {name}",
       "messages": "{n} messages",
       "openThread": "Open thread",
@@ -2332,7 +2330,11 @@
       "guessedHint": "Guessed by AI, not confirmed by a person — edit freely",
       "skip": "Skip",
       "unskip": "Restore",
-      "imported": "Imported"
+      "imported": "Imported",
+      "posted": "posted {date}",
+      "eventDateLabel": "Event date",
+      "eventDateHint": "= card's completed + due date",
+      "noEventDateHint": "empty = completed on posting date ({date}), no due date"
     },
     "result": {
       "done": "Imported {n}",

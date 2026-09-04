@@ -310,12 +310,10 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
   const ws = row.pick_workstreams ?? row.ai_workstreams ?? []
   const areas = row.pick_areas ?? row.ai_areas ?? []
   const people = row.participants || []
-  const assignee = row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? ''
+  const assignee = row.pick_no_assignee ? '' : (row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? '')
+  const eventDate = row.pick_no_event_date ? '' : String(row.pick_event_date ?? row.ai_event_date ?? '').slice(0, 10)
   const guessed = (key) => row[`pick_${key}`] == null && (row[`ai_${key}`]?.length || row[`ai_${key}`] != null)
 
-  const dateLabel = row.ai_event_date
-    ? t('row.eventDate', { date: String(row.ai_event_date).slice(0, 10) })
-    : t('row.noEventDate', { date: String(row.thread_created_at).slice(0, 10) })
 
   return (
     <div className={`rounded-xl border p-3 flex flex-col gap-2 transition ${
@@ -338,7 +336,7 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
           <div className="flex items-center gap-2 flex-wrap text-xs text-warm-400 dark:text-disc-muted">
             {row.ai_is_project === true && <span className="px-1.5 py-0.5 rounded bg-teal/15 text-teal">{t('row.isProject')}</span>}
             {row.ai_is_project === false && <span className="px-1.5 py-0.5 rounded bg-warm-100 dark:bg-disc-hover">{t('row.isChat')}</span>}
-            <span>{dateLabel}</span>
+            <span>{t('row.posted', { date: String(row.thread_created_at).slice(0, 10) })}</span>
             {row.author_name && <span>· {t('row.author', { name: row.author_name })}</span>}
             <span>· {t('row.messages', { n: row.message_count })}</span>
             <a href={row.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-teal hover:underline">
@@ -382,13 +380,29 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
       )}
 
       <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100 dark:border-disc-border">
+        <Field
+          label={t('row.eventDateLabel')}
+          guessed={row.pick_event_date == null && !row.pick_no_event_date && row.ai_event_date != null}
+          t={t}
+        >
+          <input
+            type="date"
+            value={eventDate}
+            onChange={(e) => onPatch({ eventDate: e.target.value })}
+            disabled={busy}
+            className="rounded-lg border border-warm-200 dark:border-disc-border bg-transparent px-2 py-1 text-base text-warm-700 dark:text-disc-text focus:border-teal focus:outline-none"
+          />
+          <span className="text-xs text-warm-400 dark:text-disc-muted">
+            {eventDate ? t('row.eventDateHint') : t('row.noEventDateHint', { date: String(row.thread_created_at).slice(0, 10) })}
+          </span>
+        </Field>
         <Field label={t('row.workstreams')} guessed={guessed('workstreams')} t={t}>
           <ChipPicker options={optionsOf['สายงาน'] || []} value={ws} onChange={(v) => onPatch({ workstreams: v })} disabled={busy} />
         </Field>
         <Field label={t('row.areas')} guessed={guessed('areas')} t={t}>
           <ChipPicker options={optionsOf['พื้นที่'] || []} value={areas} onChange={(v) => onPatch({ areas: v })} disabled={busy} />
         </Field>
-        <Field label={t('row.assignee')} guessed={row.pick_assignee_user_id == null && row.ai_assignee_user_id != null} t={t}>
+        <Field label={t('row.assignee')} guessed={row.pick_assignee_user_id == null && !row.pick_no_assignee && row.ai_assignee_user_id != null} t={t}>
           <select
             value={assignee || ''}
             onChange={(e) => onPatch({ assigneeUserId: e.target.value || null })}

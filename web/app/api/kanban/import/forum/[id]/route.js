@@ -37,8 +37,17 @@ export async function PATCH(req, { params }) {
   if ('workstreams' in body) patch.workstreams = ids(body.workstreams)
   if ('areas' in body) patch.areas = ids(body.areas)
   if ('assigneeUserId' in body) {
+    // ล้างค่า = "ตั้งใจไม่มีผู้รับผิดชอบ" ไม่ใช่ "ถอยไปใช้ที่ AI เดา" (ต้องปักธงคู่กันเสมอ)
     const v = body.assigneeUserId
-    patch.assigneeUserId = v === null || v === '' ? null : Number(v) || null
+    const cleared = v === null || v === ''
+    patch.assigneeUserId = cleared ? null : Number(v) || null
+    patch.noAssignee = cleared
+  }
+  if ('eventDate' in body) {
+    const v = String(body.eventDate ?? '').trim()
+    if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return err(400, 'รูปแบบวันที่ต้องเป็น YYYY-MM-DD')
+    patch.eventDate = v || null
+    patch.noEventDate = !v
   }
 
   return Response.json({ row: await importDB.updatePick(ctx.orgId, id, patch) })

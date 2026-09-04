@@ -10,8 +10,14 @@ const LIST_SQL = `
   SELECT i.id, i.thread_id, i.channel_id, i.title, i.url, i.thread_created_at,
          i.first_message, i.message_count, i.image_count, i.participants,
          i.ai_summary, i.ai_is_project, i.ai_reason, i.ai_workstreams, i.ai_areas,
-         i.ai_assignee_user_id, i.ai_event_date, i.ai_at,
+         i.ai_assignee_user_id, i.ai_at,
+         -- ⚠️ คืน DATE เป็น "ข้อความ" เสมอ — ปล่อยให้ node-pg แปลงเป็น Date object จะกลายเป็น
+         --    เที่ยงคืนเวลาไทย แล้วพอ .toISOString() ฝั่งเว็บ (UTC) วันจะถอยไป 1 วันทันที
+         --    (บั๊กเดียวกับ txn_at ของ finance ที่เขียนเตือนไว้ใน CLAUDE.md)
+         to_char(i.ai_event_date,   'YYYY-MM-DD') AS ai_event_date,
+         to_char(i.pick_event_date, 'YYYY-MM-DD') AS pick_event_date,
          i.pick_title, i.pick_detail, i.pick_workstreams, i.pick_areas, i.pick_assignee_user_id,
+         i.pick_no_event_date, i.pick_no_assignee,
          i.status, i.card_id, i.dup_card_id, i.dup_score,
          i.author_user_id, i.author_discord_id,
          COALESCE(au.username, au.firstname) AS author_name,
@@ -56,9 +62,11 @@ export function effective(row) {
     detail: row.pick_detail ?? row.ai_summary ?? row.first_message ?? null,
     workstreams: row.pick_workstreams ?? row.ai_workstreams ?? [],
     areas: row.pick_areas ?? row.ai_areas ?? [],
-    assigneeUserId: row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? null,
+    // ⚠️ pick_no_* คือ "คนดูแล้วและตั้งใจให้ว่าง" — ต่างจาก NULL ที่แปลว่า "ยังไม่แตะ ใช้ของ AI ไปก่อน"
+    //    ไม่มี 2 สถานะนี้แยกกัน = คนล้างค่าทิ้งแล้วค่าที่ AI เดาเด้งกลับมาเงียบๆ
+    assigneeUserId: row.pick_no_assignee ? null : (row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? null),
     // วันจัดงาน = ทั้ง due_at และ completed_at (user เคาะ 2026-09-04) · ไม่มี = completed_at ใช้วันตั้งกระทู้
-    eventDate: row.ai_event_date ?? null,
+    eventDate: row.pick_no_event_date ? null : (row.pick_event_date ?? row.ai_event_date ?? null),
   }
 }
 
@@ -68,6 +76,9 @@ const PICK_COLUMNS = {
   workstreams: 'pick_workstreams',
   areas: 'pick_areas',
   assigneeUserId: 'pick_assignee_user_id',
+  eventDate: 'pick_event_date',
+  noEventDate: 'pick_no_event_date',
+  noAssignee: 'pick_no_assignee',
 }
 
 /**
