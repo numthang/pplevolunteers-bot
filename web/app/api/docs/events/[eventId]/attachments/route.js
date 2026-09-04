@@ -5,7 +5,7 @@ import { canManageDocs } from '@/lib/docsAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { upsertDocProject, getDocProjectByEventId } from '@/db/docs/projects.js'
 import { getAttachmentsByProject, createAttachment } from '@/db/docs/attachments.js'
-import { cropAndSave, buildRegistrationPdf, getRegPdfPath, getUploadPath } from '@/lib/cropDocument.js'
+import { saveAttachmentImage, buildRegistrationPdf, getRegPdfPath, getUploadPath } from '@/lib/cropDocument.js'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 
@@ -58,8 +58,8 @@ export async function POST(req, { params }) {
       return Response.json({ ok: true, type: 'pdf' }, { status: 201 })
     }
 
-    // Image upload — crop + save as attachment
-    const filePath = await cropAndSave(buffer, projectId, file.type)
+    // Image upload — บันทึกภาพที่ครอบมาแล้วจากฝั่ง client
+    const filePath = await saveAttachmentImage(buffer, projectId)
     const attachment = await createAttachment(projectId, orgId, {
       originalName: file.name,
       filePath,

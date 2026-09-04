@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, Copy, RefreshCw, Link2 } from 'lucide-react'
+import { X, CreditCard, CheckCircle, FilePlus, Check, Pencil, Copy, RefreshCw, Link2 } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
-import { calcSpeakerCeiling, SPEAKER_RULES } from '@/config/fund69-rules.js'
+import DocImageCropper from './DocImageCropper'
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 function formatDate(dateStr) {
@@ -24,24 +24,8 @@ const PROJECT_STATUS_COLOR = {
   closed: 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted',
 }
 
-const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
-const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
-
-const inputCls = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
-
-function newItem(description) {
-  return { id: Math.random().toString(36).slice(2), itemType: 'food', description, amount: '', speakerHours: 1, speakerType: 'general', soundHours: 1 }
-}
-
-function calcSpeakerAmount(hours, type) {
-  return calcSpeakerCeiling({ hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60), isGovOfficer: type === 'government' })
-}
-
 export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentUserId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince, signPolicy = 'strict' }) {
   const t = useTranslations('docs')
-  function itemLabel(itemType) {
-    return ALL_ITEMS.includes(itemType) ? t(`entryList.itemLabels.${itemType}`) : itemType
-  }
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -49,17 +33,9 @@ export default function DocProjectView({ project: initialProject, initialEntries
   // province จาก project (ถ้ามีแล้ว) หรือจาก event โดยตรง (ก่อนสร้าง project)
   const province = project?.province ?? eventProvince
 
-  // manual form state
-  const [query, setQuery]                 = useState('')
-  const [searchResults, setSearchResults] = useState([])
-  const [showDropdown, setShowDropdown]   = useState(false)
   const [recentMembers, setRecentMembers] = useState([])
-  const debounceRef = useRef(null)
-  const dropdownRef = useRef(null)
-  const [members, setMembers]   = useState([])
-  const [saving, setSaving]     = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
-  const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'manual'
+  const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'act'
 
   // ACT tab — attachments + tokens
   const [attachments, setAttachments]   = useState([])
@@ -109,6 +85,34 @@ export default function DocProjectView({ project: initialProject, initialEntries
   useEffect(() => {
     if (billMode === 'act' && !attLoaded) loadAttachments()
   }, [billMode])
+
+  // อัพโหลดแนบท้าย 3 — รูปต้องครอบเองก่อนเสมอ (ไม่มี auto-crop แล้ว) ส่วน PDF อัพตรงได้เลย
+  const [cropQueue, setCropQueue] = useState([]) // File[] รูปที่รอครอบ
+  const [cropSrc, setCropSrc]     = useState(null) // object URL ของรูปที่กำลังครอบอยู่
+
+  function queueFiles(files) {
+    const pdfs   = files.filter(f => f.type === 'application/pdf')
+    const images = files.filter(f => f.type !== 'application/pdf')
+    pdfs.forEach(f => uploadAttachment(f))
+    if (images.length) setCropQueue(prev => [...prev, ...images])
+  }
+
+  useEffect(() => {
+    if (!cropSrc && cropQueue.length > 0) setCropSrc(URL.createObjectURL(cropQueue[0]))
+  }, [cropQueue, cropSrc])
+
+  function cancelCrop() {
+    URL.revokeObjectURL(cropSrc)
+    setCropSrc(null)
+    setCropQueue(prev => prev.slice(1))
+  }
+
+  async function finishCrop(blob) {
+    URL.revokeObjectURL(cropSrc)
+    setCropSrc(null)
+    setCropQueue(prev => prev.slice(1))
+    await uploadAttachment(new File([blob], 'attachment.jpg', { type: 'image/jpeg' }))
+  }
 
   async function uploadAttachment(file) {
     setAttUploading(true)
@@ -181,31 +185,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [payerSavingTop, setPayerSavingTop]   = useState(false)
 
   useEffect(() => {
-    function handler(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  useEffect(() => {
     if (!province) return
     fetch(`/api/docs/members/recent?province=${encodeURIComponent(province)}&limit=8`)
       .then(r => r.json())
       .then(d => { if (d.data) setRecentMembers(d.data) })
       .catch(() => {})
   }, [province])
-
-  useEffect(() => {
-    clearTimeout(debounceRef.current)
-    if (!query.trim()) { setSearchResults([]); return }
-    debounceRef.current = setTimeout(async () => {
-      const res  = await fetch(`/api/docs/members?q=${encodeURIComponent(query)}&limit=20`)
-      const data = await res.json()
-      setSearchResults(data.data || [])
-      setShowDropdown(true)
-    }, 300)
-  }, [query])
 
   // โหลด pool ผู้จ่ายที่ scope ครอบคลุมจังหวัดของโครงการ + seed payer default
   useEffect(() => {
@@ -224,58 +209,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
       })
       .catch(() => setEligiblePayers([]))
   }, [canManage, province, project?.payer_user_id])
-
-  function addMember(member) {
-    if (members.find(m => m.userId === member.user_id)) {
-      setQuery(''); setShowDropdown(false); return
-    }
-    setMembers(prev => [...prev, {
-      userId: member.user_id,
-      name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username,
-      items: [newItem(itemLabel('food'))],
-    }])
-    setQuery(''); setShowDropdown(false)
-  }
-
-  function removeMember(userId) {
-    setMembers(prev => prev.filter(m => m.userId !== userId))
-  }
-
-  function addItem(userId) {
-    setMembers(prev => prev.map(m =>
-      m.userId === userId ? { ...m, items: [...m.items, newItem(itemLabel('food'))] } : m
-    ))
-  }
-
-  function removeItem(userId, itemId) {
-    setMembers(prev => prev.map(m =>
-      m.userId === userId ? { ...m, items: m.items.filter(i => i.id !== itemId) } : m
-    ))
-  }
-
-  function updateItem(userId, itemId, field, value) {
-    setMembers(prev => prev.map(m =>
-      m.userId === userId
-        ? { ...m, items: m.items.map(i => {
-            if (i.id !== itemId) return i
-            const next = { ...i, [field]: value }
-            if (field === 'itemType' && (!i.description || i.description === itemLabel(i.itemType))) {
-              next.description = itemLabel(value) || ''
-            }
-            if (field === 'itemType' && value === 'speaker') {
-              next.amount = calcSpeakerAmount(i.speakerHours, i.speakerType)
-            }
-            if (field === 'speakerHours') {
-              next.amount = calcSpeakerAmount(value, i.speakerType)
-            }
-            if (field === 'speakerType') {
-              next.amount = calcSpeakerAmount(i.speakerHours, value)
-            }
-            return next
-          }) }
-        : m
-    ))
-  }
 
   // ต้องตั้งกรอบงบ + มีผู้มีสิทธิ์จ่าย ≥ 2 คน ถึงจะสร้างบิลได้
   const canCreate = budget != null && eligiblePayers.length >= 2
@@ -307,33 +240,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
     } finally {
       setPayerSavingTop(false)
     }
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!canCreate) { alert(blockReason); return }
-    const payload = []
-    for (const m of members) {
-      for (const item of m.items) {
-        if (!item.amount) continue
-        payload.push({
-          memberUserId:    m.userId,
-          itemType:        item.itemType,
-          description:     item.description || null,
-          amount:          parseFloat(item.amount),
-          // วิทยากร/เครื่องเสียง: เก็บจำนวนชั่วโมงไว้ที่ override_data.duration (PDF เติม "ชั่วโมง" ต่อท้ายเอง)
-          overrideData:    item.itemType === 'speaker' ? { duration: String(item.speakerHours) }
-                         : item.itemType === 'sound'   ? { duration: String(item.soundHours ?? 1) }
-                         : undefined,
-        })
-      }
-    }
-    if (payload.length === 0) { alert(t('projectView.validation.entriesRequired')); return }
-
-    setSaving(true)
-    try { await postEntries(payload, null); setMembers([]) }
-    catch (err) { alert(t('entryList.errorPrefix', { message: err.message })) }
-    finally { setSaving(false) }
   }
 
   async function postEntries(payload, pCount) {
@@ -388,8 +294,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
 
   const isMobile     = project?.is_mobile ?? false
-  const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
-  const formTotal    = members.flatMap(m => m.items).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
 
   return (
     <div>
@@ -537,7 +441,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
           <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
             {[
               { key: 'auto', label: t('projectView.tabs.auto') },
-              { key: 'manual', label: t('projectView.tabs.manual') },
               { key: 'act', label: t('projectView.common.attachment3Label') },
             ].map(tab => (
               <button
@@ -579,7 +482,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
               {/* Upload zone */}
               <div>
                 <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-1">{t('projectView.act.uploadSectionTitle')}</p>
-                <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">{t('projectView.act.comingSoonNotice')}</p>
                 <button
                   type="button"
                   onClick={() => attInputRef.current?.click()}
@@ -601,7 +503,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
                   multiple
                   className="hidden"
-                  onChange={e => { [...(e.target.files || [])].forEach(f => uploadAttachment(f)); e.target.value = '' }}
+                  onChange={e => { queueFiles([...(e.target.files || [])]); e.target.value = '' }}
                 />
               </div>
 
@@ -653,6 +555,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   <span className="absolute bottom-4 text-white/60 text-sm">{previewIdx + 1} / {attachments.length}</span>
                 </div>
               )}
+
+              {/* ครอบรูปเอง — ทุกรูปที่อัพต้องผ่านตรงนี้ก่อน (ไม่มี auto-crop แล้ว) */}
+              {cropSrc && (
+                <DocImageCropper src={cropSrc} onCancel={cancelCrop} onCropped={finishCrop} />
+              )}
             </div>
           </div>
 
@@ -673,107 +580,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
             />
           </div>
 
-          <div className={billMode !== 'manual' ? 'hidden' : ''}>
-            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-3 space-y-4">
-          {formTotal > 0 && (
-            <div className="flex justify-end">
-              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('projectView.manual.totalLabel', { amount: formTotal.toLocaleString() })}</span>
-            </div>
-          )}
-
-          <div className="relative" ref={dropdownRef}>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted pointer-events-none" />
-              <input
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onFocus={() => { if (!query.trim() && recentMembers.length > 0) setShowDropdown(true) }}
-                placeholder={t('projectView.manual.searchMemberPlaceholder')}
-                className={`${inputCls} pl-9`}
-              />
-            </div>
-            {showDropdown && (searchResults.length > 0 || (!query.trim() && recentMembers.length > 0)) && (
-              <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
-                {!query.trim() && <li className="px-4 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
-                {(query.trim() ? searchResults : recentMembers).map(m => (
-                  <li key={m.user_id}>
-                    <button
-                      type="button"
-                      onClick={() => addMember(m)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-disc-hover transition"
-                    >
-                      <span className="text-base font-medium text-warm-900 dark:text-disc-text">{m.display_name}</span>
-                      <span className="ml-2 text-sm text-warm-500 dark:text-disc-muted">
-                        {m.username && `@${m.username}`}
-                        {(m.first_name || m.last_name) && ` · ${m.first_name || ''} ${m.last_name || ''}`.trim()}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {members.map(m => {
-            const memberTotal = m.items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
-            return (
-              <div key={m.userId} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
-                  <span className="font-semibold text-warm-900 dark:text-disc-text">{m.name}</span>
-                  <div className="flex items-center gap-3">
-                    {memberTotal > 0 && (
-                      <span className="text-sm text-warm-500 dark:text-disc-muted">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
-                    )}
-                    <button type="button" onClick={() => removeMember(m.userId)} className="p-1 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors">
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div className="p-3 space-y-2">
-                  {m.items.map(item => (
-                    <div key={item.id} className="flex flex-wrap gap-2 items-center">
-                      <select value={item.itemType} onChange={e => updateItem(m.userId, item.id, 'itemType', e.target.value)} className={`${inputCls} w-full sm:w-40 shrink-0`}>
-                        {allowedItems.map(itemType => <option key={itemType} value={itemType}>{itemLabel(itemType)}</option>)}
-                      </select>
-                      {item.itemType === 'speaker' && (<>
-                        <select value={item.speakerHours} onChange={e => updateItem(m.userId, item.id, 'speakerHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
-                          {[0.5,1,1.5,2,2.5,3,3.5,4,5,6].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
-                        </select>
-                        <select value={item.speakerType} onChange={e => updateItem(m.userId, item.id, 'speakerType', e.target.value)} className={`${inputCls} w-full sm:w-36 shrink-0`}>
-                          <option value="general">{t('projectView.manual.speakerGeneralOption', { rate: SPEAKER_RULES.rates.general.toLocaleString() })}</option>
-                          <option value="government">{t('projectView.manual.speakerGovernmentOption', { rate: SPEAKER_RULES.rates.government.toLocaleString() })}</option>
-                        </select>
-                      </>)}
-                      {item.itemType === 'sound' && (
-                        <select value={item.soundHours} onChange={e => updateItem(m.userId, item.id, 'soundHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
-                          {[1,2,3,4,5,6,7,8].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
-                        </select>
-                      )}
-                      <input type="text" value={item.description} onChange={e => updateItem(m.userId, item.id, 'description', e.target.value)} placeholder={t('entryList.notePlaceholder')} className={`${inputCls} flex-1 min-w-28`} />
-                      <div className="flex gap-2 items-center shrink-0">
-                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.userId, item.id, 'amount', e.target.value)} placeholder={t('projectView.manual.amountPlaceholder')} className={`${inputCls} w-28`} />
-                        <button type="button" onClick={() => removeItem(m.userId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors shrink-0">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" onClick={() => addItem(m.userId)} disabled={!canCreate} title={blockReason || undefined} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1">
-                    <Plus size={14} /> {t('projectView.manual.addItemButton')}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-
-          {members.length > 0 && (
-            <button type="submit" disabled={saving || !canCreate} title={blockReason || undefined} className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition">
-              {saving ? t('projectView.manual.creating') : t('projectView.manual.createButton', { count: members.flatMap(m => m.items.filter(i => i.amount)).length })}
-            </button>
-          )}
-            </form>
-          </div>
         </div>
       )}
 

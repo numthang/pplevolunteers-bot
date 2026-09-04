@@ -1046,9 +1046,6 @@
         "sectionTitle": "Payer",
         "saving": "Saving…"
       },
-      "validation": {
-        "entriesRequired": "Please add at least 1 item"
-      },
       "header": {
         "receiptButton": "Receipt",
         "regenerateLinkButton": "Regenerate link",
@@ -1070,27 +1067,23 @@
         "shortfall": "Short {amount} THB"
       },
       "tabs": {
-        "auto": "Automatic",
-        "manual": "Manual"
+        "auto": "Automatic"
       },
       "act": {
         "printBlankLink": "Print Attachment 3 (blank form) ↗",
         "printSignedLink": "Print Attachment 3 (signed) ↗",
         "uploadSectionTitle": "Upload signed Attachment 3",
-        "comingSoonNotice": "Coming soon: upload your ID card once, the system will automatically apply the watermark every time",
         "tapToUpload": "Tap to upload an image or PDF",
-        "fileTypesHint": "JPG / PNG (auto-crop) · PDF"
-      },
-      "manual": {
-        "totalLabel": "Total {amount} THB",
-        "searchMemberPlaceholder": "Search member name...",
-        "amountPlaceholder": "Amount",
-        "addItemButton": "Add item",
-        "creating": "Creating...",
-        "createButton": "Create items ({count})",
-        "hoursUnit": "hrs",
-        "speakerGeneralOption": "General ({rate})",
-        "speakerGovernmentOption": "Government officer ({rate})"
+        "fileTypesHint": "JPG / PNG (crop it yourself) · PDF",
+        "cropper": {
+          "title": "Crop Attachment 3 photo",
+          "instructions": "Drag · zoom · rotate to straighten the document in the frame",
+          "rotateButton": "Rotate 90°",
+          "fineRotateLabel": "Straighten",
+          "cancelButton": "Cancel",
+          "processing": "Processing...",
+          "useThisPhoto": "Use this photo"
+        }
       },
       "clearAll": {
         "confirmPrompt": "Clear all {count} bill items? This cannot be undone.\nType {count} to confirm:",

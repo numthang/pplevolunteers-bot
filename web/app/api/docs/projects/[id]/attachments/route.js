@@ -5,7 +5,7 @@ import { canManageDocs } from '@/lib/docsAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
 import { getAttachmentsByProject, createAttachment } from '@/db/docs/attachments.js'
-import { cropAndSave } from '@/lib/cropDocument.js'
+import { saveAttachmentImage } from '@/lib/cropDocument.js'
 
 async function auth(session) {
   const { access } = await getEffectiveOrgIdentity(session)
@@ -45,7 +45,7 @@ export async function POST(req, { params }) {
   const buffer = Buffer.from(bytes)
 
   try {
-    const filePath = await cropAndSave(buffer, project.id, file.type)
+    const filePath = await saveAttachmentImage(buffer, project.id)
     const attachment = await createAttachment(project.id, orgId, {
       originalName: file.name,
       filePath,

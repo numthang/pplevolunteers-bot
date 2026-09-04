@@ -1046,9 +1046,6 @@
         "sectionTitle": "ผู้จ่ายเงิน",
         "saving": "กำลังบันทึก…"
       },
-      "validation": {
-        "entriesRequired": "กรุณาใส่รายการอย่างน้อย 1 รายการ"
-      },
       "header": {
         "receiptButton": "ใบสำคัญรับเงิน",
         "regenerateLinkButton": "สร้างลิงก์ใหม่",
@@ -1070,27 +1067,23 @@
         "shortfall": "ขาด {amount} บ."
       },
       "tabs": {
-        "auto": "อัตโนมัติ",
-        "manual": "กำหนดเอง"
+        "auto": "อัตโนมัติ"
       },
       "act": {
         "printBlankLink": "พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗",
         "printSignedLink": "พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗",
         "uploadSectionTitle": "อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว",
-        "comingSoonNotice": "เร็วๆ นี้: อัพบัตรประชาชนครั้งเดียว ระบบจะแนบลายน้ำคร่อมให้อัตโนมัติทุกครั้ง",
         "tapToUpload": "แตะเพื่ออัพโหลดรูปหรือ PDF",
-        "fileTypesHint": "JPG / PNG (auto-crop) · PDF"
-      },
-      "manual": {
-        "totalLabel": "รวม {amount} บ.",
-        "searchMemberPlaceholder": "ค้นชื่อสมาชิก...",
-        "amountPlaceholder": "จำนวนเงิน",
-        "addItemButton": "เพิ่มรายการ",
-        "creating": "กำลังสร้าง...",
-        "createButton": "สร้างรายการ ({count})",
-        "hoursUnit": "ชม.",
-        "speakerGeneralOption": "ทั่วไป ({rate})",
-        "speakerGovernmentOption": "ข้าราชการ ({rate})"
+        "fileTypesHint": "JPG / PNG (ครอบรูปเองได้) · PDF",
+        "cropper": {
+          "title": "ครอบรูปแนบท้าย 3",
+          "instructions": "ลากเลื่อน · ซูม · หมุน ให้เอกสารตรงและอยู่ในกรอบ",
+          "rotateButton": "หมุน 90°",
+          "fineRotateLabel": "ปรับตรง",
+          "cancelButton": "ยกเลิก",
+          "processing": "กำลังประมวลผล...",
+          "useThisPhoto": "ใช้รูปนี้"
+        }
       },
       "clearAll": {
         "confirmPrompt": "ล้างบิลทั้งหมด {count} รายการ ไม่สามารถยกเลิกได้\nพิมพ์ {count} เพื่อยืนยัน:",

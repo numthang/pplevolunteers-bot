@@ -1,5 +1,5 @@
 import path from 'path'
-import { writeFile, readFile as fsReadFile, unlink, mkdir, access, readdir } from 'fs/promises'
+import { writeFile, readFile as fsReadFile, unlink, mkdir, readdir } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
@@ -11,7 +11,6 @@ export function getUploadPath() {
 }
 
 const PYTHON     = process.env.PYTHON_BIN ?? 'python3'
-const CROP_SCRIPT = path.join(process.cwd(), '..', 'scripts', 'docs', 'crop_document.py')
 const PDF_SCRIPT  = path.join(process.cwd(), '..', 'scripts', 'docs', 'build_pdf.py')
 
 export function sanitizeProjectName(name) {
@@ -26,40 +25,14 @@ export function getRegPdfPath(projectId, projectName) {
   return path.join(getUploadPath(), String(projectId), getRegPdfFilename(projectName))
 }
 
-const EXT_OF_MIME = {
-  'image/jpeg': 'jpg',
-  'image/png':  'png',
-  'image/webp': 'webp',
-  'image/heic': 'heic',
-  'image/heif': 'heif',
-}
-
-/**
- * เก็บ**ต้นฉบับ**ไว้คู่กับไฟล์ที่ครอบแล้วเสมอ (`<uuid>.orig.<ext>`)
- * เดิมลบทิ้งทันทีหลังครอบ → ย้อนดูไม่ได้เลยว่า autocrop ทำพลาดตรงไหน และครอบใหม่ก็ไม่ได้
- * (เจอตอนแก้อาการภาพเพี้ยน 2026-08-09) · ลบพร้อมกันตอนลบไฟล์แนบใน removeFile()
- */
-export async function cropAndSave(buffer, projectId, mimeType = 'image/jpeg') {
+/** บันทึกรูปที่ผู้ใช้ครอบเอง (จาก DocImageCropper — เป็น JPEG อยู่แล้ว) ไม่มี auto-crop อีกต่อไป */
+export async function saveAttachmentImage(buffer, projectId) {
   const uploadDir = path.join(getUploadPath(), String(projectId))
   await mkdir(uploadDir, { recursive: true })
 
-  const uuid = randomUUID()
-  const origPath = path.join(uploadDir, `${uuid}.orig.${EXT_OF_MIME[mimeType] || 'jpg'}`)
-  const outName = `${uuid}.jpg`
+  const outName = `${randomUUID()}.jpg`
   const outPath = path.join(uploadDir, outName)
-
-  await writeFile(origPath, buffer)
-
-  try {
-    await execFileAsync(PYTHON, [CROP_SCRIPT, origPath, outPath], { timeout: 30000 })
-  } catch (err) {
-    // exit code 1 = no document detected, script wrote resized fallback — OK
-    if (err.code !== 1) throw err
-  }
-
-  // If script failed to write output (e.g. missing cv2), save original buffer as fallback
-  const outExists = await access(outPath).then(() => true).catch(() => false)
-  if (!outExists) await writeFile(outPath, buffer)
+  await writeFile(outPath, buffer)
 
   return path.join(String(projectId), outName)
 }
