@@ -491,15 +491,21 @@ export async function promoteToOrg(id, byUserId) {
   //    ปลอดภัยที่จะเรียกซ้ำ — mirrorEntityCard คืนใบเดิมถ้ามีแล้ว (links.js:234)
   //    สิ่งที่เปลี่ยนจริงตอน promote คือ **ใครเห็นการ์ด** ไม่ใช่ว่ามีการ์ดไหม (visibleLinkSql อ่านสด)
   if (post?.visibility === 'org') {
-    // ⭐ **จุดเดียวที่ seed ผู้รับผิดชอบจากคนสร้างได้** (เฟส C เคาะ 2026-09-03)
-    //    ร่างส่วนตัว = เขาลงมือเขียนเอง → ตอนเปิดให้ทีมเห็น เขาคือแม่งานจริง ไม่ใช่ "คนนำเข้า"
-    //    ต่างจากโพสต์ที่เกิดจากตะกร้าดิสฯ/import ซึ่งคนสร้างเป็นแค่คนกดปุ่ม
-    if (post.created_by) await addPostAssignee(post.id, post.org_id, post.created_by)
+    // ⛔ **ห้าม seed ผู้รับผิดชอบจากคนสร้างตรงนี้** (ถอดทิ้ง 2026-09-04 — เดิมเป็นจุดเดียวที่ยังทำ)
+    //    เหตุผลที่กลับคำ: promote ตอบคำถาม "ใครเห็น" ไม่ใช่ "ใครทำ" — เปิดร่างให้ทีมเห็นเพราะ
+    //    อยากให้คนอื่นไปเขียนต่อก็เป็นเรื่องปกติ ยัดชื่อคนกดลงไปแล้วใบนั้นจะหายจากกอง
+    //    "ยังไม่มีคนรับ" ทันที = ไม่มีใครมาเก็บ · แถมแอดมินก็ promote ร่างของคนอื่นได้
+    //    (postsAccess.canPromoteToOrg) → seed ลงหัวเจ้าของทั้งที่เขาไม่ได้กดอะไรเลย
+    //    ⭐ ที่มาแทน: เจ้าของกด "รับงาน" ได้เองตั้งแต่ยังเป็นร่างส่วนตัว (lib/postAssign.js
+    //       §canSelfAssignPost) → ใครถืองานอยู่ ต้นทางรู้ก่อน promote แล้ว ไม่ต้องเดา
+    //    กฎเดียวกับ db/kanban/links.js §SOURCE_SQL "ห้ามเอา created_by มาใส่ช่องผู้รับผิดชอบ"
+    //
     // การ์ดมีอยู่ก่อนแล้วเป็นปกติ (ร่างส่วนตัวก็มีการ์ด) → mirror ไม่ได้เขียนอะไร ต้อง sync ต่อท้ายเสมอ
     // ⚠️ ต้องเรียงหลัง mirror ไม่ใช่ยิงคู่ขนาน — sync ที่วิ่งก่อนการ์ดเกิด จะเจอ "ไม่มีการ์ด" แล้วเงียบไป
+    // ⚠️ assigneeIds ว่างเสมอ — มีผลเฉพาะตอน mirror **สร้างการ์ดใหม่** (โพสต์เก่าก่อน 2026-08-24)
+    //    ของจริงถูกเติมโดย syncPostCardPeople ที่ต่อท้าย ซึ่งอ่าน post_assignees สดอยู่แล้ว
     mirrorEntityCard(post.org_id, 'post', {
-      id: post.id, title: post.title || `งานสื่อ #${post.id}`,
-      assigneeIds: post.created_by ? [post.created_by] : [],
+      id: post.id, title: post.title || `งานสื่อ #${post.id}`, assigneeIds: [],
     }, byUserId).then(() => syncPostCardPeople(post.id)).catch(() => {})
   }
   return post

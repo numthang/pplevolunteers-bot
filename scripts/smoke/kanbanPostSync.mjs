@@ -6,8 +6,8 @@
 // ที่ทั้งหน้า /posts และบอร์ด kanban เรียกร่วมกัน (บั๊กเดิม: กดรับงานบนบอร์ดแล้วต้นทางไม่รู้เรื่อง)
 import { mirrorEntityCard, syncPostCardPeople } from '../../web/db/kanban/links.js'
 import { getCard } from '../../web/db/kanban/cards.js'
-import { getPost, getPostAssignees } from '../../web/db/posts/episodes.js'
-import { assignPost, unassignPost, canAssignPost } from '../../web/lib/postAssign.js'
+import { getPost, getPostAssignees, promoteToOrg } from '../../web/db/posts/episodes.js'
+import { assignPost, unassignPost, canAssignPost, canSelfAssignPost, postAssignBlock } from '../../web/lib/postAssign.js'
 import pool from '../../web/db/index.js'
 
 const ORG = 1, ALICE = 1, BOB = 2, CAROL = 3
@@ -65,10 +65,37 @@ try {
   const raw2 = await rawStatus(cardId)
   ok('ไม่มีใครรับแล้วแต่การ์ดยังอยู่กองเดิม (ไม่มี clamp)', raw2 === 'doing', raw2)
 
-  console.log('\n── ร่างส่วนตัวไม่มีผู้รับผิดชอบ ──')
+  console.log('\n── ร่างส่วนตัว: เจ้าของรับงานเองได้ · คนอื่นห้ามแตะ (แยกกฎ 2026-09-04) ──')
   await pool.query(`UPDATE post_episodes SET visibility = 'personal' WHERE id = $1`, [postId])
-  ok('canAssignPost ปฏิเสธร่างส่วนตัว', canAssignPost(await getPost(postId)) === false)
+  const draft = await getPost(postId)
+  ok('canAssignPost (ใส่คนอื่น) ยังปฏิเสธร่างส่วนตัว', canAssignPost(draft) === false)
   ok('canAssignPost ยอมรับโพสต์องค์กร', canAssignPost({ visibility: 'org' }) === true)
+  ok('เจ้าของ (ALICE) รับงานตัวเองได้', canSelfAssignPost(draft, ALICE) === true)
+  ok('คนอื่น (BOB) รับงานในร่างส่วนตัวไม่ได้', canSelfAssignPost(draft, BOB) === false)
+  ok('ด่านกลาง: เจ้าของกดรับตัวเอง → ผ่าน', postAssignBlock(draft, ALICE, ALICE) === null)
+  ok('ด่านกลาง: เจ้าของใส่คนอื่น → บล็อก', /เพิ่มคนอื่นไม่ได้/.test(postAssignBlock(draft, BOB, ALICE) || ''))
+  ok('ด่านกลาง: คนอื่นรับแทนเจ้าของ → บล็อก', /รับงานแทนเจ้าของไม่ได้/.test(postAssignBlock(draft, BOB, BOB) || ''))
+
+  console.log('\n── ตะเข็บจริง: เจ้าของกดรับบนร่างส่วนตัว แล้วสำเนาลงการ์ด ──')
+  await assignPost(ORG, draft, ALICE, { actorUserId: ALICE })
+  ok('post_assignees มีเจ้าของ 1 คน', (await getPostAssignees(postId, ORG)).length === 1)
+  card = await getCard(ORG, cardId)
+  ok('สำเนาบนการ์ดตามทัน', card.assignee_ids.length === 1 && card.assignee_ids[0] === ALICE)
+
+  console.log('\n── promoteToOrg ⛔ ห้าม seed คนสร้าง (ถอดทิ้ง 2026-09-04) ──')
+  await unassignPost(ORG, draft, ALICE, { actorUserId: ALICE })
+  await pool.query(`UPDATE post_episodes SET visibility = 'personal' WHERE id = $1`, [postId])
+  const promoted = await promoteToOrg(postId, ALICE)
+  ok('เปิดให้ทีมเห็นแล้ว', promoted.visibility === 'org')
+  ok('⛔ ไม่มีใครถูกยัดเป็นผู้รับผิดชอบตอน promote',
+     (await getPostAssignees(postId, ORG)).length === 0)
+
+  console.log('\n── promote หลังเจ้าของกดรับไว้แล้ว → ชื่อต้องอยู่ครบ ──')
+  await pool.query(`UPDATE post_episodes SET visibility = 'personal' WHERE id = $1`, [postId])
+  await assignPost(ORG, await getPost(postId), ALICE, { actorUserId: ALICE })
+  await promoteToOrg(postId, ALICE)
+  const after = await getPostAssignees(postId, ORG)
+  ok('เจ้าของยังเป็นผู้รับผิดชอบหลัง promote', after.length === 1 && Number(after[0].user_id) === ALICE)
 } catch (e) {
   fail++
   console.error('\n💥 หยุดกลางทาง:', e.message)

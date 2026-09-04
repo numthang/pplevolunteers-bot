@@ -63,9 +63,39 @@ export async function postOfCard(orgId, card) {
 }
 
 /**
- * ⛔ ร่างส่วนตัวไม่มีผู้รับผิดชอบ — มันคือกระดาษทดของคนคนเดียว ยังไม่ใช่ "งาน" ของทีม
- *    (เปิดให้ทีมเห็นก่อน แล้วเจ้าของจะถูก seed เป็นผู้รับผิดชอบให้เองใน promoteToOrg)
+ * ⛔ ใส่ **คนอื่น** เป็นผู้รับผิดชอบได้เฉพาะงานที่ทีมเห็นแล้ว
+ *    ร่างส่วนตัวมีคนเห็นคนเดียวคือเจ้าของ (`visibleLinkSql` ใน db/kanban/statusSql.js)
+ *    → ยัดคนอื่นลงไป = เขาได้งานที่ตัวเองเปิดดูไม่ได้ และสำเนาบนการ์ดจะไม่มีวันตรงกับต้นทาง
  */
 export function canAssignPost(post) {
   return post?.visibility === 'org'
+}
+
+/**
+ * ⭐ **ตัวเอง** รับงานได้ตั้งแต่ยังเป็นร่างส่วนตัว (user เคาะ 2026-09-04)
+ *
+ *    เดิมบล็อกทุกทาง แล้วไปยัดเจ้าของให้อัตโนมัติตอน `promoteToOrg` แทน — กลับกฎแล้ว:
+ *    promote ตอบคำถาม "ใครเห็น" ไม่ใช่ "ใครทำ" (เปิดให้ทีมเห็นเพราะอยากให้คนอื่นไปเขียนต่อก็มี)
+ *    → ความเป็นเจ้าของงานต้องมาจากการกดของคนนั้นเอง ไม่ใช่ระบบเดาจาก `created_by`
+ *    (กฎเดียวกับ links.js §SOURCE_SQL "ห้ามเอา created_by มาใส่ช่องผู้รับผิดชอบ")
+ *
+ * ⛔ ห้ามคลายเงื่อนไข `created_by` ตรงนี้เป็น "ใครก็ได้ใน org" — บนร่างส่วนตัว คนอื่นไม่ควรมีชื่อ
+ *    แม้แต่แอดมินที่อ่านได้ (เซตผู้รับผิดชอบของร่างส่วนตัวมีได้แค่ {} หรือ {เจ้าของ})
+ */
+export function canSelfAssignPost(post, userId) {
+  if (post?.visibility === 'org') return true
+  return post?.visibility === 'personal' && Number(post?.created_by) === Number(userId)
+}
+
+/**
+ * ⭐ ด่านเดียวที่ทุก route ต้องเรียก — คืน**ข้อความ error** ถ้าทำไม่ได้ · null = ผ่าน
+ *    (ประตูเข้ามี 3 ทาง: /api/posts/[id]/assign · /api/kanban/cards/[id]/assignees · path claim
+ *     ใน /api/kanban/cards/[id] — ข้อความต้องตรงกันทั้งสามทาง ไม่งั้นคนกดเจอคำอธิบายคนละเรื่อง)
+ * ⚠️ 400 ไม่ใช่ 403 — ไม่ใช่เรื่องสิทธิ์ของคนกด แต่เป็นเรื่องที่ใบนี้ยังไม่ใช่งานของทีม
+ */
+export function postAssignBlock(post, targetUserId, actorUserId) {
+  if (Number(targetUserId) === Number(actorUserId)) {
+    return canSelfAssignPost(post, actorUserId) ? null : 'ร่างส่วนตัวของคนอื่น — รับงานแทนเจ้าของไม่ได้'
+  }
+  return canAssignPost(post) ? null : 'ร่างส่วนตัวเพิ่มคนอื่นไม่ได้ — เปิดให้ทีมเห็นก่อน'
 }

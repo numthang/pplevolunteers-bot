@@ -14,7 +14,7 @@ import {
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
-import { assignPost, postOfCard, canAssignPost } from '@/lib/postAssign.js'
+import { assignPost, postOfCard, postAssignBlock } from '@/lib/postAssign.js'
 
 // เคสมีผู้รับผิดชอบได้หลายคน — คนที่เพิ่มทีหลังเป็น "ร่วม" ไม่ใช่แทนที่
 const CO_ASSIGNEE_NOTICE = 'เคสนี้มีผู้รับผิดชอบอยู่แล้ว — คนที่เพิ่มเข้ามาถูกบันทึกเป็นผู้รับผิดชอบร่วม'
@@ -106,7 +106,9 @@ export async function PATCH(req, { params }) {
     //    โชว์คนละคน จนกว่าจะแก้ตรงนี้ให้เดินทาง postAssign.js เหมือน /assignees route)
     const linkedPost = await postOfCard(orgId, card)
     if (linkedPost) {
-      if (!canAssignPost(linkedPost)) return err(400, 'ร่างส่วนตัวยังไม่มีผู้รับผิดชอบ — เปิดให้ทีมเห็นก่อน')
+      // ⭐ ทางนี้คือ "รับงานเอง" เสมอ (userId = คนกด) → ร่างส่วนตัวของตัวเองผ่านได้ตั้งแต่ 2026-09-04
+      const blocked = postAssignBlock(linkedPost, userId, userId)
+      if (blocked) return err(400, blocked)
       await assignPost(orgId, linkedPost, userId, { actorUserId: userId, app: 'kanban' })
       return Response.json({ card: await cardDB.getCard(orgId, card.id) })
     }

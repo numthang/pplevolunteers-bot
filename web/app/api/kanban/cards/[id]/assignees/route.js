@@ -15,19 +15,24 @@ import { cardContext, err } from '@/lib/kanbanGuard.js'
 import { canAssign, canEditCard, canClaimCard } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
-import { assignPost, unassignPost, postOfCard, canAssignPost } from '@/lib/postAssign.js'
+import { assignPost, unassignPost, postOfCard, postAssignBlock } from '@/lib/postAssign.js'
 
 /**
  * ต้นทางของการ์ดใบนี้ — คืน `{ kind, row }` หรือ null (การบ้านเปล่า เขียนการ์ดตรงๆ ได้)
- * โพสต์ที่ยังเป็นร่างส่วนตัวไม่มีผู้รับผิดชอบ → 400 ไม่ใช่เขียนลงการ์ดเงียบๆ
- * (การ์ดของร่างส่วนตัวมีเจ้าของคนเดียวเห็น — ยัดคนลงไปแล้วสำเนาจะไม่มีวันตรงต้นทาง)
+ *
+ * ⭐ ร่างส่วนตัว: **เจ้าของกดรับเองได้** แต่ใส่คนอื่นยังไม่ได้ (แยกกฎ 2026-09-04)
+ *    → ต้องรู้ว่าคำสั่งนี้ทำกับใคร ถึงจะตัดสินได้ · ด่านจริงอยู่ที่ `postAssignBlock` ที่เดียว
+ * ⛔ 400 ไม่ใช่เขียนลงการ์ดเงียบๆ — สำเนาบนการ์ดต้องตรงกับ `post_assignees` เสมอ
+ *
+ * @param {number} targetUserId คนที่จะถูกเพิ่ม/ถอด (= ctx.userId เมื่อทำกับตัวเอง)
  */
-async function sourceOfCard(ctx) {
+async function sourceOfCard(ctx, targetUserId) {
   const caseRow = await caseOfCard(ctx.orgId, ctx.card)
   if (caseRow) return { kind: 'case', row: caseRow }
   const post = await postOfCard(ctx.orgId, ctx.card)
   if (post) {
-    if (!canAssignPost(post)) return { kind: 'blocked', error: err(400, 'ร่างส่วนตัวยังไม่มีผู้รับผิดชอบ — เปิดให้ทีมเห็นก่อน') }
+    const blocked = postAssignBlock(post, targetUserId, ctx.userId)
+    if (blocked) return { kind: 'blocked', error: err(400, blocked) }
     return { kind: 'post', row: post }
   }
   return null
@@ -40,7 +45,7 @@ export async function POST(req, { params }) {
   const target = (await req.json().catch(() => ({}))).userId
   if (target && Number(target) !== ctx.userId) {
     if (!canAssign(ctx.card, ctx.access, ctx.userId)) return err(403, 'ไม่มีสิทธิ์เพิ่มผู้รับผิดชอบในKANBANใบนี้')
-    const src = await sourceOfCard(ctx)
+    const src = await sourceOfCard(ctx, Number(target))
     if (src?.error) return src.error
     if (src?.kind === 'case') await assignCase(ctx.orgId, src.row, Number(target), { actorUserId: ctx.userId, app: 'kanban' })
     else if (src?.kind === 'post') await assignPost(ctx.orgId, src.row, Number(target), { actorUserId: ctx.userId, app: 'kanban' })
@@ -55,7 +60,7 @@ export async function POST(req, { params }) {
   if (!canEditCard(ctx.card, ctx.access, ctx.userId) && !canClaimCard(ctx.card, ctx.access, ctx.userId)) {
     return err(403, 'งานนี้ปิดไปแล้ว')
   }
-  const srcSelf = await sourceOfCard(ctx)
+  const srcSelf = await sourceOfCard(ctx, ctx.userId)
   if (srcSelf?.error) return srcSelf.error
   if (srcSelf?.kind === 'case') await assignCase(ctx.orgId, srcSelf.row, ctx.userId, { actorUserId: ctx.userId, app: 'kanban' })
   else if (srcSelf?.kind === 'post') await assignPost(ctx.orgId, srcSelf.row, ctx.userId, { actorUserId: ctx.userId, app: 'kanban' })
@@ -72,7 +77,7 @@ export async function DELETE(req, { params }) {
   if (target !== ctx.userId && !canAssign(ctx.card, ctx.access, ctx.userId)) {
     return err(403, 'ไม่มีสิทธิ์ถอดผู้รับผิดชอบออกจากKANBANใบนี้')
   }
-  const srcDel = await sourceOfCard(ctx)
+  const srcDel = await sourceOfCard(ctx, target)
   if (srcDel?.error) return srcDel.error
   if (srcDel?.kind === 'case') await unassignCase(ctx.orgId, srcDel.row, target, { actorUserId: ctx.userId, app: 'kanban' })
   else if (srcDel?.kind === 'post') await unassignPost(ctx.orgId, srcDel.row, target, { actorUserId: ctx.userId, app: 'kanban' })
