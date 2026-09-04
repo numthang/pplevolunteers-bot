@@ -39,6 +39,7 @@ export default function SignPage({ params }) {
   const [infoOpen, setInfoOpen]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
   const [signPolicy, setSignPolicy]     = useState('strict')
+  const [sigLocked, setSigLocked]       = useState(false)
   const [canManage, setCanManage]       = useState(false)
   const [recipientComplete, setRecipientComplete] = useState(true)
   const [selfSaving, setSelfSaving]     = useState(false)
@@ -90,6 +91,7 @@ export default function SignPage({ params }) {
           const role = d.data.signer_role || 'recipient'
           setSignerRole(role)
           setSignPolicy(d.data.sign_policy || 'strict')
+          setSigLocked(!!d.data.signature_locked)
           setCanManage(!!d.data.can_manage)
           setRecipientComplete(d.data.recipient_complete !== false)
 
@@ -97,7 +99,12 @@ export default function SignPage({ params }) {
             setNgsLinked(!!d.data.has_ngs_link)
             setSelfInfoDone(!!d.data.has_self_info)
             setHasIdCard(!!d.data.has_id_card)
-            if (d.data.has_id_card && d.data.external_payee_id) {
+            // ⛔ โหมด open ไม่โหลด preview สำเนาบัตร — endpoint /api/docs/id-card/* ยังบังคับ
+            // ล็อกอินอยู่ (ตั้งใจ: ใครที่ได้ลิงก์ต่อห้ามเห็นบัตร ปชช. คนอื่น) ยิงไปก็ได้ 401 + รูปแตก
+            const openLink = (d.data.sign_policy || 'strict') === 'open' && !session?.user?.userId
+            if (openLink) {
+              /* ไม่โหลด preview บัตร */
+            } else if (d.data.has_id_card && d.data.external_payee_id) {
               setIdCardPreviewUrl(`/api/docs/external-payees/${d.data.external_payee_id}/id-card?token=${encodeURIComponent(token)}`)
             } else if (d.data.has_id_card && d.data.member_user_id) {
               setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_user_id}?token=${encodeURIComponent(token)}`)
@@ -113,6 +120,11 @@ export default function SignPage({ params }) {
   const recipientName = [entry?.title, entry?.ngs_first_name ?? entry?.firstname, entry?.ngs_last_name ?? entry?.lastname]
     .filter(Boolean).join(' ').trim() || entry?.display_name || ''
   // คนนอกไม่มีบัญชี → เซ็นแทนเสมอ · สมาชิกจะเข้าเงื่อนไขนี้ได้เฉพาะตอน org เปิดโหมดยืดหยุ่น
+  // ⭐ โหมด open + ยังไม่ล็อกอิน = "คนถือกระดาษ" — ไม่รู้ว่าเป็นใคร แต่ถือลิงก์ของใบนี้อยู่
+  // ห้ามยุบรวมกับ isRecipientSelf: เจ้าตัวที่ล็อกอินยังกรอกข้อมูล/อัปบัตรได้ คนถือลิงก์ทำไม่ได้
+  // (endpoint พวกนั้นเขียนลงบัญชี ต้องมีบัญชีให้ผูก) — เห็นใบ + เซ็น ได้แค่นั้น
+  const openLink = signPolicy === 'open' && !session?.user?.userId
+
   const isSigningForSomeoneElse = !!entry && (
     entry.external_payee_id ? true : (!!session?.user?.userId && session.user.userId !== entry.member_user_id)
   )
@@ -141,19 +153,23 @@ export default function SignPage({ params }) {
   // รูปบัตรคือหลักฐาน ข้อมูลบนใบต้องตรงกับหลักฐานเสมอ ไม่เกี่ยวว่าตั้งต้นมาจากไหน
   // ของเดิมทำให้อัปบัตรคนละใบทับได้เงียบๆ แล้วใบยังพิมพ์ชื่อ/ที่อยู่คนใน roster = คนละคนกับรูป
   // `ngsLinked` เหลือหน้าที่เดียว = ด่านยืนยันตัวตนใน canSign (ผูกทะเบียนแล้ว = ยืนยันแล้ว)
-  const showInfoSection = !!entry && !entry.external_payee_id
+  // ⛔ โหมด open ซ่อนการ์ดกรอกข้อมูล/สำเนาบัตรทั้งชุด — self-info + id-card เขียนลง users/user_config
+  // ต้องมีบัญชี ถ้าโชว์ = ฟอร์มที่กดบันทึกแล้ว 401 เสมอ · ข้อมูลไม่ครบให้ไปจบที่การ์ด "ติดต่อผู้ดูแล"
+  const showInfoSection = !!entry && !entry.external_payee_id && !openLink
+  // ข้อมูลบนใบไม่ครบ + คนถือลิงก์แก้เองไม่ได้ = ทางตัน ต้องบอกให้ชัดว่าติดอะไร ไม่ใช่หน้าว่าง
+  const openLinkBlocked = openLink && signerRole === 'recipient' && !entry?.external_payee_id && !recipientComplete
   // ⭐ สวิตช์เดียวที่ตัดสินว่าหน้านี้ "ทำอะไรได้ไหม" — หน้าเดียว การ์ดชุดเดียวทั้ง strict/flexible
   // ต่างกันแค่ตัวนี้ (เคาะ 2026-08-26): strict + ไม่ใช่เจ้าตัว = ซ่อนทุกการ์ดที่ลงมือได้
   // เหลือแค่รายละเอียดใบ + ป้ายบอกว่าใบนี้ออกให้ใคร
   // เดิมซ่อนแค่บางอัน ช่องวาดลายเซ็นยังโผล่ให้วาดจนเสร็จแล้วค่อยเด้ง 403 ตอนกดส่ง
-  const canInteract = signerRole !== 'recipient' || isRecipientSelf || canSignOnBehalf
+  const canInteract = signerRole !== 'recipient' || isRecipientSelf || canSignOnBehalf || openLink
 
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
   }, [entry])
 
   useEffect(() => {
-    const ready = signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone
+    const ready = signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone || openLink
     if (!ready || !entry) return
     setPreviewLoading(true)
     setPreviewErr('')
@@ -162,7 +178,7 @@ export default function SignPage({ params }) {
       .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || t('settings.loadFailed')) })
       .catch(() => setPreviewErr(t('settings.loadFailed')))
       .finally(() => setPreviewLoading(false))
-  }, [signerRole, canSignOnBehalf, ngsLinked, selfInfoDone, entry, token, previewVer])
+  }, [signerRole, canSignOnBehalf, ngsLinked, selfInfoDone, openLink, entry, token, previewVer])
 
   useEffect(() => {
     if (!entry || !canvasRef.current) return
@@ -503,7 +519,10 @@ export default function SignPage({ params }) {
   // เก็บไว้เป็นตาข่ายเผื่อวันหน้าปลดด่านให้ลิงก์เซ็นเข้าได้โดยไม่ต้องเป็นคนใน org
   // ห้ามกลับไปเป็นปุ่ม Discord ปุ่มเดียว: ผู้รับเงินจำนวนมากไม่มี Discord (คนนอก/ร้านค้า)
   // LoginPanel มีครบทุกทางและมีที่เดียวในระบบ — ห้ามก๊อปมาทำชุดใหม่ตรงนี้
-  if (!session) {
+  // โหมด open (ถือลิงก์ = เซ็นได้) ข้ามจอนี้ไป — org อื่นยังเจอ LoginPanel เหมือนเดิมทุกประการ
+  // เช็คหลัง `loading` เสมอ: signPolicy มาจาก verify ถ้าเช็คก่อนโหลดเสร็จจะเห็นค่า default 'strict'
+  // แล้วเด้งจอล็อกอินแวบนึงทั้งที่ org เปิด open ไว้
+  if (!session && signPolicy !== 'open') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2 p-4">
         <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8">
@@ -526,14 +545,17 @@ export default function SignPage({ params }) {
   }
 
   // เซ็นไปแล้วหรือยัง (แยกตาม role) — ไม่ dead-end แล้ว แค่โชว์ banner + เซ็นใหม่ทับได้เสมอ
+  // ยกเว้นใบที่เซ็นผ่านลิงก์ (sigLocked) — ล็อกไว้จนกว่าผู้ดูแลจะปลด ดู signEntry()
   const isSigned = done || (entry && (
     signerRole === 'payer' ? !!entry.payer_signed_at : entry.status !== 'pending'
   ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
   // canInteract นำหน้าทุกอย่าง — strict + ไม่ใช่เจ้าตัว ห้ามมีแม้แต่ช่องให้วาด
-  const canSign = canInteract &&
-    (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone) && !needsRecipientInfo
+  // sigLocked ตัดทุกอย่างทิ้ง — ห้ามโชว์ช่องวาดให้เซ็นจนเสร็จแล้วค่อยเด้ง 409 ตอนกดส่ง
+  // (`done` = เพิ่งเซ็นจบในจอนี้ ไม่ใช่ล็อกที่ต้องแจ้ง — แถวนั้นเป็นของเขาเอง)
+  const canSign = canInteract && !(sigLocked && !done) &&
+    (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone || openLink) && !needsRecipientInfo && !openLinkBlocked
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
@@ -547,7 +569,10 @@ export default function SignPage({ params }) {
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
               <CheckCircle size={18} className="shrink-0" /> {t('sign.signedBanner')}
-              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">{t('sign.signedBannerNote')}</span>
+              {/* "เซ็นใหม่ทับได้" ไม่จริงเมื่อใบถูกล็อก (เซ็นผ่านลิงก์มาแล้ว) — บอกทางออกแทน */}
+              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">
+                {sigLocked && !done ? t('sign.openLink.signedBannerLocked') : t('sign.signedBannerNote')}
+              </span>
             </span>
             <a
               href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
@@ -621,6 +646,25 @@ export default function SignPage({ params }) {
             <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
             <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.recipientInfoMissing.title')}</p>
             <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.recipientInfoMissing.hint')}</p>
+          </div>
+        )}
+
+        {/* โหมด open: ข้อมูลบนใบไม่ครบ + คนถือลิงก์กรอกเองไม่ได้ (ไม่มีบัญชีให้ผูก) = ทางตัน
+            บอกให้ชัดว่าติดอะไรและต้องไปหาใคร — ไม่ใช่ปล่อยหน้าที่ไม่มีช่องให้เซ็นแล้วเงียบ */}
+        {openLinkBlocked && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
+            <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
+            <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.openLink.blockedTitle')}</p>
+            <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.openLink.blockedHint')}</p>
+          </div>
+        )}
+
+        {/* เซ็นผ่านลิงก์ไปแล้ว → ล็อก (signEntry) · ต้องบอกก่อนวาด ไม่ใช่ไปเด้ง 409 ตอนกดส่ง */}
+        {sigLocked && !done && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
+            <CheckCircle size={32} className="mx-auto text-green-500 mb-3" />
+            <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.openLink.lockedTitle')}</p>
+            <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.openLink.lockedHint')}</p>
           </div>
         )}
 

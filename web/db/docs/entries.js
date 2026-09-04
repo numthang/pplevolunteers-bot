@@ -332,39 +332,53 @@ export async function reassignEntryPayer(entryId, payerUserId) {
  * @param {boolean} onBehalf ผู้รับเป็นคนนอกที่ไม่มีบัญชี → เซ็นบนเครื่องของคนในทีม
  *   userId ที่บันทึกจึงหมายถึง "คนที่ถือเครื่องตอนนั้น" ไม่ใช่ผู้รับเงิน — ต้องแยกด้วยแฟล็กนี้
  *   ไม่ใช่ปล่อยให้สองความหมายปนกันในคอลัมน์เดียว (บันทึกไว้เฉยๆ ไม่ขึ้นบนใบสำคัญฯ)
+ * @param {'login'|'link'} via คนเซ็นล็อกอินอยู่ไหม — โหมด `open` เซ็นผ่านลิงก์เปล่าๆ userId เป็น null
+ *   ⚠️ ห้ามอนุมานจาก `userId == null` แทนการส่งค่านี้: onBehalf กับ via คนละความหมาย
+ *   (ดูคอมเมนต์ docs_sign_policy ใน web/db/orgConfig.js)
+ *
+ * 🔒 เซ็นแล้วล็อก — ใบที่ลายเซ็นล่าสุดมาจากลิงก์ (via='link') เซ็นทับไม่ได้ ต้องให้ผู้ดูแลปลดก่อน
+ *   (resetRecipientSignature ผ่านปุ่มใน DocEntryList) · เดิมทับได้เสมอเพราะมี login กำกับว่าใครทับ
+ *   โหมด open ไม่มีตัวกำกับนั้น = ใครที่ได้ลิงก์ต่อลบลายเซ็นเดิมทิ้งได้ตลอดกาลโดยไม่มีร่องรอย
+ *   ล็อกที่แถวลายเซ็น **ไม่ใช่ที่ status** — status ถูกรีเซ็ตเงียบๆ จากทางอื่นได้ (updateEntry)
  */
-export async function signEntry({ token, signatureBase64, userId, ip, role = 'recipient', onBehalf = false }) {
+export async function signEntry({ token, signatureBase64, userId, ip, role = 'recipient', onBehalf = false, via = 'login' }) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    let entryId
+    // SELECT … FOR UPDATE ก่อนเสมอ — กันสองคนกดส่งพร้อมกันแล้วผ่านด่าน "เซ็นแล้วล็อก" ทั้งคู่
+    const tokenCol = role === 'recipient' ? 'sign_token' : 'payer_sign_token'
+    const { rows: locked } = await client.query(
+      `SELECT id FROM docs_activity_entries WHERE ${tokenCol} = $1 FOR UPDATE`,
+      [token]
+    )
+    if (!locked[0]) throw new Error('token invalid')
+    const entryId = locked[0].id
+
+    const { rows: prev } = await client.query(
+      `SELECT signed_via FROM docs_signatures
+        WHERE entry_id = $1 AND role = $2
+        ORDER BY created_at DESC LIMIT 1`,
+      [entryId, role]
+    )
+    if (prev[0]?.signed_via === 'link') throw new Error('signature locked')
+
     if (role === 'recipient') {
-      const { rows } = await client.query(
-        `UPDATE docs_activity_entries
-         SET status = 'signed', signed_at = NOW()
-         WHERE sign_token = $1
-         RETURNING id`,
-        [token]
+      await client.query(
+        `UPDATE docs_activity_entries SET status = 'signed', signed_at = NOW() WHERE id = $1`,
+        [entryId]
       )
-      if (!rows[0]) throw new Error('token invalid')
-      entryId = rows[0].id
     } else {
-      const { rows } = await client.query(
-        `UPDATE docs_activity_entries
-         SET payer_signed_at = NOW()
-         WHERE payer_sign_token = $1
-         RETURNING id`,
-        [token]
+      await client.query(
+        `UPDATE docs_activity_entries SET payer_signed_at = NOW() WHERE id = $1`,
+        [entryId]
       )
-      if (!rows[0]) throw new Error('token invalid')
-      entryId = rows[0].id
     }
 
     await client.query(
-      `INSERT INTO docs_signatures (entry_id, signature_base64, signed_by_user_id, signed_ip, role, signed_on_behalf)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [entryId, signatureBase64, userId, ip, role, onBehalf]
+      `INSERT INTO docs_signatures (entry_id, signature_base64, signed_by_user_id, signed_ip, role, signed_on_behalf, signed_via)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [entryId, signatureBase64, userId ?? null, ip, role, onBehalf, via]
     )
 
     await client.query('COMMIT')
@@ -532,7 +546,7 @@ export async function getPendingSignaturesForUser(userId, orgId) {
 
 export async function getSignatureByEntryId(entryId, role = 'recipient') {
   const { rows } = await pool.query(
-    `SELECT signature_base64, signed_by_user_id, created_at
+    `SELECT signature_base64, signed_by_user_id, signed_via, created_at
      FROM docs_signatures WHERE entry_id = $1 AND role = $2
      ORDER BY created_at DESC LIMIT 1`,
     [entryId, role]

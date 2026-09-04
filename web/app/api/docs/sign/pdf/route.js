@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
+import { getDocsSignPolicy } from '@/db/orgConfig.js'
 import { generateEntryPdf } from '@/lib/generatePdf.js'
 
 /**
@@ -10,9 +11,7 @@ import { generateEntryPdf } from '@/lib/generatePdf.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.userId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const userId  = session?.user?.userId ?? null
 
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')
@@ -22,10 +21,18 @@ export async function GET(req) {
     const entry = await getEntryByToken(token)
     if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
 
-    const isRecipient = entry.member_user_id === session.user.userId
-    const isPayer     = entry.payer_user_id  === session.user.userId
-    if (!isRecipient && !isPayer) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    // โหมด open — ปุ่ม "ดาวน์โหลด PDF" หลังเซ็นเสร็จต้องใช้ได้ทั้งที่ยังไม่ล็อกอิน
+    // ไฟล์นี้คือใบของคนที่ถือ token อยู่แล้ว (เขาเพิ่งเซ็นมันเอง) จึงไม่ได้เปิดอะไรใหม่เกินตัวลิงก์
+    if (!userId) {
+      if (await getDocsSignPolicy(entry.org_id) !== 'open') {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } else {
+      const isRecipient = entry.member_user_id === userId
+      const isPayer     = entry.payer_user_id  === userId
+      if (!isRecipient && !isPayer) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     // ผู้รับยังไม่เซ็น → ยังไม่มี signature แต่ยังให้ดาวน์โหลดได้ (preview ว่าง)

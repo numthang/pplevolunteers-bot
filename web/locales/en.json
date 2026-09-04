@@ -834,7 +834,9 @@
       "amount": "{amount} THB",
       "externalBadge": "external",
       "addExternal": "Add external payee",
-      "addExternalNamed": "Add external payee “{name}”"
+      "addExternalNamed": "Add external payee “{name}”",
+      "confirmUnlockSignature": "Unlock this signature? The existing signature is deleted and the recipient can sign again using the same link.",
+      "unlockSignatureTitle": "Unlock for re-signing"
     },
     "pending": {
       "title": "Pending Signatures",
@@ -1195,6 +1197,13 @@
         "retake": "Retake photo",
         "hint": "One photo does it all — we read the name, ID number and address, and keep it as the ID copy attached to this receipt. Check everything before saving.",
         "idWarn": "The ID number we read may be off — check it against the card before saving."
+      },
+      "openLink": {
+        "blockedTitle": "Can't sign yet",
+        "blockedHint": "This form is missing recipient details (name / ID number / address). Ask the admin who sent you this link to fill them in, then open the same link again.",
+        "lockedTitle": "Already signed",
+        "lockedHint": "The signature has been recorded and can't be overwritten. Ask an admin to unlock it if you need to sign again.",
+        "signedBannerLocked": "· an admin must unlock it before re-signing"
       }
     },
     "externalPayee": {
@@ -1253,7 +1262,12 @@
         "label": "Flexible — anyone can sign for anyone",
         "description": "Like passing paper around at the event · anyone logged in who opens the link can sign that receipt"
       },
-      "auditNote": "Both modes always record who pressed sign and when — this never appears on the receipt"
+      "auditNote": "Strict and flexible always record who signed and when — it never appears on the receipt itself",
+      "open": {
+        "label": "Open — anyone with the link can sign, no login",
+        "description": "Like handing someone paper to sign · best when sending links to recipients who don't use this site regularly"
+      },
+      "openWarning": "⚠️ Open mode trades away knowing who signed (only time and IP remain). A form signed via link is locked until an admin unlocks it, and anyone the link is forwarded to can open that form."
     }
   },
   "join": {

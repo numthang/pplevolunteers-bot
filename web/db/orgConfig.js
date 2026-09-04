@@ -43,10 +43,15 @@ export async function getAppointPolicy(orgId) {
 // docs_sign_policy — ใครเซ็นใบสำคัญรับเงินแทนใครได้บ้าง
 //   'strict'   (ค่าตั้งต้น) สมาชิกเซ็นได้เฉพาะใบของตัวเอง · คนนอกให้คนในทีมเซ็นแทนได้
 //   'flexible' ใครที่ล็อกอินแล้วถือลิงก์ก็เซ็นได้ทุกใบ — เหมือนส่งกระดาษต่อกันหน้างาน
+//   'open'     ถือลิงก์ = เซ็นได้ **ไม่ต้องล็อกอิน** — เหมือนส่งกระดาษไปให้เซ็นถึงมือ
 //
-// ⚠️ flexible ≠ ไม่รู้ว่าใครเซ็น — ทั้งสองโหมดบันทึก signed_by_user_id + signed_on_behalf เสมอ
+// ⚠️ strict/flexible ≠ ไม่รู้ว่าใครเซ็น — สองโหมดนี้บันทึก signed_by_user_id + signed_on_behalf เสมอ
 //    (ไม่ขึ้นบนใบสำคัญฯ · งัดมาดูได้ตอนมีเรื่อง)
-export const DOCS_SIGN_POLICIES = ['strict', 'flexible']
+// ⚠️ open = **ยอมทิ้ง audit trail โดยตั้งใจ** — ไม่มีบัญชีให้ผูก เหลือแค่ IP + เวลา + ตัวลิงก์
+//    แลกกับอัตราการเซ็นสำเร็จ (ผู้รับเงินส่วนใหญ่ไม่ได้ใช้เว็บนี้เป็นประจำ) · ชดเชยด้วยกฎ
+//    "เซ็นแล้วล็อก" — ใบที่เซ็นผ่านลิงก์แล้วเซ็นทับไม่ได้ ต้องให้ผู้ดูแลปลดก่อน (ไม่งั้นคนที่
+//    ได้ลิงก์ต่อทับลายเซ็นเดิมได้ตลอดกาล และไม่มีร่องรอยว่าใครทับ)
+export const DOCS_SIGN_POLICIES = ['strict', 'flexible', 'open']
 export const DEFAULT_DOCS_SIGN_POLICY = 'strict'
 
 export async function getDocsSignPolicy(orgId) {

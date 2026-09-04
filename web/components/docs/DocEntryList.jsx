@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Pencil, Trash2, Check, X, Copy, Plus } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Copy, Plus, Unlock } from 'lucide-react'
 import ExternalPayeeModal from './ExternalPayeeModal'
 import { calcTravelCeiling } from '@/config/fund69-rules.js'
 import { externalBrowserUrl } from '@/lib/shareLink.js'
@@ -220,6 +220,24 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setSaving(false)
+    }
+  }
+
+  /**
+   * ปลดล็อกลายเซ็นผู้รับ — ลบลายเซ็นเดิมทิ้ง ให้เซ็นใหม่ผ่าน**ลิงก์เดิม**ได้ (sign_token ไม่เปลี่ยน)
+   * จำเป็นเพราะโหมด "เปิด" ล็อกใบที่เซ็นผ่านลิงก์แล้วไม่ให้เซ็นทับ — คนเซ็นพลาดต้องมีทางแก้
+   * ที่ไม่ใช่การลบใบทิ้งสร้างใหม่ (ซึ่งเปลี่ยน token = ต้องส่งลิงก์ใหม่ทั้งชุด)
+   */
+  async function handleUnlockSignature(entryId) {
+    if (!confirm(t('entryList.confirmUnlockSignature'))) return
+    try {
+      const res = await fetch(`/api/docs/entries/${entryId}/unlock-signature`, { method: 'POST' })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const next = entries.map(e => e.id === entryId ? { ...e, status: 'pending', signed_at: null } : e)
+      setEntries(next)
+      onChange?.(next)
+    } catch (err) {
+      alert(t('entryList.errorPrefix', { message: err.message }))
     }
   }
 
@@ -480,6 +498,15 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                               >
                                 <Pencil size={13} />
                               </button>
+                              {entry.status === 'signed' && (
+                                <button
+                                  onClick={() => handleUnlockSignature(entry.id)}
+                                  className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+                                  title={t('entryList.unlockSignatureTitle')}
+                                >
+                                  <Unlock size={13} />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDelete(entry.id)}
                                 className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"

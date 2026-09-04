@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check, X } from 'lucide-react'
 
-const MODES = ['strict', 'flexible']
+const MODES = ['strict', 'flexible', 'open']
 
 /**
  * โหมดการเซ็นใบสำคัญรับเงินของ org
  *
  * เลือกแล้วมีผลทันที (ไม่มีปุ่มบันทึก) — เป็น toggle ค่าเดียว ไม่ใช่ฟอร์ม
- * ปุ่มบันทึกสำหรับ radio 2 ตัวคือขั้นตอนเกิน · มีป้ายบอกสถานะแทนตามกฎ Update
+ * ปุ่มบันทึกสำหรับ radio ไม่กี่ตัวคือขั้นตอนเกิน · มีป้ายบอกสถานะแทนตามกฎ Update
  */
 export default function DocsSignPolicySetting() {
   const t = useTranslations('docs')
@@ -85,6 +85,14 @@ export default function DocsSignPolicySetting() {
           </li>
         ))}
       </ul>
+
+      {/* คำเตือนขึ้นเฉพาะตอนเลือกโหมดเปิด — สิ่งที่แลกไป (ไม่รู้ว่าใครเซ็น) ต้องอยู่ตรงหน้าคนที่เพิ่งเลือก
+          ไม่ใช่ย่อหน้ารวมที่อ่านผ่านไป · ไม่ใช่ modal ยืนยันด้วย เพราะค่านี้กดกลับได้ทันที */}
+      {policy === 'open' && (
+        <p className="px-4 py-3 border-t border-warm-200 dark:border-disc-border text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20">
+          {t('signPolicy.openWarning')}
+        </p>
+      )}
 
       <p className="px-4 py-3 border-t border-warm-200 dark:border-disc-border text-sm text-warm-400 dark:text-disc-muted">
         {t('signPolicy.auditNote')}

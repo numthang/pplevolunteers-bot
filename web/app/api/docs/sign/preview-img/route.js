@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
+import { getDocsSignPolicy } from '@/db/orgConfig.js'
 import { generateEntryPdf } from '@/lib/generatePdf.js'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -12,7 +13,6 @@ const execFileAsync = promisify(execFile)
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
 
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')
@@ -24,6 +24,12 @@ export async function GET(req) {
   try {
     const entry = await getEntryByToken(token)
     if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
+
+    // โหมด open ต้องเปิดด่านนี้ด้วย ไม่งั้น "เซ็นได้โดยไม่ล็อกอิน" กลายเป็นเซ็นทั้งที่มองไม่เห็นใบ
+    // (หน้าเซ็นโชว์ใบจาก endpoint นี้ทางเดียว) · ผูกกับ token ของใบนั้นใบเดียวเหมือนเดิม
+    if (!session?.user?.userId && await getDocsSignPolicy(entry.org_id) !== 'open') {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
+    }
     const full   = await getEntryById(entry.id)
     const recSig = await getSignatureByEntryId(entry.id, 'recipient')
     const paySig = await getSignatureByEntryId(entry.id, 'payer')

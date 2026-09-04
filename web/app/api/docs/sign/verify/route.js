@@ -2,8 +2,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs, canAccessEvent } from '@/lib/docsAccess.js'
-import { getEntryByToken } from '@/db/docs/entries.js'
+import { getEntryByToken, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { getDocsSignPolicy } from '@/db/orgConfig.js'
+import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
 
 /**
  * GET /api/docs/sign/verify?token=
@@ -33,6 +34,14 @@ export async function GET(req) {
       return json({ error: 'ลิงก์ไม่ถูกต้อง' }, 404)
     }
 
+    // ด่านฟีเจอร์ของลิงก์เซ็นอยู่ตรงนี้ที่เดียว — `app/docs/layout.js` ยกเว้น /docs/sign/* จาก
+    // requireFeature() ไปแล้ว (ไม่งั้นโหมด open ใช้ไม่ได้เลย: คนโดนเด้งไปล็อกอินก่อน render)
+    // ⚠️ ต้องถาม org ของ **ใบ** ไม่ใช่ org ของคนเปิด — โหมด open ไม่มีคนให้ resolve org ตั้งแต่ต้น
+    const enabled = await getOrgEnabledFeatures(entry.org_id)
+    if (!enabled.includes('docs')) {
+      return json({ error: 'ลิงก์ไม่ถูกต้อง' }, 404)   // ปิดฟีเจอร์ = ตอบเหมือน token ผิด ไม่บอกว่ามีใบอยู่จริง
+    }
+
     const role = entry.signer_role  // 'recipient' | 'payer'
     const isExternal = !!entry.external_payee_id
     // หน้าเซ็นต้องรู้ policy เพื่อเตือนก่อนเซ็นว่า "กำลังเซ็นแทนคนอื่น" — จับพลาดก่อนเซ็น
@@ -54,6 +63,11 @@ export async function GET(req) {
     }
     // ข้อมูลบนใบครบพอจะพิมพ์ไหม — เช็คแบบเดียวกับที่ buildData() เลือกค่า (override ชนะ ทะเบียน/คนนอก)
     // ใช้ตัดสินว่าต้องขึ้นการ์ด "กรอกข้อมูลผู้รับ" ให้ผู้ดูแลก่อนเซ็นหรือยัง
+    // เซ็นแล้วล็อกไหม — ลายเซ็นล่าสุดของ role นี้มาจากลิงก์ (โหมด open) = เซ็นทับไม่ได้
+    // ต้องบอกหน้าเซ็นตั้งแต่แรก ไม่ใช่ให้วาดจนเสร็จแล้วค่อยเด้ง 409 ตอนกดส่ง
+    const lastSig = await getSignatureByEntryId(entry.id, role)
+    const signatureLocked = lastSig?.signed_via === 'link'
+
     const ov = entry.override_data || {}
     const recipientComplete = !!(
       (ov.full_name     || entry.ngs_first_name        || entry.firstname) &&
@@ -82,6 +96,7 @@ export async function GET(req) {
         external_payee_id: role === 'recipient' ? entry.external_payee_id : null,
         recipient_kind:    role === 'recipient' ? entry.recipient_kind    : null,
         sign_policy:       signPolicy,
+        signature_locked:  signatureLocked,
         can_manage:        canManage,
         recipient_complete: role === 'recipient' ? recipientComplete : null,
         // ค่าตั้งต้นของฟอร์มแก้ไขข้อมูล (ผู้ดูแลกรอกแทน) — ต้องส่งที่อยู่จากทะเบียนไปด้วย
