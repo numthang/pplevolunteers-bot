@@ -18,7 +18,8 @@ const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`$
 (async () => {
   try {
     // 1) หย่อนรูป → เปิดตะกร้าใหม่ให้เอง
-    await b.addImages(GUILD, CH1, USER, [{ url: 'https://cdn.test/a.png' }, { url: 'https://cdn.test/b.png' }], 'MSG1', 'ห้องทดสอบ');
+    const first = await b.addImages(GUILD, CH1, USER, [{ url: 'https://cdn.test/a.png' }, { url: 'https://cdn.test/b.png' }], 'MSG1', 'ห้องทดสอบ');
+    ok('หย่อนครั้งแรก → created:true (ใช้แจ้งลิงก์แบ็คครั้งเดียว)', first.created === true, JSON.stringify(first));
     const ep = await b.getOpenEpisode(GUILD, CH1);
     ok('หย่อนรูป → เปิดตะกร้าให้อัตโนมัติ', !!ep);
     ok('guild ที่ยังไม่ผูก org → org_id NULL (โผล่แค่ในดิสฯ)', ep.org_id === null, `org_id=${ep.org_id}`);
@@ -49,11 +50,15 @@ const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`$
     ok('reorderImages สลับลำดับได้', basket.filter(r => r.type === 'image')[0].id === imgs[1].id);
 
     // 5) วิดีโอ
-    await b.addVideo(GUILD, CH1, USER, [{ url: 'https://cdn.test/v.mp4' }], 'MSG2', 'ห้องทดสอบ');
+    const second = await b.addVideo(GUILD, CH1, USER, [{ url: 'https://cdn.test/v.mp4' }], 'MSG2', 'ห้องทดสอบ');
     basket = await b.getBasket(GUILD, CH1);
     ok('addVideo → type=video', basket.filter(r => r.type === 'video').length === 1);
     ok('หย่อนซ้ำในห้องเดิม → ยังเป็นตะกร้าใบเดิม',
        (await b.getOpenEpisode(GUILD, CH1)).id === ep.id);
+    // แจ้งลิงก์แบ็คครั้งเดียว: หย่อนเพิ่มเข้าใบเดิมต้องไม่แจ้งซ้ำ (user เคาะ 2026-09-05)
+    ok('หย่อนเพิ่มใบเดิม → created:false (ไม่แจ้งซ้ำ)', second.created === false, JSON.stringify(second));
+    ok('appendCaption ใบเดิม → created:false',
+       (await b.appendCaption(GUILD, CH1, USER, 'บรรทัดสาม', null)).created === false);
 
     // 6) ล้างตะกร้า = archive (ห้ามลบแถว — มันคือคอนเทนต์)
     await b.clearBasket(GUILD, CH1);
@@ -63,9 +68,10 @@ const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`$
     ok('ยังรู้ว่ามาจากห้องไหน (provenance ไม่หาย)', arch[0].channel_id === CH1);
 
     // 7) ห้องว่างแล้ว → เปิดใบใหม่ได้
-    await b.addImages(GUILD, CH1, USER, [{ url: 'https://cdn.test/c.png' }], 'MSG3', 'ห้องทดสอบ');
+    const reopened = await b.addImages(GUILD, CH1, USER, [{ url: 'https://cdn.test/c.png' }], 'MSG3', 'ห้องทดสอบ');
     const ep2 = await b.getOpenEpisode(GUILD, CH1);
     ok('เปิดตะกร้าใบใหม่ในห้องเดิมได้', !!ep2 && ep2.id !== ep.id);
+    ok('ล้างแล้วหย่อนใหม่ → created:true อีกรอบ (แจ้งใหม่ได้)', reopened.created === true);
 
     // 8) invariant ที่ DB บังคับ: 1 ห้อง เปิดได้ใบเดียว
     let blocked = false;

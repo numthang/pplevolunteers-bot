@@ -436,9 +436,14 @@ async function handleBasketAdd(interaction) {
   // หย่อนได้หมดก่อน แล้วค่อยไปลบส่วนเกินทีหลังที่ 🖼️ จัดการรูป (เหมือนรูป — เคาะ 2026-08-07)
   // เดิมตีตกทั้งข้อความเมื่อมีคลิป >1 ทำให้รูปในข้อความเดียวกันหล่นหายไปด้วย
   // ด่านกันของจริงอยู่ตอน "สร้างโพสต์" (handleBasketPost) ซึ่งเช็คทั้งผสมรูป+คลิป และคลิปเกิน 1
-  if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id, channelName);
-  if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id, channelName);
-  if (text && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName);
+  // `created` = การหย่อนครั้งนี้เป็นตัวเปิดโพสต์ใบใหม่ (ไม่ใช่หย่อนเพิ่มเข้าใบที่เปิดค้างอยู่)
+  // ทั้งสามทางเปิดใบใหม่ได้หมด แต่ในหนึ่งครั้งที่กดมีได้ใบเดียว → ตัวไหนเปิดก็ถือว่าเปิด
+  let episodeId = null;
+  let createdNew = false;
+  const remember = (r) => { episodeId ??= r.episodeId; createdNew ||= r.created; };
+  if (images.length) remember(await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id, channelName));
+  if (videos.length) remember(await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id, channelName));
+  if (text && !images.length && !videos.length) remember(await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName));
 
   const basket = await getBasket(guildId, channelId);
   const added = [
@@ -447,8 +452,40 @@ async function handleBasketAdd(interaction) {
     text && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
 
+  /**
+   * ลิงก์แบ็ค — **แจ้งครั้งเดียวตอนเปิดโพสต์ใหม่** (user เคาะ 2026-09-05 · ทรงเดียวกับ kanban/cases)
+   * หย่อนเพิ่มเข้าใบเดิมไม่แจ้งซ้ำ: ปุ่ม 🖼️ จัดการสื่อ ใน embed ติดมาทุกครั้งอยู่แล้ว
+   * ใช้ลิงก์ตัวเดียวกับปุ่มนั้น (`/posts/{id}`) · ไม่ตั้ง WEB_BASE_URL → ตกเป็นตัวหนา ข้อความไม่พัง
+   * ⛔ ห้ามใส่ MessageFlags.SuppressEmbeds ที่ editReply นี้ — จะกลืน embed ตะกร้าไปด้วย
+   *    (masked link `[x](url)` ไม่ unfurl อยู่แล้ว ไม่ต้องกัน)
+   */
+  const openedUrl = process.env.WEB_BASE_URL && episodeId
+    ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
+    : null;
+  const openedLabel = openedUrl ? `[จัดการโพสต์](${openedUrl})` : '**หน้าโพสต์**';
+  const openedLine = createdNew ? `\n🆕 เปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}` : '';
+
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
-  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว`, ...payload });
+  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${openedLine}`, ...payload });
+
+  /**
+   * ประกาศให้ทั้งห้องเห็น — ตอบกลับข้อความต้นทาง (ลอกจาก kanbanImportHandler)
+   * `failIfNotExists: false` = ข้อความต้นทางโดนลบก็ยังประกาศออกเป็นข้อความธรรมดา
+   * `allowedMentions: { parse: [] }` = โชว์ชื่อคนหย่อนได้ แต่ไม่ ping ใคร
+   * best-effort — ประกาศไม่ออกต้องไม่ทำให้ "หย่อนสำเร็จ" กลายเป็นล้มเหลว
+   */
+  if (createdNew) {
+    try {
+      await interaction.channel?.send({
+        content: `🆕 <@${interaction.user.id}> เปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}`,
+        reply: { messageReference: msg.id, failIfNotExists: false },
+        allowedMentions: { parse: [] },
+        flags: MessageFlags.SuppressEmbeds,
+      });
+    } catch (e) {
+      console.error('basketAdd: ประกาศเปิดโพสต์ใหม่ไม่สำเร็จ:', e.message);
+    }
+  }
 
   // โหลดไฟล์ลงดิสก์ **หลัง ack เท่านั้น** — คลิป 10–50 MB ให้ interaction รอไม่ได้ (3 วิ ก็ตายแล้ว)
   // ปิดบั๊กรูปตายใน 24 ชม. + ข้อความต้นทางถูกลบก็ยังโพสต์ได้

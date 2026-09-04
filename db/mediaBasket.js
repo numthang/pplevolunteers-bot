@@ -56,6 +56,11 @@ async function userIdOf(discordId) {
  *   `category` = หมวดที่คนตั้งเอง ปล่อยว่างไว้ให้เขาจัด — ยัดชื่อห้องลงไปแล้วเขาเปลี่ยนหมวด
  *   ชื่อห้องหายถาวร และตัวกรองหมวดต้องคอย exclude ชื่อห้องทุก query
  * org_id NULL = guild ที่ยังไม่ผูก org → โผล่แค่ในดิสฯ ไม่เข้าฟีดองค์กร
+ *
+ * @returns {{ id: number, created: boolean }} `created` = เพิ่งเปิดใบใหม่จริง (ไม่ใช่เกาะใบเดิม)
+ *   ⭐ ต้องคืนออกไปเพราะ handleBasketAdd ใช้ตัดสินว่าจะแจ้งลิงก์แบ็คไหม — แจ้งครั้งเดียวตอนเปิด
+ *      โพสต์ใหม่ หย่อนเพิ่มเข้าใบเดิมไม่แจ้งซ้ำ (user เคาะ 2026-09-05) · ข้างในรู้อยู่แล้วว่าใบใหม่
+ *      หรือใบเดิม (INSERT ติด vs หาเจอ) แค่เดิมกลืนทิ้งไป คืนแต่ id เปล่า
  */
 async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName = null) {
   const found = await getOpenEpisode(guildId, channelId);
@@ -64,7 +69,7 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
     if (channelName && !found.channel_name) {
       await pool.query('UPDATE post_episodes SET channel_name = $2 WHERE id = $1', [found.id, channelName]);
     }
-    return found.id;
+    return { id: found.id, created: false };
   }
 
   const createdBy = await userIdOf(addedBy);
@@ -90,13 +95,14 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
         id: rows[0].id, title: channelName || null, assigneeIds: [],
       }, { createdBy: createdBy, guildId }).catch(() => {});
     }
-    return rows[0].id;
+    return { id: rows[0].id, created: true };
   }
 
   // ชนกับคนอื่นที่เพิ่งเปิดตะกร้าห้องเดียวกัน (unique index กันไว้) → ใช้ใบของเขา
+  // created:false — คนที่ INSERT ติดเป็นคนเปิด ไม่ใช่เรา (ไม่งั้นแจ้ง "เปิดโพสต์ใหม่" ซ้ำสองคน)
   const again = await getOpenEpisode(guildId, channelId);
   if (!again) throw new Error('เปิดตะกร้าไม่สำเร็จ');
-  return again.id;
+  return { id: again.id, created: false };
 }
 
 async function getOpenEpisode(guildId, channelId) {
@@ -153,8 +159,12 @@ async function downloadPending(episodeId, { refreshUrls = null } = {}) {
   return done;
 }
 
+/**
+ * ⚠️ ตัวหย่อนของ (addImages/addVideo/setCaption/appendCaption) คืน **`{ episodeId, created }`**
+ *    ไม่ใช่ id เปล่าแล้ว (2026-09-05) — `created` ใช้แจ้งลิงก์แบ็คครั้งเดียวตอนเปิดโพสต์ใหม่
+ */
 async function addImages(guildId, channelId, addedBy, images, messageId, channelName = null) {
-  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const { id: episodeId, created } = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
   const userId = await userIdOf(addedBy);
   for (const img of images) {
     await pool.query(
@@ -164,11 +174,11 @@ async function addImages(guildId, channelId, addedBy, images, messageId, channel
       [episodeId, img.url, messageId || null, userId]
     );
   }
-  return episodeId;
+  return { episodeId, created };
 }
 
 async function addVideo(guildId, channelId, addedBy, videos, messageId, channelName = null) {
-  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const { id: episodeId, created } = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
   const userId = await userIdOf(addedBy);
   for (const vid of videos) {
     await pool.query(
@@ -178,11 +188,11 @@ async function addVideo(guildId, channelId, addedBy, videos, messageId, channelN
       [episodeId, vid.url, messageId || null, userId]
     );
   }
-  return episodeId;
+  return { episodeId, created };
 }
 
 async function setCaption(guildId, channelId, addedBy, caption, messageId, channelName = null) {
-  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const { id: episodeId, created } = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
 
   // ชื่อเรื่อง = บรรทัดแรก **แต่ห้ามทับชื่อที่คนตั้งเองบนเว็บ**
   // ดูจาก: ชื่อปัจจุบันตรงกับบรรทัดแรกของ body เดิมไหม → ตรง = ของอัตโนมัติ (อัปเดตตามได้)
@@ -198,16 +208,19 @@ async function setCaption(guildId, channelId, addedBy, caption, messageId, chann
       WHERE id = $1`,
     [episodeId, caption || null, await userIdOf(addedBy), nextTitle]
   );
-  return episodeId;
+  return { episodeId, created };
 }
 
 // ต่อท้าย caption เดิม (ไม่มี → สร้างใหม่) — ใช้ตอนสะสมข้อความหลายอันก่อนให้ AI เรียบเรียง
 async function appendCaption(guildId, channelId, addedBy, text, messageId, channelName = null) {
-  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const { id: episodeId, created } = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
   const { rows } = await pool.query('SELECT body FROM post_episodes WHERE id = $1', [episodeId]);
   const prev = rows[0]?.body?.trim();
   const merged = prev ? `${prev}\n\n${text}` : text;
-  return setCaption(guildId, channelId, addedBy, merged, messageId, channelName);
+  // ⚠️ ต้องใช้ `created` ของรอบนี้ ไม่ใช่ของ setCaption — ข้างในมัน ensureOpenEpisode ซ้ำ
+  //    ซึ่งตอนนั้นใบเพิ่งถูกเปิดไปแล้ว จะได้ created:false เสมอ (แจ้ง "เปิดโพสต์ใหม่" หลุดหาย)
+  await setCaption(guildId, channelId, addedBy, merged, messageId, channelName);
+  return { episodeId, created };
 }
 
 /**

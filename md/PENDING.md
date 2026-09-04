@@ -2,6 +2,19 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🧺 ตะกร้าสื่อ — แจ้งลิงก์แบ็คตอนเปิดโพสต์ใหม่ (เสร็จ local 2026-09-05 · **ยังไม่ push/deploy**)
+
+หย่อนสื่อลงตะกร้าครั้งที่เปิดโพสต์ใบใหม่ → แจ้งลิงก์ `/posts/{id}` **ครั้งเดียว** (ทรงเดียวกับ
+kanban/cases) ทั้งใน ephemeral ของคนกด และประกาศสาธารณะ reply ข้อความต้นทาง · หย่อนเพิ่ม
+เข้าใบเดิมไม่แจ้งซ้ำ (ปุ่ม 🖼️ จัดการสื่อ ใน embed ยังติดมาทุกครั้งเหมือนเดิม)
+
+- `db/mediaBasket.js` — `ensureOpenEpisode` + `addImages`/`addVideo`/`setCaption`/`appendCaption`
+  คืน **`{ episodeId, created }`** แทน id เปล่า (ผู้เรียกเดิมทุกตัวไม่ได้ใช้ค่าคืน จึงไม่กระทบ)
+- `handlers/basketHandler.js` — `handleBasketAdd` ต่อบรรทัดแจ้ง + ประกาศสาธารณะเมื่อ `created`
+- เทส `scripts/test/basketEpisode.test.js` 25 เคสผ่าน (เพิ่ม 4 เคสของ `created`)
+- **ขึ้น prod ต้อง restart บอท** (ไม่มี migration · เว็บไม่เกี่ยว)
+- ⬜ i18n: string ใหม่ 2 อันยัง hardcode ไทยตามทั้งไฟล์ (`basketHandler.js` ยังไม่ migrate ทั้งโซนบอท)
+
 ## 🚢 เฟส B (kanban ยุบ `owner_user_id`) เสร็จบน dev แล้ว — **ยังไม่ขึ้น prod** (2026-09-03)
 
 commit `dd7bb8f` + `2ecaf2e` · migration รันบน dev แล้ว · **ยังไม่ push ยังไม่ deploy**
