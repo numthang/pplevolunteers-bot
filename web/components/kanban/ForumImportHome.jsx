@@ -227,18 +227,22 @@ export default function ForumImportHome() {
                 {t('bulk.import', { n: selected.size })}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => applyToSelected({ status: 'skipped' })}
-              className="px-3 py-1 rounded-lg text-base border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-red-400 hover:text-red-500 transition"
-            >{t('bulk.skip')}</button>
+            {/* ⛔ ตัวเลือกที่ทำไม่ได้ต้องไม่โผล่ ไม่ใช่โผล่แล้วกดได้ error (กติกาเดียวกับ statusOptionsFor ใน kanban)
+                แท็บ "นำเข้าแล้ว" แก้สถานะไม่ได้เลย — หลังบ้านล็อก status <> 'imported' ไว้ */}
+            {status !== 'imported' && (
+              <button
+                type="button"
+                onClick={() => applyToSelected({ status: status === 'skipped' ? 'pending' : 'skipped' })}
+                className="px-3 py-1 rounded-lg text-base border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-red-400 hover:text-red-500 transition"
+              >{status === 'skipped' ? t('bulk.unskip') : t('bulk.skip')}</button>
+            )}
             <button
               type="button"
               onClick={() => setSelected(new Set())}
               className="px-3 py-1 rounded-lg text-base text-warm-400 dark:text-disc-muted hover:underline"
             >{t('bulk.clear')}</button>
           </div>
-          {(optionsOf['สายงาน'] || optionsOf['พื้นที่']) && (
+          {status !== 'imported' && (optionsOf['สายงาน'] || optionsOf['พื้นที่']) && (
             <div className="flex flex-col gap-1 pt-1 border-t border-warm-100 dark:border-disc-border">
               <span className="text-xs text-warm-400 dark:text-disc-muted">{t('bulk.applyHint')}</span>
               <ChipPicker

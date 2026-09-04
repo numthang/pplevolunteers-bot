@@ -7029,6 +7029,146 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-04T14:02:50.741Z"
+    },
+    {
+      "id": "bug-399",
+      "timestamp": "2026-09-04T14:30:02.446Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "Had \"inline-flex items-center gap-0.5 text-teal hover:",
+      "fix": "Changed to \"inline-flex items-center gap-0.5 text-cyan-600 da",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T14:30:02.446Z"
+    },
+    {
+      "id": "bug-400",
+      "timestamp": "2026-09-04T18:04:23.406Z",
+      "error_message": "Significant refactor of mediaBasket.js",
+      "file": "db/mediaBasket.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 11→12 lines (2 removed) | Also: return episodeId;; const episodeId = await ensureOpenEpisode(guildId,",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-04T18:05:14.952Z"
+    },
+    {
+      "id": "bug-401",
+      "timestamp": "2026-09-04T18:05:30.355Z",
+      "error_message": "Significant refactor of basketHandler.js",
+      "file": "handlers/basketHandler.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 5→10 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:05:30.355Z"
+    },
+    {
+      "id": "bug-402",
+      "timestamp": "2026-09-04T18:06:00.173Z",
+      "error_message": "Missing error handling in basketHandler.js",
+      "file": "handlers/basketHandler.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:06:00.173Z"
+    },
+    {
+      "id": "bug-403",
+      "timestamp": "2026-09-04T18:08:20.512Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:08:20.512Z",
+      "error_message": "Your credit balance is too low to access the Anthropic API (ทั้งที่ .env มี key ที่มีเครดิต)",
+      "file": "scripts/smoke/_envload.mjs",
+      "root_cause": "~/.bashrc export ANTHROPIC_API_KEY ตัวเก่าที่ยอด $0 ไว้ และ dotenv ไม่เขียนทับค่าที่มีใน process.env อยู่แล้ว → สคริปต์ทุกตัวหยิบ key ที่ตายจาก shell ส่วนเว็บอ่านไฟล์เองเลยทำงานปกติ = อาการหลอกว่าโค้ดสคริปต์ผิด",
+      "fix": "dotenv.config({ override: true }) ใน scripts/smoke/_envload.mjs · วิธีวินิจฉัย: เทียบ sha256 10 ตัวแรกของ key ในไฟล์ กับใน /proc/<pid>/environ ของ next-server (ไม่ต้องพิมพ์ค่า key)",
+      "tags": [
+        "env",
+        "dotenv",
+        "anthropic",
+        "shell"
+      ]
+    },
+    {
+      "id": "bug-404",
+      "timestamp": "2026-09-04T18:08:20.512Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:08:20.512Z",
+      "error_message": "could not determine data type of parameter $21",
+      "file": "scripts/kanban/prepForumImport.mjs",
+      "root_cause": "เขียน CASE WHEN $21 IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END ใน VALUES ของ INSERT — pg เดาชนิด $21 ไม่ได้ ทุกแถวพังแต่สคริปต์ยัง exit 0 (catch รายแถว) จึงดูเหมือนทำงานจนจบ",
+      "fix": "ส่งเป็นพารามิเตอร์ที่ cast ชัด $22::timestamptz แทน CASE",
+      "tags": [
+        "postgres",
+        "node-pg",
+        "insert"
+      ]
+    },
+    {
+      "id": "bug-405",
+      "timestamp": "2026-09-04T18:08:20.512Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:08:20.512Z",
+      "error_message": "inconsistent types deduced for parameter $3",
+      "file": "web/lib/forumImportCommit.js",
+      "root_cause": "UPDATE ใช้ $3 ทั้งเดี่ยวๆ (timestamptz) และใน COALESCE คู่กับ $4::date",
+      "fix": "cast ให้ครบ: created_at = $3::timestamptz, completed_at = COALESCE($4::date::timestamptz, $3::timestamptz)",
+      "tags": [
+        "postgres",
+        "node-pg",
+        "update"
+      ]
+    },
+    {
+      "id": "bug-406",
+      "timestamp": "2026-09-04T18:08:20.512Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:08:20.512Z",
+      "error_message": "วันที่เพี้ยนไป 1 วัน (ตั้ง 2026-03-15 อ่านกลับได้ 2026-03-14)",
+      "file": "web/db/kanban/forumImport.js",
+      "root_cause": "คอลัมน์ DATE ถูก node-pg แปลงเป็น Date object = เที่ยงคืนเวลาไทย พอฝั่งเว็บ .toISOString() (UTC) วันถอย 1 วัน — ตระกูลเดียวกับ txn_at ของ finance",
+      "fix": "คืนเป็นข้อความจาก SQL: to_char(col,YYYY-MM-DD)",
+      "tags": [
+        "timezone",
+        "postgres",
+        "date"
+      ]
+    },
+    {
+      "id": "bug-407",
+      "timestamp": "2026-09-04T18:08:20.512Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-04T18:08:20.512Z",
+      "error_message": "นำเข้าการ์ดซ้ำกับ KB-1267 ทั้งที่ระบบตรวจเจอแล้ว (dup_score 1.000)",
+      "file": "web/lib/forumImportCommit.js",
+      "root_cause": "ธง dup_card_id/dup_score ถูกคำนวณและเก็บไว้ แต่ไม่มีใครบังคับใช้ตอนนำเข้า — สโมคเลือกใบนั้นมาทดสอบแล้วสร้างการ์ดซ้ำจริง",
+      "fix": "commitImportRows ปฏิเสธใบที่ dup_score >= 0.9 เว้นแต่ส่ง force · UI ขึ้นกล่องเตือน + ปุ่มยืนยัน",
+      "tags": [
+        "kanban",
+        "import",
+        "dedupe"
+      ]
     }
   ]
 }
