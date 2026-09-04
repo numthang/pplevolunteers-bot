@@ -2325,7 +2325,6 @@
       "workstreams": "Workstream",
       "areas": "Area",
       "assignee": "Assignee",
-      "noAssignee": "— none —",
       "guessed": "AI guess",
       "guessedHint": "Guessed by AI, not confirmed by a person — edit freely",
       "skip": "Skip",
@@ -2334,11 +2333,14 @@
       "posted": "posted {date}",
       "eventDateLabel": "Event date",
       "eventDateHint": "= card's completed + due date",
-      "noEventDateHint": "empty = completed on posting date ({date}), no due date"
+      "noEventDateHint": "empty = completed on posting date ({date}), no due date",
+      "noKnownPeople": "Nobody in this thread matches a system account"
     },
     "result": {
       "done": "Imported {n}",
-      "failed": "{n} failed"
+      "failed": "{n} failed",
+      "dupBlocked": "Likely duplicates were blocked — check whether it's the same work",
+      "dupForce": "Import anyway"
     }
   }
 }

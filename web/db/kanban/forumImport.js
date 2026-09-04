@@ -17,16 +17,14 @@ const LIST_SQL = `
          to_char(i.ai_event_date,   'YYYY-MM-DD') AS ai_event_date,
          to_char(i.pick_event_date, 'YYYY-MM-DD') AS pick_event_date,
          i.pick_title, i.pick_detail, i.pick_workstreams, i.pick_areas, i.pick_assignee_user_id,
-         i.pick_no_event_date, i.pick_no_assignee,
+         i.pick_no_event_date, i.pick_assignees,
          i.status, i.card_id, i.dup_card_id, i.dup_score,
          i.author_user_id, i.author_discord_id,
          COALESCE(au.username, au.firstname) AS author_name,
-         COALESCE(pu.username, pu.firstname) AS pick_assignee_name,
          COALESCE(iu.username, iu.firstname) AS ai_assignee_name,
          d.title AS dup_title, d.ref_no AS dup_ref_no
     FROM kanban_forum_import i
     LEFT JOIN users au ON au.id = i.author_user_id
-    LEFT JOIN users pu ON pu.id = i.pick_assignee_user_id
     LEFT JOIN users iu ON iu.id = i.ai_assignee_user_id
     LEFT JOIN kanban_cards d ON d.id = i.dup_card_id
    WHERE i.org_id = $1`
@@ -64,7 +62,9 @@ export function effective(row) {
     areas: row.pick_areas ?? row.ai_areas ?? [],
     // ⚠️ pick_no_* คือ "คนดูแล้วและตั้งใจให้ว่าง" — ต่างจาก NULL ที่แปลว่า "ยังไม่แตะ ใช้ของ AI ไปก่อน"
     //    ไม่มี 2 สถานะนี้แยกกัน = คนล้างค่าทิ้งแล้วค่าที่ AI เดาเด้งกลับมาเงียบๆ
-    assigneeUserId: row.pick_no_assignee ? null : (row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? null),
+    // หลายคนได้ (kanban_card_assignees เท่ากันหมด ไม่มีเจ้าภาพ) · [] = ตั้งใจไม่มีใคร · null = ใช้ที่ AI เดา
+    assigneeIds: (row.pick_assignees ?? (row.ai_assignee_user_id ? [row.ai_assignee_user_id] : []))
+      .map(Number).filter(Boolean),
     // วันจัดงาน = ทั้ง due_at และ completed_at (user เคาะ 2026-09-04) · ไม่มี = completed_at ใช้วันตั้งกระทู้
     eventDate: row.pick_no_event_date ? null : (row.pick_event_date ?? row.ai_event_date ?? null),
   }
@@ -75,10 +75,9 @@ const PICK_COLUMNS = {
   detail: 'pick_detail',
   workstreams: 'pick_workstreams',
   areas: 'pick_areas',
-  assigneeUserId: 'pick_assignee_user_id',
+  assignees: 'pick_assignees',
   eventDate: 'pick_event_date',
   noEventDate: 'pick_no_event_date',
-  noAssignee: 'pick_no_assignee',
 }
 
 /**

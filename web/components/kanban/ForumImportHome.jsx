@@ -138,19 +138,22 @@ export default function ForumImportHome() {
   }
 
   /** สร้างการ์ดจริงจากใบที่ติ๊กไว้ — ทำทีละใบฝั่ง server (โหลดรูปจากดิสฯ ด้วย) จึงอาจใช้เวลาสักครู่ */
-  const commit = async () => {
+  const commit = async (force = false) => {
     setImporting(true)
     setResult(null)
     try {
       const res = await fetch('/api/kanban/import/forum/commit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...selected] }),
+        body: JSON.stringify({ ids: [...selected], force }),
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error || t('saveFailed')); return }
       setResult(json)
+      // ใบที่ถูกปฏิเสธเพราะซ้ำ ต้องคาที่เลือกไว้ ไม่งั้นกดยืนยันซ้ำไม่ได้ (load() ล้างที่เลือกทิ้ง)
+      const dupIds = (json.failed || []).filter((f) => f.duplicate).map((f) => String(f.id))
       await load()
+      if (dupIds.length) setSelected(new Set(dupIds))
     } catch {
       setError(t('saveFailed'))
     } finally {
@@ -216,7 +219,7 @@ export default function ForumImportHome() {
             {status === 'pending' && (
               <button
                 type="button"
-                onClick={commit}
+                onClick={() => commit(false)}
                 disabled={importing}
                 className="px-3 py-1 rounded-lg text-base bg-teal text-white hover:bg-teal/90 transition inline-flex items-center gap-1 disabled:opacity-60"
               >
@@ -255,10 +258,26 @@ export default function ForumImportHome() {
 
       {error && <p className="text-base text-red-500 dark:text-red-400">{error}</p>}
       {result && (
-        <p className="text-base text-teal">
-          {t('result.done', { n: result.created.length })}
-          {result.failed.length > 0 && ` · ${t('result.failed', { n: result.failed.length })}`}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-base text-teal">
+            {t('result.done', { n: result.created.length })}
+            {result.failed.length > 0 && ` · ${t('result.failed', { n: result.failed.length })}`}
+          </p>
+          {result.failed.filter((f) => f.duplicate).length > 0 && (
+            <div className="rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-500/10 p-2 flex flex-col gap-1">
+              <p className="text-base text-amber-700 dark:text-amber-400">{t('result.dupBlocked')}</p>
+              <ul className="text-xs text-amber-700/80 dark:text-amber-400/80 list-disc pl-4">
+                {result.failed.filter((f) => f.duplicate).map((f) => <li key={f.id}>{f.reason}</li>)}
+              </ul>
+              <button
+                type="button"
+                onClick={() => commit(true)}
+                disabled={importing}
+                className="self-start px-3 py-1 rounded-lg text-base border border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition"
+              >{t('result.dupForce')}</button>
+            </div>
+          )}
+        </div>
       )}
 
       {loading ? (
@@ -310,7 +329,7 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
   const ws = row.pick_workstreams ?? row.ai_workstreams ?? []
   const areas = row.pick_areas ?? row.ai_areas ?? []
   const people = row.participants || []
-  const assignee = row.pick_no_assignee ? '' : (row.pick_assignee_user_id ?? row.ai_assignee_user_id ?? '')
+  const assignees = (row.pick_assignees ?? (row.ai_assignee_user_id ? [row.ai_assignee_user_id] : [])).map(String)
   const eventDate = row.pick_no_event_date ? '' : String(row.pick_event_date ?? row.ai_event_date ?? '').slice(0, 10)
   const guessed = (key) => row[`pick_${key}`] == null && (row[`ai_${key}`]?.length || row[`ai_${key}`] != null)
 
@@ -402,18 +421,21 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
         <Field label={t('row.areas')} guessed={guessed('areas')} t={t}>
           <ChipPicker options={optionsOf['พื้นที่'] || []} value={areas} onChange={(v) => onPatch({ areas: v })} disabled={busy} />
         </Field>
-        <Field label={t('row.assignee')} guessed={row.pick_assignee_user_id == null && !row.pick_no_assignee && row.ai_assignee_user_id != null} t={t}>
-          <select
-            value={assignee || ''}
-            onChange={(e) => onPatch({ assigneeUserId: e.target.value || null })}
-            disabled={busy}
-            className="rounded-lg border border-warm-200 dark:border-disc-border bg-transparent px-2 py-1 text-base text-warm-700 dark:text-disc-text focus:border-teal focus:outline-none"
-          >
-            <option value="">{t('row.noAssignee')}</option>
-            {people.filter((p) => p.user_id).map((p) => (
-              <option key={p.user_id} value={p.user_id}>{p.name}</option>
-            ))}
-          </select>
+        <Field
+          label={t('row.assignee')}
+          guessed={row.pick_assignees == null && row.ai_assignee_user_id != null}
+          t={t}
+        >
+          {people.filter((p) => p.user_id).length === 0 ? (
+            <span className="text-xs text-warm-400 dark:text-disc-muted">{t('row.noKnownPeople')}</span>
+          ) : (
+            <ChipPicker
+              options={people.filter((p) => p.user_id).map((p) => ({ id: String(p.user_id), name: p.name }))}
+              value={assignees}
+              onChange={(v) => onPatch({ assignees: v })}
+              disabled={busy}
+            />
+          )}
         </Field>
       </div>
 

@@ -52,9 +52,14 @@ async function importImages(orgId, cardId, threadId, userId) {
 
 /**
  * สร้างการ์ดจากแถวในตารางพัก
+ *
+ * ⛔ ใบที่ธง "น่าจะซ้ำ" คะแนน >= 0.9 ถูกปฏิเสธเสมอ เว้นแต่ส่ง force มาด้วย
+ *    (เจ็บมาแล้ว 2026-09-04: สโมคของผมเลือกใบที่คะแนนซ้ำ 1.000 มานำเข้าโดยไม่ดูธงของตัวเอง
+ *     ได้การ์ดซ้ำกับ KB-1267 ที่ผูกงานสื่ออยู่ — ธงที่ไม่มีใครบังคับใช้ก็แค่ของประดับ)
+ * @param {{force?: boolean}} [opts] force = คนยืนยันแล้วว่ารู้ว่าซ้ำและยังจะเอา
  * @returns {Promise<{created: object[], failed: object[]}>}
  */
-export async function commitImportRows(orgId, ids, userId) {
+export async function commitImportRows(orgId, ids, userId, { force = false } = {}) {
   // field "สายงาน"/"พื้นที่" ของ org นี้ — ค่าที่คัดไว้เป็น option id ของ 2 ช่องนี้
   const defs = await fieldDB.listFieldDefs(orgId)
   const fieldByLabel = Object.fromEntries(defs.filter((d) => ['สายงาน', 'พื้นที่'].includes(d.label))
@@ -68,6 +73,11 @@ export async function commitImportRows(orgId, ids, userId) {
     if (!row) { failed.push({ id, reason: 'ไม่พบกระทู้นี้' }); continue }
     if (row.status === 'imported') { failed.push({ id, reason: 'นำเข้าไปแล้ว' }); continue }
 
+    if (!force && row.dup_card_id && Number(row.dup_score) >= 0.9) {
+      failed.push({ id, reason: `ซ้ำกับ KB-${row.dup_ref_no} "${row.dup_title}"`, duplicate: true })
+      continue
+    }
+
     const eff = importDB.effective(row)
     if (!eff.title) { failed.push({ id, reason: 'ไม่มีชื่อ' }); continue }
 
@@ -76,7 +86,7 @@ export async function commitImportRows(orgId, ids, userId) {
       const card = await cardDB.createCard(orgId, {
         title: eff.title,
         detail: eff.detail,
-        assigneeIds: eff.assigneeUserId ? [eff.assigneeUserId] : [],
+        assigneeIds: eff.assigneeIds,
         startAt: threadDate,
         dueAt: eff.eventDate || null,
         statusType: 'done',
