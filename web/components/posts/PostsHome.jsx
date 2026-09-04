@@ -67,7 +67,7 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
 
   // ไฟล์ในดิสก์ (ผ่าน gate) ก่อน · ไม่มีค่อยใช้ CDN ของ Discord ซึ่งลิงก์หมดอายุได้ → error แล้วซ่อนไป
   const [thumbFailed, setThumbFailed] = useState(false)
-  const thumbSrc = post.thumb_media_id ? `/api/posts/media/${post.thumb_media_id}` : (post.thumb_source_url || null)
+  const thumbSrc = post.thumb_media_id ? `/api/posts/media/${post.thumb_media_id}?thumb=1` : (post.thumb_source_url || null)
 
   return (
     <div
@@ -83,6 +83,7 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
             src={thumbSrc}
             alt=""
             loading="lazy"
+            decoding="async"
             onError={() => setThumbFailed(true)}
             className="w-full h-full object-cover"
           />

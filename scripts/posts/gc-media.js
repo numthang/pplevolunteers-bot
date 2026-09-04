@@ -115,6 +115,55 @@ async function main() {
     `ยังใหม่เกินไป ${tooNew} · error ${errors}`
   );
   if (DRY && removed) console.log('รันซ้ำโดยไม่ใส่ --dry เพื่อลบจริง');
+
+  await gcThumbs(refs);
+}
+
+// thumbnail เป็นแค่ cache ที่สร้างใหม่ได้เสมอ (web/lib/postsThumbs.js) — จงใจไม่ผูกกับขาลบไฟล์ต้นฉบับ
+// (ขาลบมี 2 ฝั่งคนละโมดูล web/lib กับ utils/ — แขวนสองที่ = เพิ่มตะเข็บฟรีๆ) gc เก็บกวาดทีเดียวจบแทน
+async function gcThumbs(refs) {
+  const THUMBS_DIR = path.join('storage', 'posts-thumbs');
+  const dir = path.resolve(storage.REPO_ROOT, THUMBS_DIR);
+
+  let names;
+  try {
+    names = await fs.readdir(dir);
+  } catch (err) {
+    if (err.code === 'ENOENT') return;   // ยังไม่เคยสร้าง thumb เลย — ข้ามเงียบๆ
+    throw err;
+  }
+
+  // basename (ตัดนามสกุล) ของทุก path ที่ยังมีคนอ้างถึง — thumb ตั้งชื่อตาม basename ต้นฉบับ
+  const referencedBase = new Set([...refs].map(p => path.basename(p, path.extname(p))));
+  const tmpCutoff = Date.now() - 3600_000;   // ไฟล์ .tmp-* ค้าง <1 ชม. อาจกำลังเขียนอยู่ ยังไม่ลบ
+
+  let checked = 0, removed = 0, bytes = 0, errors = 0;
+
+  for (const name of names) {
+    checked++;
+    const isTmp = name.includes('.tmp-');
+    // ไฟล์ tmp ชื่อ "<base>.webp.tmp-<uuid>" — ตัด .tmp-<uuid> ก่อนแล้วค่อยตัด .webp
+    const stripped = isTmp ? name.slice(0, name.indexOf('.tmp-')) : name;
+    const base = path.basename(stripped, path.extname(stripped));
+    if (referencedBase.has(base)) continue;   // ต้นฉบับยังมีคนอ้าง = thumb ไม่กำพร้า
+
+    const full = path.join(dir, name);
+    try {
+      const st = await fs.stat(full);
+      if (!st.isFile()) continue;
+      if (isTmp && st.mtimeMs > tmpCutoff) continue;   // tmp ใหม่ อาจกำลังเขียนอยู่
+
+      if (!DRY) await fs.unlink(full);
+      removed++; bytes += st.size;
+    } catch (err) {
+      errors++;
+      console.error(`\n  [thumbs] ข้าม ${name}: ${err.message}`);
+    }
+  }
+
+  console.log(
+    `[thumbs] เสร็จ: ${DRY ? 'จะลบ' : 'ลบแล้ว'} ${removed}/${checked} ไฟล์ · คืนพื้นที่ ${mb(bytes)} MB · error ${errors}`
+  );
 }
 
 main()

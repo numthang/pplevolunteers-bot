@@ -7,11 +7,23 @@
 import { readFile } from 'fs/promises'
 import { assetContext } from '@/lib/postsGuard.js'
 import { absPath, mimeOfPath } from '@/lib/postsStorage.js'
+import { getOrCreateThumb } from '@/lib/postsThumbs.js'
 
 export async function GET(req, { params }) {
   const { id } = await params
   const ctx = await assetContext(id)   // ไม่ผ่านสิทธิ์ = 404 (ไม่ยืนยันว่ามีอยู่)
   if (ctx.error) return ctx.error
+
+  // ?thumb=1 — คลังภาพก็โชว์เป็นกริด ใช้รูปย่อแทน original เหมือน /api/posts/media/[id]
+  if (new URL(req.url).searchParams.get('thumb') === '1') {
+    const thumb = await getOrCreateThumb(ctx.asset.path)
+    if (thumb) {
+      return new Response(thumb, {
+        headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=31536000, immutable' },
+      })
+    }
+    // สร้างไม่สำเร็จ → ตกลงไปเสิร์ฟต้นฉบับตามเดิม (รูปต้องไม่แตก)
+  }
 
   try {
     const buffer = await readFile(absPath(ctx.asset.path))

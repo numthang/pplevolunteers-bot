@@ -296,8 +296,10 @@ export default function AssetLibrary({ mode = 'page', onPick = null }) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={srcOf(a)}
+                src={`${srcOf(a)}?thumb=1`}
                 alt={a.title || ''}
+                loading="lazy"
+                decoding="async"
                 onClick={() => (mode === 'pick' ? pick(a) : null)}
                 className={`w-full h-full object-cover ${mode === 'pick' ? 'cursor-pointer' : ''}`}
               />

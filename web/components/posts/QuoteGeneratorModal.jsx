@@ -517,7 +517,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                         className="aspect-square rounded-md overflow-hidden border border-warm-200 dark:border-disc-border hover:ring-2 hover:ring-teal transition"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/posts/media/${m.id}`} alt="" className="w-full h-full object-cover" />
+                        <img src={`/api/posts/media/${m.id}?thumb=1`} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>

@@ -4,6 +4,7 @@ import { Readable } from 'stream'
 import { postContext } from '@/lib/postsGuard.js'
 import { canReadPost, canEditPost } from '@/lib/postsAccess.js'
 import { absPath, mimeOfPath, deletePostFile, savePostFile, isAllowedMime, MAX_FILE_SIZE } from '@/lib/postsStorage.js'
+import { getOrCreateThumb } from '@/lib/postsThumbs.js'
 import { getMediaWithPost, deleteMedia, replaceMediaFile, pathStillUsed } from '@/db/posts/media.js'
 
 /**
@@ -28,6 +29,18 @@ export async function GET(req, { params }) {
   // เช็คด้วยแถวของสื่อเองก่อน stream — ไม่ผ่าน = 404 (ห้าม 403 กันยืนยันว่ามีอยู่)
   if (row.org_id !== ctx.orgId || !canReadPost(row, ctx.access, ctx.userId, ctx.policy)) {
     return Response.json({ error: 'ไม่พบไฟล์' }, { status: 404 })
+  }
+
+  // ?thumb=1 — กริดในหน้า /posts/[id] ขอรูปย่อแทน original ประหยัดแบนด์วิดท์/เวลาโหลด
+  // max-age ยาวได้เพราะ path ต้นฉบับเป็น uuid ใหม่ทุกครั้งที่ไฟล์เปลี่ยน + ฝั่ง client มี ?v= อยู่แล้ว
+  if (new URL(req.url).searchParams.get('thumb') === '1' && row.kind !== 'video') {
+    const thumb = await getOrCreateThumb(row.path)
+    if (thumb) {
+      return new Response(thumb, {
+        headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=31536000, immutable' },
+      })
+    }
+    // สร้างไม่สำเร็จ → ตกลงไปเสิร์ฟต้นฉบับตามเดิม (รูปต้องไม่แตก)
   }
 
   try {

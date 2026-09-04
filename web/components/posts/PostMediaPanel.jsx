@@ -23,6 +23,14 @@ const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quickt
 //  → ไม่มีตัวนี้เบราว์เซอร์โชว์รูปก่อนเบลออีก 1 ชม.) ใส่ฝั่ง client อย่างเดียว ไม่ได้มาจาก DB
 const srcOf = m => (m.path ? `/api/posts/media/${m.id}${m.v ? `?v=${m.v}` : ''}` : m.source_url || null)
 
+// เวอร์ชันย่อ — ใช้เฉพาะ tile ในกริดเท่านั้น (lightbox/แก้รูปยังต้องใช้ srcOf ตัวเต็ม)
+// m.path เป็น null แปลว่า src เป็นลิงก์ Discord CDN ตรงๆ (ไม่ใช่ route ของเรา) ห้ามต่อ query ใส่
+const thumbOf = m => {
+  const src = srcOf(m)
+  if (!src || !m.path) return src
+  return `${src}${src.includes('?') ? '&' : '?'}thumb=1`
+}
+
 // compact = อยู่ในรางขวา 360px (กริดแคบ) · false = การ์ดเต็มความกว้าง
 // แยกเป็น prop เพราะยังลองสลับที่วางอยู่ — ย้ายการ์ดในหน้า /posts/[id] แล้วสลับ flag ตามได้เลย
 const GRID = {
@@ -332,6 +340,7 @@ export default function PostMediaPanel({ id, compact = false }) {
         <div className={`${compact ? GRID.compact : GRID.wide}${draggingId !== null ? ' select-none' : ''}`}>
           {images.map((m, i) => {
             const src = srcOf(m)
+            const thumb = thumbOf(m)
             const broken = !src || failedIds.includes(m.id)
             return (
               <div
@@ -351,11 +360,14 @@ export default function PostMediaPanel({ id, compact = false }) {
                 ) : (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={src}
+                    src={thumb}
                     alt={`สื่อ ${i + 1}`}
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                     // จิ้มรูป = เข้าหน้าแก้ไขเลย (กล่องแก้ไขโชว์รูปเต็มอยู่แล้ว จึงไม่ต้องมีขั้น lightbox คั่น)
                     // เหลือ lightbox ไว้เฉพาะทางที่แก้ไม่ได้: ไม่มีสิทธิ์แก้ / ไฟล์ยังไม่ลงดิสก์ (canvas taint)
+                    // lightbox ใช้ src ตัวเต็ม (ไม่ใช่ thumb) เพราะเป็นจอดูรูปขยาย
                     onClick={() => (canEdit && m.path ? setEditing(m) : setLightbox({ src, index: i }))}
                     onError={() => setFailedIds(prev => (prev.includes(m.id) ? prev : [...prev, m.id]))}
                     className={`w-full h-full object-cover ${canEdit && m.path ? 'cursor-pointer' : 'cursor-zoom-in'}`}
