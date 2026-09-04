@@ -1686,7 +1686,7 @@ export default function KanbanHome() {
         //   เล็กกว่านั้น: กองเดียวกันซ้อนลงมา กดพับ/กางได้ (แนวเดียวกับ Notion/Linear/Asana บนมือถือ)
         <div className={`flex flex-col gap-3 xl:grid xl:gap-2 ${groupBy === 'due' ? 'xl:grid-cols-5' : 'xl:grid-cols-6'}`}>
           {groups.map(({ key, cards: list }) => {
-            const sorted = sortCardsBy(list, sort)
+            const sorted = sortCardsBy(list, sort, { doneMode: key === 'done' })
             const shown = sorted.slice(0, MAX_PER_COLUMN + (extraShown[key] || 0))
             const isOpen = openState[key] ?? sorted.length > 0
             const head = groupBy === 'due' ? t(`due.${key}`) : t(`status.${key}`)

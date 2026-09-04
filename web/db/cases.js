@@ -583,10 +583,26 @@ export async function deleteCase(orgId, caseId) {
   return { ok: Boolean(rows[0]), files: files.map(f => f.file_path).filter(Boolean) }
 }
 
+// สถานะเคสที่แปลว่า "เสร็จ" ฝั่ง kanban — ต้องตรงกับ CASE_STATUS ใน db/kanban/statusSql.js เป๊ะ
+// (ไม่ import ตรงๆ เพราะ CASE_STATUS ไม่ได้ export — แค่ 3 ค่า ซ้ำไว้ที่นี่ถูกกว่าเปิด import ข้ามโมดูล)
+const KANBAN_DONE_STATUSES = ['resolved', 'closed', 'rejected']
+
 export async function updateStatus(caseId, status, closeReason = null) {
   await pool.query(
     `UPDATE cases SET status = $2, close_reason = $3, updated_at = NOW() WHERE id = $1`,
     [caseId, status, closeReason],
+  )
+  // ⭐ ซิงก์ completed_at ของการ์ด kanban ที่ผูกเคสนี้ (ถ้ามี) — status_type คำนวณสดจากต้นทางเสมออยู่แล้ว
+  //    (LIVE_STATUS_SQL) แต่ completed_at เป็นคอลัมน์ cache ธรรมดา ไม่มีใครเขียนให้นอกจากลากการ์ดเอง
+  //    → เคสที่ปิดผ่านหน้า /cases (ไม่ได้ลากการ์ด) completed_at ค้าง NULL ตลอดกาล (บั๊กที่เจอ 2026-09-03)
+  //    COALESCE กันไม่ให้ปิด-เปิด-ปิดซ้ำแล้วเวลาเสร็จเปลี่ยนไปเรื่อยๆ — ยึดครั้งแรกที่ปิดจริง
+  await pool.query(
+    `UPDATE kanban_cards c
+        SET completed_at = CASE WHEN $2 THEN COALESCE(c.completed_at, now()) ELSE NULL END,
+            updated_at = now()
+       FROM kanban_card_links l
+      WHERE l.card_id = c.id AND l.entity_type = 'case' AND l.entity_id = $1`,
+    [caseId, KANBAN_DONE_STATUSES.includes(status)],
   )
 }
 

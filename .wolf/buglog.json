@@ -6414,6 +6414,201 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-03T11:50:24.891862Z"
+    },
+    {
+      "id": "bug-361",
+      "timestamp": "2026-09-03T15:01:10.879Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/kanban/cards/[id]/route.js",
+      "root_cause": "Was returning: Response.json({ card: await cardDB.addAssignee(org",
+      "fix": "Now returns: err(400, 'ร่างส่วนตัวยังไม่มีผู้รับผิดชอบ — เปิดให",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T15:01:10.879Z"
+    },
+    {
+      "id": "bug-362",
+      "timestamp": "2026-09-03T15:02:01.000Z",
+      "error_message": "403 'งานนี้ปิดไปแล้ว' — กด 'รับงาน' บนการ์ด done/cancelled ไม่มีคนรับ ไม่อัปเดต",
+      "file": "web/app/api/kanban/cards/[id]/route.js",
+      "root_cause": "PATCH { claim: true } เช็คด่านเดียว canClaimCard() ซึ่ง block ทุกการ์ด status_type in ('done','cancelled') ไม่ว่าใครเรียก — เคยแก้บั๊กเดียวกันไปแล้วที่ /api/kanban/cards/[id]/assignees (2026-08-24, เพิ่ม canEditCard เป็นทางผ่านสำรอง) แต่ handler นี้เป็น code path คู่ขนานที่ไม่เคยได้ฟิกซ์ตาม — ยังไม่พอ: handler นี้ยังไม่เคยต่อ postAssign.js เลย (มีแค่ caseOfCard) เขียน kanban_card_assignees ตรงๆ สำหรับการ์ดโพสต์ ทำให้ post_assignees ไม่ sync (บั๊กเดียวกับที่ /assignees แก้ไปแล้วในเฟส C แต่จุดนี้ตกหล่น)",
+      "fix": "1) เปลี่ยนด่านเป็น !canEditCard && !canClaimCard (เหมือน /assignees) 2) เพิ่ม postOfCard/canAssignPost/assignPost branch ก่อน fallback ไป cardDB.addAssignee ตรงๆ",
+      "tags": [
+        "kanban",
+        "assignee",
+        "claim",
+        "post-sync",
+        "duplicate-code-path",
+        "403"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T15:02:01.000Z"
+    },
+    {
+      "id": "bug-363",
+      "timestamp": "2026-09-03T15:07:23.406Z",
+      "error_message": "Significant refactor of migration.sql",
+      "file": "scripts/migration/migration.sql",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 23→7 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "sql"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T15:07:23.406Z"
+    },
+    {
+      "id": "bug-364",
+      "timestamp": "2026-09-03T15:19:18.574Z",
+      "error_message": "Incorrect value in code",
+      "file": "migrations/1788448639938_fix-kanban-card-created-at-for-appflowy-backfilled-cards.sql",
+      "root_cause": "Had '2026-08-19 18:59:42.777+00'",
+      "fix": "Changed to '2026-08-19 18:59:42.778+00'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "sql"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T15:19:18.574Z"
+    },
+    {
+      "id": "bug-365",
+      "timestamp": "2026-09-03T15:33:15.486Z",
+      "error_message": "Significant refactor of kanbanSort.js",
+      "file": "web/lib/kanbanSort.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T15:33:15.487Z"
+    },
+    {
+      "id": "bug-366",
+      "timestamp": "2026-09-03T17:47:56.759Z",
+      "error_message": "Significant refactor of route.js",
+      "file": "web/app/api/case/[ref]/status/route.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 5→5 lines (3 removed) | Also: // ปิด/ไม่รับ → ต้องมีเหตุผล + public note อธิบายใ; if (NEEDS_REASON.includes(status)) {",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-03T17:48:15.731Z"
+    },
+    {
+      "id": "bug-367",
+      "timestamp": "2026-09-03T17:48:41.232Z",
+      "error_message": "Significant refactor of CaseManageActions.jsx",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→4 lines (2 removed) | Also: const NEEDS_REASON = ['closed', 'rejected']; const STATUS_ORDER = ['open', 'in_progress', 'reso",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-03T17:49:10.507Z"
+    },
+    {
+      "id": "bug-368",
+      "timestamp": "2026-09-03T17:49:44.620Z",
+      "error_message": "CSS fix: public_note",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "public_note: needsReason ? publicNote : undefined, → NEEDS_PUBLIC_NOTE.includes(next) ? publicNote : undefined,",
+      "fix": "Changed public_note: needsReason ? publicNote : undefined, → NEEDS_PUBLIC_NOTE.includes(next) ? publicNote : undefined,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T17:49:44.620Z"
+    },
+    {
+      "id": "bug-369",
+      "timestamp": "2026-09-03T17:49:54.070Z",
+      "error_message": "Wrong condition in logic",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "Condition was: if (needsReason)",
+      "fix": "Changed to: if (NEEDS_PUBLIC_NOTE.includes(next)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T17:49:54.070Z"
+    },
+    {
+      "id": "bug-370",
+      "timestamp": "2026-09-03T17:50:20.111Z",
+      "error_message": "Null/undefined access in CaseManageActions.jsx",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T17:50:20.111Z"
+    },
+    {
+      "id": "bug-371",
+      "timestamp": "2026-09-03T17:50:57.246Z",
+      "error_message": "Wrong reference: noteBoxRef should be noteRef",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "Used \"noteBoxRef\" instead of \"noteRef\"",
+      "fix": "Changed noteBoxRef → noteRef",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T17:50:57.246Z"
+    },
+    {
+      "id": "bug-372",
+      "timestamp": "2026-09-03T17:51:39.554Z",
+      "error_message": "Wrong reference: CASE_CLOSE_REASONS should be CASE_REJECT_REASONS",
+      "file": "web/app/cases/[ref]/page.js",
+      "root_cause": "Used \"CASE_CLOSE_REASONS\" instead of \"CASE_REJECT_REASONS\"",
+      "fix": "Changed CASE_CLOSE_REASONS → CASE_REJECT_REASONS",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-03T17:51:39.554Z"
     }
   ]
 }

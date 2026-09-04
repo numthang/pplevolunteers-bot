@@ -14,6 +14,7 @@ import {
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
+import { assignPost, postOfCard, canAssignPost } from '@/lib/postAssign.js'
 
 // เคสมีผู้รับผิดชอบได้หลายคน — คนที่เพิ่มทีหลังเป็น "ร่วม" ไม่ใช่แทนที่
 const CO_ASSIGNEE_NOTICE = 'เคสนี้มีผู้รับผิดชอบอยู่แล้ว — คนที่เพิ่มเข้ามาถูกบันทึกเป็นผู้รับผิดชอบร่วม'
@@ -85,7 +86,9 @@ export async function PATCH(req, { params }) {
   // ⭐ การ์ดที่ผูกของจริงก็รับงานได้ตามปกติ — เจ้าภาพ/คนช่วย/กำหนดส่ง เป็นข้อมูลของ kanban เอง
   //    ที่ล็อกมีแค่ **สถานะกับชื่อ** ซึ่งเป็นของต้นทาง
   if (body.claim === true) {
-    if (!canClaimCard(card, access, userId)) return err(403, 'งานนี้ปิดไปแล้ว')
+    // ⚠️ ด่านเดียว canClaimCard เคยเป็นบั๊กที่ /assignees แล้ว (แก้ 2026-08-24): บล็อกคนเกี่ยวข้อง/
+    //    admin ไม่ให้ใส่ชื่อตัวเองในการ์ด "เสร็จ/พักไว้" — จุดนี้ยังไม่เคยเอาฟิกซ์เดียวกันมาใส่
+    if (!canEditCard(card, access, userId) && !canClaimCard(card, access, userId)) return err(403, 'งานนี้ปิดไปแล้ว')
 
     // ⭐ การ์ดที่ผูกเคส: คนเป็นของ `case_assignees` — เขียนที่ต้นทางแล้วให้ sync ลงการ์ด
     //    (ด่านสิทธิ์ผ่านแล้วตั้งแต่ cardContext → getCardForViewer ซึ่งบังคับ manageCases + จังหวัด)
@@ -96,6 +99,16 @@ export async function PATCH(req, { params }) {
         card: await cardDB.getCard(orgId, card.id),
         notice: wasFirst ? undefined : CO_ASSIGNEE_NOTICE,
       })
+    }
+
+    // ⭐ การ์ดที่ผูกโพสต์: คนเป็นของ `post_assignees` — เขียนที่ต้นทางแล้วให้ sync ลงการ์ด เหมือน
+    //    ฝั่งเคสข้างบน (จุดนี้เคยตกฟิกซ์เฟส C — เขียน kanban_card_assignees ตรงๆ ทำ /posts กับบอร์ด
+    //    โชว์คนละคน จนกว่าจะแก้ตรงนี้ให้เดินทาง postAssign.js เหมือน /assignees route)
+    const linkedPost = await postOfCard(orgId, card)
+    if (linkedPost) {
+      if (!canAssignPost(linkedPost)) return err(400, 'ร่างส่วนตัวยังไม่มีผู้รับผิดชอบ — เปิดให้ทีมเห็นก่อน')
+      await assignPost(orgId, linkedPost, userId, { actorUserId: userId, app: 'kanban' })
+      return Response.json({ card: await cardDB.getCard(orgId, card.id) })
     }
 
     // ⭐ เฟส B: ทางเดียวแล้ว — ไม่ต้องแยก "ยังไม่มีเจ้าภาพ = ตั้งเจ้าภาพ" กับ "มีแล้ว = ลงเป็นคนช่วย"

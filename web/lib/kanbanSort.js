@@ -3,9 +3,10 @@
  * ซึ่งเป็นลำดับ **ค่าเริ่มต้น** ตายตัวที่มีเทสอยู่แล้ว ห้ามแก้ signature นั้น)
  *
  * spec = null (หรือ key: null) → ใช้ sortCards ค่าเริ่มต้นเป๊ะ (กำหนดส่ง→ความสำคัญ→ใหม่ก่อน)
+ * ยกเว้นกอง "เสร็จ" (doneMode) ที่ due_at ไม่มีความหมายแล้ว → ใช้ sortDoneCards แทน (เพิ่งปิดก่อน)
  */
 
-import { sortCards } from './kanbanGrouping.js'
+import { sortCards, sortDoneCards } from './kanbanGrouping.js'
 import { STATUS_TYPES } from './kanbanAccess.js'
 
 /** field ในตัวการ์ดเอง (ไม่ใช่ custom field) ที่เรียงได้ */
@@ -71,9 +72,10 @@ function compareValues(av, bv, type) {
  * @param {object[]} cards
  * @param {{key: string, fieldId?: number|string, type: string, dir: 'asc'|'desc'}|null} spec
  *   fieldId มี = custom field, ไม่มี = builtin (ใช้ key ตรงกับคอลัมน์บนการ์ด)
+ * @param {{doneMode?: boolean}} [opts] doneMode: true เมื่อ spec ว่าง ใช้ sortDoneCards แทน sortCards
  */
-export function sortCardsBy(cards = [], spec) {
-  if (!spec || !spec.key) return sortCards(cards)
+export function sortCardsBy(cards = [], spec, { doneMode = false } = {}) {
+  if (!spec || !spec.key) return doneMode ? sortDoneCards(cards) : sortCards(cards)
 
   const getValue = spec.fieldId != null
     ? (c) => customValue(c, spec.fieldId, spec.type)

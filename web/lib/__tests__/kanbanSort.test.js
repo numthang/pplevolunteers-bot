@@ -24,6 +24,23 @@ describe('sortCardsBy', () => {
     expect(sortCardsBy(cards, null).map((c) => c.id)).toEqual([2, 1])
   })
 
+  it('spec ว่าง + doneMode → sortDoneCards (เพิ่งปิดก่อน แทนกำหนดส่ง)', () => {
+    const cards = [
+      card({ id: 1, due_at: at('2020-01-01T09:00:00+07:00'), completed_at: null }),
+      card({ id: 2, due_at: null, completed_at: at('2026-08-30T09:00:00+07:00') }),
+    ]
+    expect(sortCardsBy(cards, null, { doneMode: true }).map((c) => c.id)).toEqual([2, 1])
+  })
+
+  it('spec มีค่า → doneMode ไม่มีผล ใช้ spec ตามปกติ', () => {
+    const cards = [
+      card({ id: 1, title: 'b' }),
+      card({ id: 2, title: 'a' }),
+    ]
+    const sorted = sortCardsBy(cards, { key: 'title', type: 'text', dir: 'asc' }, { doneMode: true })
+    expect(sorted.map((c) => c.id)).toEqual([2, 1])
+  })
+
   it('เรียงตาม updated_at ล่าสุดขึ้นก่อน (dir desc)', () => {
     const cards = [
       card({ id: 1, updated_at: at('2026-08-01T00:00:00+07:00') }),

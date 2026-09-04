@@ -1850,7 +1850,6 @@ DELETE FROM kanban_card_assignees a
                     WHERE pa.episode_id = p.id AND pa.user_id = a.user_id);
 
 COMMIT;
--- production ทำถึงตรงนี้
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-09-03 (รอบ 2) — ⛔ ถอดกฎ "ผู้รับผิดชอบผูกกับกอง" ออกจาก kanban ทั้งหมด
@@ -1930,3 +1929,36 @@ SELECT l.card_id, pa.user_id, pa.assigned_at
 ON CONFLICT DO NOTHING;
 
 COMMIT;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-09-03 (รอบ 3) — งานสื่อ backfill: kanban_cards.created_at ผิด → เรียงมั่ว
+--
+-- user ทัก: การ์ด KB-1093 (กระทู้ปีก่อน) โผล่บนสุดตอนเรียง "ใหม่ก่อน" ทั้งที่เนื้อหาเก่า
+-- สาเหตุ: kanban_cards.created_at ของการ์ด backfill = **วัน mirror การ์ด** (นาทีเดียวกันเกือบ
+-- ทุกใบ, 2026-08-27) ไม่ใช่วันตั้งกระทู้จริง — คนละคอลัมน์กับ post_episodes.created_at ที่ถูกอยู่แล้ว
+-- (แกะ snowflake ใน backfillPostThreads.js) ไม่มีผลข้างเคียง เพราะการ์ด backfill ไม่มีใครอ้างอิง
+-- created_at เดิมอยู่แล้ว (ไม่มี due date/reminder ผูกกับมัน)
+--
+-- แก้คู่กับ: web/db/posts/episodes.js (ORDER BY แยกตาม source='backfill' ให้ใช้ created_at
+--            แทน updated_at — updated_at ยังคงความหมาย "แก้ล่าสุด" ไว้ตามเดิม ไม่แตะ)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+UPDATE kanban_cards c
+   SET created_at = pe.created_at
+  FROM kanban_card_links l
+  JOIN post_episodes pe ON pe.id = l.entity_id
+ WHERE l.card_id = c.id
+   AND l.entity_type = 'post'
+   AND pe.created_via = 'backfill'
+   AND c.created_at <> pe.created_at;
+
+COMMIT;
+
+-- production ทำถึงตรงนี้
+--
+-- ⭐ 2026-09-03: สลับมาใช้ node-pg-migrate ตั้งแต่จุดนี้เป็นต้นไป — ไฟล์นี้จบบทบาท "งานใหม่" แค่นี้
+--   เก็บไว้เป็น archive อย่างเดียว งานถัดไปทั้งหมดอยู่ใน migrations/ (ดู README/scripts/migrate.js)
+--   บั๊ก kanban_cards.created_at ฝั่งเคส (รอบ 4 เดิม) ย้ายไปอยู่ migrations/1788447993748_*.sql แล้ว
+

@@ -91,7 +91,7 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
        LEFT JOIN users u ON u.id = e.created_by
        LEFT JOIN dc_guilds g ON g.guild_id = e.guild_id
       WHERE ${where}
-      ORDER BY e.updated_at DESC
+      ORDER BY ${source === 'backfill' ? 'e.created_at' : 'e.updated_at'} DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
     params
   )

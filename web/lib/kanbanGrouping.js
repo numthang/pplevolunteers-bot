@@ -117,3 +117,18 @@ export function sortCards(cards = []) {
     return new Date(b.created_at || 0) - new Date(a.created_at || 0)
   })
 }
+
+/**
+ * เรียงกอง "เสร็จ" โดยเฉพาะ (2026-09-03 — user ทัก) — แยกจาก sortCards เพราะ due_at ไม่มีความหมาย
+ * กับงานที่จบไปแล้ว: ใช้สูตรเดิม (due_at น้อยไปมาก) จะทำให้งานเก่าที่ due ผ่านมานานลอยขึ้นบนสุด
+ * ฝังงานที่เพิ่งปิดจริงๆ ไว้ล่าง — ตัวตัดสินที่มีความหมายสำหรับกองนี้คือ "เพิ่งปิดเมื่อไหร่"
+ *
+ * ไม่มี completed_at (การ์ดเก่าที่ import ตรงมาเป็น "เสร็จ" โดยไม่ผ่าน setCardStatus) → ไปท้ายสุดเสมอ
+ */
+export function sortDoneCards(cards = []) {
+  return [...cards].sort((a, b) => {
+    const at = a.completed_at ? new Date(a.completed_at).getTime() : -Infinity
+    const bt = b.completed_at ? new Date(b.completed_at).getTime() : -Infinity
+    return bt - at
+  })
+}

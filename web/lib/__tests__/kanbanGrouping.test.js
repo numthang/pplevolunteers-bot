@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dueBucket, isMyCard, groupCards, sortCards, DUE_BUCKETS } from '../kanbanGrouping.js'
+import { dueBucket, isMyCard, groupCards, sortCards, sortDoneCards, DUE_BUCKETS } from '../kanbanGrouping.js'
 
 // นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน
 const NOW = new Date('2026-08-18T10:00:00+07:00')
@@ -125,6 +125,33 @@ describe('sortCards', () => {
     const cards = [card({ id: 1, due_at: at('2026-08-25T09:00:00+07:00') }), card({ id: 2, due_at: null })]
     const copy = [...cards]
     sortCards(cards)
+    expect(cards).toEqual(copy)
+  })
+})
+
+// ---- sortDoneCards ----
+describe('sortDoneCards', () => {
+  it('เพิ่งปิดก่อน (completed_at ใหม่สุดขึ้นก่อน)', () => {
+    const cards = [
+      card({ id: 1, completed_at: at('2025-01-01T09:00:00+07:00') }),
+      card({ id: 2, completed_at: at('2026-08-30T09:00:00+07:00') }),
+      card({ id: 3, completed_at: at('2026-01-15T09:00:00+07:00') }),
+    ]
+    expect(sortDoneCards(cards).map(c => c.id)).toEqual([2, 3, 1])
+  })
+
+  it('ไม่มี completed_at ไปท้ายสุดเสมอ — due_at เก่าไม่ลอยขึ้นบน', () => {
+    const cards = [
+      card({ id: 1, completed_at: null, due_at: at('2020-01-01T09:00:00+07:00') }),
+      card({ id: 2, completed_at: at('2026-08-30T09:00:00+07:00'), due_at: null }),
+    ]
+    expect(sortDoneCards(cards).map(c => c.id)).toEqual([2, 1])
+  })
+
+  it('ไม่แก้ array เดิม', () => {
+    const cards = [card({ id: 1, completed_at: at('2026-08-25T09:00:00+07:00') }), card({ id: 2, completed_at: null })]
+    const copy = [...cards]
+    sortDoneCards(cards)
     expect(cards).toEqual(copy)
   })
 })
