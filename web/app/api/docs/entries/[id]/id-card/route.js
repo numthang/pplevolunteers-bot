@@ -18,7 +18,10 @@ async function gate(session, id) {
   if (!entry) return { error: 'Not found', status: 404 }
   if (!canAccessEvent(entry.province, access)) return { error: 'Forbidden', status: 403 }
   if (!entry.member_user_id) return { error: 'ใบนี้ผู้รับไม่ใช่สมาชิก', status: 409 }
-  if (await getDocsSignPolicy(entry.org_id) !== 'flexible') {
+  // flexible กับ open ต้องไปด้วยกัน — เงื่อนไขจริงคือ "ผู้ดูแลจัดการแทนสมาชิกได้ไหม"
+  // ซึ่ง open (หลวมกว่า) ก็ต้องได้ · ตัวคุมจริงคือ canManageDocs + canAccessEvent ข้างบน
+  const policy = await getDocsSignPolicy(entry.org_id)
+  if (policy !== 'flexible' && policy !== 'open') {
     return { error: 'องค์กรนี้ตั้งให้สมาชิกแนบบัตรเอง — เปลี่ยนได้ที่ ตั้งค่าเอกสาร', status: 403 }
   }
   return { entry }

@@ -128,9 +128,15 @@ export default function SignPage({ params }) {
   const isSigningForSomeoneElse = !!entry && (
     entry.external_payee_id ? true : (!!session?.user?.userId && session.user.userId !== entry.member_user_id)
   )
+  // โหมดที่ยอมให้ "คนที่ไม่ใช่เจ้าของใบ" ลงมือแทนได้ — flexible กับ open ต้องไปด้วยกันเสมอ
+  // ⚠️ open หลวมกว่า flexible (คนไม่ล็อกอินยังเซ็นได้) ถ้าลืมนับ open ตรงนี้จะได้ตรรกะกลับหัว:
+  //    ผู้ดูแลที่ล็อกอินอยู่โดนจอ "ลิงก์นี้ไม่ใช่ของคุณ" ทั้งที่ล็อกเอาต์แล้วเซ็นได้ — เจอจริงบน prod
+  //    2026-09-04 (ตอนยื่นมือถือให้คนอื่นเซ็นด้วยบัญชีตัวเอง) เพราะแก้ฝั่ง API ไว้แต่ลืมฝั่งนี้
+  const delegatedPolicy = signPolicy === 'flexible' || signPolicy === 'open'
+
   // เซ็นแทนได้จริงไหม — ต้องตรงกับกฎฝั่ง API ไม่งั้นหน้าโชว์ช่องวาดแล้วไปโดน 403 ตอนกดส่ง
   const canSignOnBehalf = isSigningForSomeoneElse &&
-    (!!entry?.external_payee_id || signPolicy === 'flexible')
+    (!!entry?.external_payee_id || delegatedPolicy)
   // ขั้นยืนยันตัวตน (ผูกทะเบียนสมาชิก / กรอกเอง) เป็นเรื่องของ "เจ้าของใบ" เท่านั้น
   // คนเซ็นแทนกรอกให้ไม่ได้ — link-ngs/self-info เขียนลงบัญชีของคนที่ล็อกอิน ไม่ใช่ของผู้รับ
   // → ข้ามไปช่องวาดเลย ข้อมูลบนใบมาจากที่แอดมินกรอกไว้ใน entry อยู่แล้ว
@@ -145,7 +151,7 @@ export default function SignPage({ params }) {
   // (canManageDocs + อยู่ในเขตของงาน + org โหมดยืดหยุ่น) · **ห้ามผูกกับ canSignOnBehalf เฉยๆ**
   // เพราะโหมดยืดหยุ่นสมาชิกคนไหนเปิดลิงก์ก็เซ็นแทนได้ แต่ห้ามเห็นบัตร ปชช. คนอื่น (PDPA)
   const canManageIdCard = !!entry && !entry.external_payee_id && !isRecipientSelf &&
-    canManage && signPolicy === 'flexible'
+    canManage && delegatedPolicy
   // มีช่องข้อมูลผู้รับให้กรอกไหม — คนนอกไม่มี (ข้อมูลอยู่ทะเบียนคนนอก แก้ที่ /docs/settings)
   //
   // ⚠️ เดิมตัด "คนที่ผูกทะเบียนสมาชิกแล้ว" ออกด้วย (`&& !ngsLinked`) เพราะคิดว่าข้อมูลมาจาก roster

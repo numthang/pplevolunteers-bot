@@ -36,7 +36,10 @@ export async function PUT(req, { params }) {
     // คนนอกมีฟอร์มของตัวเองที่ /api/docs/external-payees/[id] — ไม่ให้ปนเส้นกัน
     return Response.json({ error: 'ใบนี้ผู้รับไม่ใช่สมาชิก' }, { status: 409 })
   }
-  if (await getDocsSignPolicy(entry.org_id) !== 'flexible') {
+  // flexible กับ open ต้องไปด้วยกันเสมอ (open หลวมกว่า) — ไม่งั้นผู้ดูแลกรอกข้อมูลแทนไม่ได้
+  // ในโหมด open ทั้งที่เป็นโหมดที่ต้องพึ่งผู้ดูแลกรอกให้มากที่สุด (คนถือลิงก์กรอกเองไม่ได้)
+  const policy = await getDocsSignPolicy(entry.org_id)
+  if (policy !== 'flexible' && policy !== 'open') {
     return Response.json({ error: 'องค์กรนี้ตั้งให้สมาชิกกรอกข้อมูลเอง — เปลี่ยนได้ที่ ตั้งค่าเอกสาร' }, { status: 403 })
   }
 

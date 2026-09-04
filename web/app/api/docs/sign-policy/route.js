@@ -19,7 +19,7 @@ export async function GET() {
   return Response.json({ success: true, data: { policy: await getDocsSignPolicy(g.orgId) } })
 }
 
-/** PUT /api/docs/sign-policy — Body: { policy: 'strict' | 'flexible' } */
+/** PUT /api/docs/sign-policy — Body: { policy: 'strict' | 'flexible' | 'open' } */
 export async function PUT(req) {
   const g = await gate(await getServerSession(authOptions))
   if (g.error) return Response.json({ error: g.error }, { status: g.status })
