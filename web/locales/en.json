@@ -1173,7 +1173,6 @@
         "confirmSignature": "Confirm Signature"
       },
       "layoutTitle": "Sign Document",
-      "onBehalfWarning": "You are signing on behalf of {name} — the system records that you signed",
       "notYourLink": {
         "title": "This link is not yours",
         "hint": "If that's you, you're signed in with a different account — sign out and back in with the account linked to that name. If not, ask them to open this link themselves, or have an admin switch to flexible mode in Document settings.",

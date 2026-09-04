@@ -25,7 +25,7 @@ import {
   Plus, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
-  AlertTriangle, X, Check,
+  AlertTriangle, X, Check, Ticket, Image as ImageIcon,
 } from 'lucide-react'
 import { STATUS_TYPES, isDraggableCard, formatRef, looksLikeRef } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
@@ -50,6 +50,8 @@ import { ChecklistBar } from './ChecklistFieldBox.jsx'
  */
 const CARD_KINDS = ['plain', 'case', 'post']
 const cardKind = (c) => c?.link?.entity_type || 'plain'
+// ⭐ icon แยกชนิดการ์ดหน้ารหัสอ้างอิง (user เคาะ 2026-09-04) — เลือก icon แทนสี/badge เพราะกินพื้นที่น้อยสุด ไม่ชนสี state อื่นบนการ์ด (due date/drag)
+const LINK_ICON = { case: Ticket, post: ImageIcon }
 
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
@@ -263,18 +265,22 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
                 รหัสยังคลิกได้ (target="_blank" ตามแบบ CardModal.jsx บรรทัด 445-452) ส่วนชื่อประเภทเต็มๆ
                 อยู่ใน title ตอน hover กันงงว่ารหัสนี้เป็นของเคสหรือโพสต์ */
             <h3 className="flex-1 min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">
-              {card.link && (
-                <a
-                  href={card.link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`${t(`linked.kind.${card.link.entity_type}`)} · ${t('linked.open')}`}
-                  className="text-teal hover:underline"
-                >
-                  {card.link.entity_type === 'case' ? card.link.ref : String(card.link.entity_id).padStart(4, '0')}
-                </a>
-              )}
+              {card.link && (() => {
+                const LinkIcon = LINK_ICON[card.link.entity_type]
+                return (
+                  <a
+                    href={card.link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title={`${t(`linked.kind.${card.link.entity_type}`)} · ${t('linked.open')}`}
+                    className="inline-flex items-center gap-0.5 text-teal hover:underline align-middle"
+                  >
+                    {LinkIcon && <LinkIcon size={13} className="shrink-0" />}
+                    {card.link.entity_type === 'case' ? card.link.ref : String(card.link.entity_id).padStart(4, '0')}
+                  </a>
+                )
+              })()}
               {card.link ? ' ' : ''}{card.title}
             </h3>
           )}

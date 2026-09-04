@@ -6869,6 +6869,166 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-04T11:24:35.389Z"
+    },
+    {
+      "id": "bug-389",
+      "timestamp": "2026-09-04T13:01:54.333Z",
+      "error_message": "CSS fix: hover",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "hover: underline\" → underline align-middle\"",
+      "fix": "Changed hover: underline\" → underline align-middle\"",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:01:54.333Z"
+    },
+    {
+      "id": "bug-390",
+      "timestamp": "2026-09-04T13:17:15.789Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/Nav.jsx",
+      "root_cause": "Had 'logs'",
+      "fix": "Changed to 'ticket'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:17:15.789Z"
+    },
+    {
+      "id": "bug-391",
+      "timestamp": "2026-09-04T13:58:57.604Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/api/posts/media/[id]/route.js",
+      "root_cause": "Had '@/db/posts/media.js'",
+      "fix": "Changed to '@/lib/postsThumbs.js'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:58:57.604Z"
+    },
+    {
+      "id": "bug-392",
+      "timestamp": "2026-09-04T13:59:03.075Z",
+      "error_message": "Missing guard clause",
+      "file": "web/components/posts/PostMediaPanel.jsx",
+      "root_cause": "No early return/throw for edge case: !src || !m.path",
+      "fix": "Added guard clause: if (!src || !m.path)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:59:03.075Z"
+    },
+    {
+      "id": "bug-393",
+      "timestamp": "2026-09-04T13:59:03.158Z",
+      "error_message": "Missing await",
+      "file": "web/app/api/posts/media/[id]/route.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:59:03.158Z"
+    },
+    {
+      "id": "bug-394",
+      "timestamp": "2026-09-04T13:59:52.826Z",
+      "error_message": "Missing error handling in function()",
+      "file": "scripts/posts/gc-media.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T13:59:52.826Z"
+    },
+    {
+      "id": "bug-395",
+      "timestamp": "2026-09-04T14:00:02.805Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/PostsHome.jsx",
+      "root_cause": "Had `/api/posts/media/${post.thumb_media_id}`",
+      "fix": "Changed to `/api/posts/media/${post.thumb_media_id}?thumb=1`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T14:00:02.805Z"
+    },
+    {
+      "id": "bug-396",
+      "timestamp": "2026-09-04T14:00:27.093Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/QuoteGeneratorModal.jsx",
+      "root_cause": "Had `/api/posts/media/${m.id}`",
+      "fix": "Changed to `/api/posts/media/${m.id}?thumb=1`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T14:00:27.093Z"
+    },
+    {
+      "id": "bug-397",
+      "timestamp": "2026-09-04T14:02:39.263Z",
+      "error_message": "Significant refactor of postsThumbs.js",
+      "file": "web/lib/postsThumbs.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T14:02:39.263Z"
+    },
+    {
+      "id": "bug-398",
+      "timestamp": "2026-09-04T14:02:50.741Z",
+      "error_message": "Missing error handling in postsThumbs.js",
+      "file": "web/lib/postsThumbs.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-04T14:02:50.741Z"
     }
   ]
 }

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T11:24:46.632Z
-> Files: 1127 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T14:02:50.683Z
+> Files: 1129 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -532,7 +532,7 @@
 
 ## scripts/posts/
 
-- `gc-media.js` — ทุก path ที่ยังมีคนอ้างถึง (relative จาก repo root) (~1456 tok)
+- `gc-media.js` — ทุก path ที่ยังมีคนอ้างถึง (relative จาก repo root) (~1980 tok)
 
 ## scripts/roles/
 
@@ -638,6 +638,7 @@
 - `_tmp_logo_test2.mjs` — Declares pdf (~193 tok)
 - `_tmp_logo_test3.mjs` — Declares pdf (~194 tok)
 - `_tmp_test_final.mjs` — TEMPLATE: mkModules, render (~417 tok)
+- `_tmp_test_thumb.mjs` — Declares relPath (~295 tok)
 - `_tmp_test_v2.mjs` — Declares TEMPLATE (~594 tok)
 - `_tmp_test_v2b.mjs` — TEMPLATE: mkModules (~370 tok)
 - `alias-hook.tmp.mjs` — TEMP — alias '@/' สำหรับ node ธรรมดา (ลบทิ้งหลังรัน) (~115 tok)
@@ -1459,7 +1460,7 @@
 
 ## web/app/api/posts/assets/[id]/file/
 
-- `route.js` — GET /api/posts/assets/[id]/file — เสิร์ฟไฟล์ในคลัง (~313 tok)
+- `route.js` — GET /api/posts/assets/[id]/file — เสิร์ฟไฟล์ในคลัง (~458 tok)
 
 ## web/app/api/posts/categories/
 
@@ -1471,7 +1472,7 @@
 
 ## web/app/api/posts/media/[id]/
 
-- `route.js` — [id] ในไฟล์นี้ = id ของสื่อ (ต่างจาก /api/posts/[id]/media ที่ [id] = id ของโพสต์) (~1847 tok)
+- `route.js` — [id] ในไฟล์นี้ = id ของสื่อ (ต่างจาก /api/posts/[id]/media ที่ [id] = id ของโพสต์) (~2027 tok)
 
 ## web/app/api/posts/media/[id]/quote-burn/
 
@@ -1956,7 +1957,7 @@
 - `LocaleSwitcher.jsx` — LOCALES (~510 tok)
 - `LoginButton.jsx` — LoginButton — uses useState (~1774 tok)
 - `LoginPanel.jsx` — ERROR_MESSAGES (~4860 tok)
-- `Nav.jsx` — Ic (~12141 tok)
+- `Nav.jsx` — Ic (~12408 tok)
 - `NoGuildNotice.jsx` — NoGuildNotice (~268 tok)
 - `OpenInBrowserNotice.jsx` — ทางออกจากมินิเบราว์เซอร์ของแอปแชต — ใช้กับหน้าที่ "คนนอกกดลิงก์เข้ามา" แล้วต้องล็อกอิน (~1000 tok)
 - `OrgSwitcherMenu.jsx` — TONES (~2732 tok)
@@ -2039,7 +2040,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~26892 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~27033 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~809 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
@@ -2074,7 +2075,7 @@
 
 ## web/components/posts/
 
-- `AssetLibrary.jsx` — ACCEPT (~5552 tok)
+- `AssetLibrary.jsx` — ACCEPT (~5574 tok)
 - `AssetPickerModal.jsx` — AssetPickerModal (~507 tok)
 - `BackToPosts.jsx` — BackToPosts (~270 tok)
 - `CategoryPicker.jsx` — NEW_CATEGORY (~890 tok)
@@ -2082,12 +2083,12 @@
 - `ImageEditorModal.jsx` — MAX_SIDE (~9837 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
 - `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12806 tok)
-- `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
+- `PostMediaPanel.jsx` — ACCEPT (~8044 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9717 tok)
-- `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9728 tok)
+- `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13237 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
 ## web/components/profile/
@@ -2260,6 +2261,7 @@
 - `postsAiQuota.js` — โควตา AI ต่อคนต่อวัน (grill ข้อ 13) — key เดียวของโปรเจกต์ ต้องกันบิลพุ่งจากสมาชิกหลักพัน (~594 tok)
 - `postsGuard.js` — postsGuard — ด่านเดียวที่ route ของ posts ใช้โหลด context + ตัดสินสิทธิ์ (~841 tok)
 - `postsStorage.js` — ที่เก็บไฟล์สื่อของ posts — **นอก `public/`** (grill ข้อ 5) (~2009 tok)
+- `postsThumbs.js` — Thumbnail แบบ lazy + cache ลงดิสก์ สำหรับรูปในโมดูล posts (~1174 tok)
 - `provinceCode.js` — Province → รหัสมหาดไทย (2 หลัก) — ใช้สร้าง case ref `<code>-<พ.ศ.2หลัก>-<random4>` (~398 tok)
 - `publishTargets.js` — publishTargets — "โพสต์ในนามใคร" ของกล่องเผยแพร่ (posts) (~2041 tok)
 - `quoteAccent.js` — สี CI ของการ์ดคำคม — ลำดับขึ้นกับบริบท (เคาะ 2026-08-12): (~838 tok)
