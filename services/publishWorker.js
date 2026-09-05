@@ -169,6 +169,20 @@ async function notifyBatchDone(client, batchId) {
   }
 }
 
+/**
+ * คีย์ของ "รูปที่เตรียมเสร็จแล้ว" — คิวเก็บ **1 แถวต่อ 1 แพลตฟอร์ม** แต่รูปที่เตรียมได้เหมือนกันเป๊ะ
+ * (ติดลายน้ำ 11 รูป ≈ 1.8 วิ · ยิง 5 แพลตฟอร์ม = ทำงานเดิมซ้ำ 5 รอบ ≈ 9 วิ)
+ *
+ * ⚠️ คีย์ต้องครอบ **ทุกอย่างที่เปลี่ยนหน้าตาผลลัพธ์**: รายการสื่อ · ไฟล์ลายน้ำที่ resolve แล้ว · ตำแหน่งลายน้ำ
+ *    ขาดตัวใดตัวหนึ่ง = โพสต์ได้รูปของงานอื่น ซึ่งเป็นความพังที่เงียบที่สุดเท่าที่จะเป็นไปได้
+ *    (ไม่ใส่ `platform` โดยตั้งใจ — นั่นคือทั้งหมดของประโยชน์ที่ได้)
+ * คืน `null` = ห้าม cache · ไม่มี batch_id / ไม่มีรายการสื่อ = ไม่มีอะไรยืนยันว่า 2 งานใช้รูปชุดเดียวกันจริง
+ */
+function prepCacheKey(job, watermarkPath) {
+  if (!job?.batch_id || !Array.isArray(job.media) || !job.media.length) return null;
+  return JSON.stringify([job.batch_id, job.media, watermarkPath || null, job.wm_pos || null]);
+}
+
 async function runOnce(client) {
   await markStale();
   const jobs = await claimJobs();
@@ -176,15 +190,27 @@ async function runOnce(client) {
 
   console.log(`[publishWorker] หยิบงาน ${jobs.length} ชิ้น`);
   const touchedBatches = new Set();
+  // อายุเท่ารอบนี้เท่านั้น — จบ runOnce แล้วปล่อยให้ GC เก็บ (ไม่แคชข้ามรอบ = ไม่มีของค้าง RAM
+  // และไม่มีทางหยิบรูปเก่ามาใช้หลังคนแก้สื่อในโพสต์)
+  const prepCache = new Map();
 
   for (const job of jobs) {
     touchedBatches.add(job.batch_id);
     try {
       const { images, videoUrl, videoPath } = await loadMedia(job, client);
       const watermarkPath = await resolveWatermark(job.wm_type);
-      const { processed, errors } = images.length
-        ? await prepareImages(images, { watermarkPath, wmPos: job.wm_pos })
-        : { processed: [], errors: [] };
+
+      const cacheKey = images.length ? prepCacheKey(job, watermarkPath) : null;
+      let prep = cacheKey ? prepCache.get(cacheKey) : null;
+      if (prep) console.log(`[publishWorker] job ${job.id} (${job.platform}) ใช้รูปที่เตรียมไว้แล้วของ batch นี้`);
+      if (!prep) {
+        prep = images.length
+          ? await prepareImages(images, { watermarkPath, wmPos: job.wm_pos })
+          : { processed: [], errors: [] };
+        // เก็บเฉพาะรอบที่เตรียมได้จริง — ล้มแล้วเก็บไว้ = แพลตฟอร์มที่เหลือล้มตามฟรีๆ ทั้งที่ควรได้ลองเอง
+        if (cacheKey && prep.processed.length) prepCache.set(cacheKey, prep);
+      }
+      const { processed, errors } = prep;
       if (images.length && !processed.length) throw new Error(errors.join(' · ') || 'เตรียมรูปไม่สำเร็จ');
 
       const r = await publishOne({
@@ -300,4 +326,4 @@ function stopPublishWorker() {
   if (cleanupTimer) { clearInterval(cleanupTimer); cleanupTimer = null; }
 }
 
-module.exports = { startPublishWorker, stopPublishWorker, runOnce, markStale, claimJobs, resolveWatermark };
+module.exports = { startPublishWorker, stopPublishWorker, runOnce, markStale, claimJobs, resolveWatermark, prepCacheKey };
