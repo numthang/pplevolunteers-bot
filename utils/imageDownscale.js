@@ -41,6 +41,7 @@ function isShrinkableImage(extOrMime) {
  */
 async function shrinkImage(buffer, {
   ext = null, mime = null, maxEdge = MAX_EDGE, maxBytes = MAX_BYTES, quality = JPEG_QUALITY,
+  keepFormat = false,
 } = {}) {
   const inExt = normalizeExt(ext) || EXT_BY_MIME[String(mime || '').toLowerCase()] || null;
   const unchanged = { buffer, ext: inExt, mime: mime || MIME_BY_EXT[inExt] || null, changed: false };
@@ -63,8 +64,10 @@ async function shrinkImage(buffer, {
     const tooHeavy = buffer.length > maxBytes;
     if (!tooWide && !tooHeavy) return unchanged;   // อยู่ในกรอบแล้ว — ห้าม re-encode ทิ้งคุณภาพฟรีๆ
 
-    const keepPng = inExt === 'png' && meta.hasAlpha;
-    const outExt = keepPng ? 'png' : 'jpg';
+    // keepFormat = ห้ามเปลี่ยนนามสกุล (ตัวไล่ย่อไฟล์เก่าใช้ตอนไม่อยากแตะ path ใน DB)
+    const keepPng = inExt === 'png' && (meta.hasAlpha || keepFormat);
+    const keepWebp = inExt === 'webp' && keepFormat;
+    const outExt = keepPng ? 'png' : keepWebp ? 'webp' : 'jpg';
 
     // ย่อทีละขั้นจนได้ไบต์ตามเพดาน — ขั้นแรกคือ maxEdge ตรงๆ
     // (png โปร่งใสบีบไม่ได้เท่า jpeg จึงต้องมีขั้นถัดไปเผื่อไว้)
@@ -72,8 +75,8 @@ async function shrinkImage(buffer, {
     for (const edge of [maxEdge, Math.round(maxEdge * 0.7), Math.round(maxEdge * 0.5)]) {
       let pipe = sharp(buffer, { failOn: 'none' }).rotate();   // rotate() = auto-orient ตาม EXIF
       if (w > edge || h > edge) pipe = pipe.resize(edge, edge, { fit: 'inside', withoutEnlargement: true });
-      out = keepPng
-        ? await pipe.png({ compressionLevel: 9 }).toBuffer()
+      out = keepPng ? await pipe.png({ compressionLevel: 9 }).toBuffer()
+        : keepWebp ? await pipe.webp({ quality }).toBuffer()
         : await pipe.jpeg({ quality, mozjpeg: true }).toBuffer();
       if (out.length <= maxBytes) break;
     }
