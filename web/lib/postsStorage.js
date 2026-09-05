@@ -90,11 +90,36 @@ export function absPath(relPath) {
 }
 
 /**
+ * ย่อรูปให้อยู่ในกรอบก่อนเก็บ (ด้านยาว ≤ 2048) — คืน `{ buffer, mime }` ชุดใหม่
+ *
+ * ทำไมต้อง export ออกมาให้เรียกเองได้ ทั้งที่ `savePostFile()` ย่อให้อยู่แล้ว:
+ * ทางเข้า **คลังภาพ** คำนวณ sha256 + ขนาดภาพ + จำนวนไบต์ จาก buffer เองก่อนเรียก savePostFile
+ * ถ้าไม่ย่อก่อน ค่าที่ลง DB จะเป็นของไฟล์ต้นฉบับ ไม่ตรงกับไฟล์ที่อยู่บนดิสก์จริง
+ * (mime อาจเปลี่ยน png/webp → image/jpeg เมื่อรูปเกินกรอบ — ต้องใช้ค่าที่คืนมาเสมอ)
+ *
+ * ⛔ ห้ามเรียกกับวิดีโอ — คืนของเดิมเฉยๆ ไม่พัง แต่ก็ไม่มีประโยชน์
+ */
+export async function shrinkForStorage(buffer, mime) {
+  // CJS ที่ repo root — โหลดตอนใช้จริงเหมือน sharp (native dep อยู่ข้างใน กัน bundler ลากเข้า client)
+  const { shrinkImage } = await import('../../utils/imageDownscale.js')
+  const fit = await shrinkImage(buffer, { mime })
+  return fit.changed ? { buffer: fit.buffer, mime: fit.mime } : { buffer, mime }
+}
+
+/**
  * เขียนไฟล์ลงดิสก์ คืน path ที่จะเก็บใน DB
+ *
+ * **รูปถูกย่อก่อนเสมอ** (ด้านยาว ≤ 2048) — มือถือรุ่นใหม่ถ่ายใบละ 50-60 ล้านพิกเซล
+ * เก็บดิบ = ดิสก์เต็ม + โพสต์ไม่ออก (โพสต์ 1051 ล้มทั้ง 5 แพลตฟอร์มเพราะการ์ด 35 MB ใบเดียว)
  * @param {Buffer} buffer
  * @param {string} mime
  */
 export async function savePostFile(buffer, mime) {
+  if (isAllowedMime(mime)) {
+    const fit = await shrinkForStorage(buffer, mime)
+    buffer = fit.buffer
+    mime = fit.mime
+  }
   const ext = EXT_BY_MIME[mime] || VIDEO_EXT_BY_MIME[mime]
   if (!ext) throw new Error('postsStorage: ชนิดไฟล์ไม่รองรับ')
   const relPath = join(POSTS_DIR, `${randomUUID()}.${ext}`)

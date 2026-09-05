@@ -10,6 +10,7 @@
 const path = require('path');
 const fs = require('fs/promises');
 const { randomUUID } = require('crypto');
+const { shrinkImage } = require('./imageDownscale');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const POSTS_DIR = path.join('storage', 'posts');
@@ -41,8 +42,17 @@ function extOfPath(p) {
   return String(p || '').split('.').pop()?.toLowerCase() || 'jpg';
 }
 
-/** เขียน buffer ลงดิสก์ คืน path ที่จะเก็บใน DB */
+/**
+ * เขียน buffer ลงดิสก์ คืน path ที่จะเก็บใน DB
+ *
+ * **รูปถูกย่อก่อนเสมอ** (ด้านยาว ≤ 2048 · ดู utils/imageDownscale.js) — รูปจากมือถือรุ่นใหม่
+ * ใบละ 50-60 ล้านพิกเซล เก็บดิบทุกใบ = ดิสก์เต็มแน่ๆ และโพสต์ไม่ออกด้วย
+ * คลิป/gif ไม่โดนแตะ (ตัวย่อเช็ค ext เอง)
+ */
 async function saveBuffer(buffer, ext = 'jpg') {
+  const fit = await shrinkImage(buffer, { ext });
+  if (fit.changed) { buffer = fit.buffer; ext = fit.ext; }
+
   await fs.mkdir(path.resolve(REPO_ROOT, POSTS_DIR), { recursive: true });
   const relPath = path.join(POSTS_DIR, `${randomUUID()}.${ext}`);
   await fs.writeFile(absPath(relPath), buffer);

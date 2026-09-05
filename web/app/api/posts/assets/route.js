@@ -6,7 +6,7 @@
  */
 import { postsContext } from '@/lib/postsGuard.js'
 import { isAdmin, canPublishAsset } from '@/lib/postsAccess.js'
-import { savePostFile, isAllowedMime, sha256Hex, probeImage, MAX_FILE_SIZE } from '@/lib/postsStorage.js'
+import { savePostFile, shrinkForStorage, isAllowedMime, sha256Hex, probeImage, MAX_FILE_SIZE } from '@/lib/postsStorage.js'
 import { listAssets, listAssetTags, createAsset, findAssetByHash, normalizeTags } from '@/db/posts/assets.js'
 
 /**
@@ -89,17 +89,19 @@ export async function POST(req) {
 
     const created = []
     for (const f of files) {
-      const buffer = Buffer.from(await f.arrayBuffer())
+      // ย่อก่อนคิด hash/ขนาด — ค่าที่ลง DB ต้องเป็นของไฟล์ที่อยู่บนดิสก์จริง ไม่ใช่ไฟล์ต้นฉบับ
+      // (mime เปลี่ยนได้เมื่อรูปเกินกรอบ: image/png → image/jpeg)
+      const { buffer, mime } = await shrinkForStorage(Buffer.from(await f.arrayBuffer()), f.type)
       const sha256 = sha256Hex(buffer)
 
       const dup = await findAssetByHash(ctx.orgId, ctx.userId, sha256)
       if (dup) { created.push({ ...dup, duplicate: true }); continue }
 
       const { width, height } = await probeImage(buffer)
-      const path = await savePostFile(buffer, f.type)
+      const path = await savePostFile(buffer, mime)
       created.push(await createAsset({
         orgId: ctx.orgId, ownerUserId: ctx.userId, visibility,
-        path, mime: f.type, width, height, bytes: buffer.length, sha256,
+        path, mime, width, height, bytes: buffer.length, sha256,
         ...meta,
       }))
     }

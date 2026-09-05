@@ -7393,6 +7393,171 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-05T13:46:05"
+    },
+    {
+      "id": "bug-422",
+      "timestamp": "2026-09-05T08:27:47.827Z",
+      "error_message": "Wrong return value",
+      "file": "web/lib/postsAccess.js",
+      "root_cause": "Was returning: isMediaTeam(access)",
+      "fix": "Now returns: canReadPost(post, access, userId, policy)",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T08:27:47.827Z"
+    },
+    {
+      "id": "bug-423",
+      "timestamp": "2026-09-05T08:27:56.939Z",
+      "error_message": "Wrong reference: access should be post",
+      "file": "web/app/api/posts/[id]/route.js",
+      "root_cause": "Used \"access\" instead of \"post\"",
+      "fix": "Changed access → post",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-09-05T08:28:42.054Z"
+    },
+    {
+      "id": "bug-424",
+      "timestamp": "2026-09-05T08:28:32.654Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/posts/categories/route.js",
+      "root_cause": "Was returning: Response.json({ success: true, data, sourceCounts,",
+      "fix": "Now returns: Response.json({ success: true, data, sourceCounts,",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T08:28:32.654Z"
+    },
+    {
+      "id": "bug-425",
+      "timestamp": "2026-09-05T08:29:01.350Z",
+      "error_message": "Significant refactor of postsAccess.test.js",
+      "file": "web/lib/__tests__/postsAccess.test.js",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 8→18 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T08:29:01.350Z"
+    },
+    {
+      "id": "bug-426",
+      "timestamp": "2026-09-05T08:58:10.058Z",
+      "error_message": "Incorrect value in code",
+      "file": "handlers/basketHandler.js",
+      "root_cause": "Had `[จัดการโพสต์](${openedUrl})`",
+      "fix": "Changed to \"จัดการโพสต์\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-05T08:58:20.218Z"
+    },
+    {
+      "id": "bug-427",
+      "timestamp": "2026-09-05T09:24:06.111Z",
+      "error_message": "Null/undefined access in publishPipeline.js",
+      "file": "services/publishPipeline.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:24:06.111Z"
+    },
+    {
+      "id": "bug-428",
+      "timestamp": "2026-09-05T09:24:27.331Z",
+      "error_message": "Missing import: ../utils/imageDownscale",
+      "file": "services/publishPipeline.js",
+      "root_cause": "Module(s) not imported: ../utils/imageDownscale",
+      "fix": "Added import(s) for ../utils/imageDownscale",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:24:27.331Z"
+    },
+    {
+      "id": "bug-429",
+      "timestamp": "2026-09-05T09:24:44.561Z",
+      "error_message": "Wrong return value",
+      "file": "utils/quoteStyles.js",
+      "root_cause": "Was returning: await sharp(buf).modulate({ saturation }).toBuffer",
+      "fix": "Now returns: await sharp(src).modulate({ saturation }).toBuffer",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:24:44.561Z"
+    },
+    {
+      "id": "bug-430",
+      "timestamp": "2026-09-05T09:26:00.787Z",
+      "error_message": "Missing await",
+      "file": "web/lib/postsStorage.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:26:00.787Z"
+    },
+    {
+      "id": "bug-465",
+      "timestamp": "2026-09-05T09:31:58.464645Z",
+      "error_message": "X media upload (400): File size 62857454.bytes is too large for operation init / FB photo upload: Please reduce the amount of data you're asking for / Threads code 1/2207003 / IG API: Timeout / Discord: Request entity too large — ยิงโพสต์ล้มพร้อมกันทั้ง 5 แพลตฟอร์ม",
+      "file": "utils/quoteStyles.js",
+      "root_cause": "การ์ดคำคมสไตล์ 'มีรูป' เรนเดอร์ที่ขนาดเท่ารูปพื้นหลัง (const W = img.width) แล้ว toBuffer('image/png') แบบ lossless · พื้นหลังของโพสต์ 1051 คือ 6936x8670 (60 ล้านพิกเซล) → การ์ด PNG 35 MB → ผ่าน applyWatermark ที่ re-encode png อีกรอบ = 60 MB · ทั้งท่อไม่มีจุดไหนย่อรูปเลยตั้งแต่วันแรก (git log -S resize/downscale ไม่เจอ) มีแค่เพดานขนาดไฟล์ 'ขาเข้า' 12 MB ซึ่ง jpeg 60 MP ผ่านสบาย",
+      "fix": "เพิ่ม utils/imageDownscale.js (ด้านยาว ≤ 2048 · เกิน 4 MB → jpeg q88 · png มี alpha คง png · gif/คลิปไม่แตะ · ไม่ขยายรูปเล็ก) แล้วต่อ 4 จุด: prepImage() ใน quoteStyles.js (กันการ์ดโตตั้งแต่เรนเดอร์ ครอบทั้งบอทและเว็บ), prepareImages() ใน publishPipeline.js (ย่อก่อนติดลายน้ำ + เช็กซ้ำหลังลายน้ำ), saveBuffer() ใน utils/postsStorage.js (ตะกร้าดิสฯ), savePostFile()/shrinkForStorage() ใน web/lib/postsStorage.js (เว็บ + คลังภาพต้องย่อก่อนคิด sha256/ขนาด) · เทสรูป noise 6936x8670: การ์ด 3.29 MB → หลังลายน้ำ 2.77 MB ผ่านทุกเพดาน",
+      "tags": [
+        "posts",
+        "quote-card",
+        "publish",
+        "sharp",
+        "image-size",
+        "meta-api",
+        "x-api",
+        "discord"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:31:58.464645Z"
     }
   ]
 }

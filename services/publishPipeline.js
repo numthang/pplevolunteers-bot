@@ -9,6 +9,7 @@
 // (ตะกร้าส่ง editReply เข้ามา · worker ส่ง noop) เพื่อให้ฝั่งเว็บเรียกได้โดยไม่ต้องมี Discord
 const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
+const { shrinkImage } = require('../utils/imageDownscale');
 const { pickWatermarkPos } = require('../utils/quoteStyleKeys');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToFacebook, postReelsToInstagram, postReelsToThreads } = require('./metaApi');
 const { postToX, postVideoToX } = require('./xApi');
@@ -101,7 +102,18 @@ async function prepareImages(sources, { watermarkPath = null, wmPos = null, onPr
   for (let i = 0; i < total; i++) {
     try {
       let buffer = sources[i].buffer || await fetchBuffer(sources[i].url);
-      let ext = sources[i].ext || null;
+      // ต้องรู้ ext ตั้งแต่ต้น — รูปจาก Discord มาเป็น URL เปล่าๆ ไม่มี ext ติดมา
+      // (ตัวย่อรูปตัดสินจาก ext ว่าเป็นรูปหรือไม่ · ไม่รู้ ext = ไม่ย่อให้)
+      let ext = sources[i].ext
+        || (sources[i].url || '').match(/\.(png|jpe?g|webp)/i)?.[1]?.toLowerCase().replace('jpeg', 'jpg')
+        || 'jpg';
+
+      // ── ด่านที่ 1: ย่อก่อนติดลายน้ำ ──────────────────────────────────────────
+      // รูปยักษ์ทำ 3 อย่างพร้อมกัน: ลายน้ำช้า · แพลตฟอร์มปฏิเสธ · Meta ดึงไฟล์ไม่ทันจน timeout
+      // ลายน้ำคิดขนาดเป็น **สัดส่วนของรูป** (size: 0.13) ย่อก่อนจึงได้ผลลัพธ์หน้าตาเดิมเป๊ะ
+      const fit = await shrinkImage(buffer, { ext });
+      buffer = fit.buffer;
+      if (fit.changed) ext = fit.ext;
 
       // ตำแหน่งเลือกต่อรูป ไม่ใช่ต่องาน — การ์ดคำคมคนละสไตล์มีที่ว่างคนละมุม
       // null = รูปนี้ห้ามแปะ (การ์ดพื้นสีมีโลโก้อยู่ในดีไซน์แล้ว)
@@ -112,11 +124,10 @@ async function prepareImages(sources, { watermarkPath = null, wmPos = null, onPr
         });
         buffer = out.buffer;
         ext = out.ext;
+        // ── ด่านที่ 2: ลายน้ำ re-encode png ใหม่ → ไบต์โตขึ้นได้อีก เช็กซ้ำก่อนยิงจริง ──
+        const refit = await shrinkImage(buffer, { ext });
+        if (refit.changed) { buffer = refit.buffer; ext = refit.ext; }
       } else {
-        if (!ext) {
-          const m = (sources[i].url || '').match(/\.(png|jpe?g|webp)/i);
-          ext = m ? m[1].toLowerCase().replace('jpeg', 'jpg') : 'jpg';
-        }
         // IG/Threads ไม่รับ webp → แปลงตั้งแต่ต้นทาง (ทำมาก่อนหน้านี้ในตะกร้าอยู่แล้ว)
         if (ext === 'webp') {
           buffer = await sharp(buffer).jpeg({ quality: 92 }).toBuffer();

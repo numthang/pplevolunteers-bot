@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T06:39:43.599Z
-> Files: 1130 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T09:26:00.753Z
+> Files: 1131 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -246,7 +246,7 @@
 - `anonHandler.js` — handlers/anonHandler.js (~208 tok)
 - `antiSpamHandler.js` — Anti-spam: duplicate ข้ามห้อง + mass-mention + honeypot channel (~1540 tok)
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
-- `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13630 tok)
+- `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13659 tok)
 - `caseImportHandler.js` — เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01) (~2229 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
@@ -588,7 +588,7 @@
 - `newsShare.js` — ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js) (~2180 tok)
 - `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~3582 tok)
 - `postsRetention.js` — services/postsRetention.js — เก็บกวาดไฟล์สื่อของ posts/ตะกร้าที่ "หมดหน้าที่แล้ว" (~831 tok)
-- `publishPipeline.js` — สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้ (~4055 tok)
+- `publishPipeline.js` — สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้ (~4465 tok)
 - `publishWorker.js` — งานที่เลยเวลามานานเกิน grace (บอทดับข้ามคืน) → ไม่ยิงเงียบๆ ให้คนตัดสินใจเอง (~3899 tok)
 - `ragSearch.js` — MAX_CONTENT_PER_POST: getExcludedChannels, buildRagContext (~232 tok)
 - `serverProvisioner.js` — แทนที่ {{org_name}} ใน string (~5478 tok)
@@ -611,13 +611,14 @@
 - `aiCrypto.js` — master key → 32 bytes (scrypt ช้าพอที่ brute-force จาก DB dump ไม่คุ้ม) (~691 tok)
 - `generateOrgChart.js` — utils/generateOrgChart.js (~1538 tok)
 - `googleDrive.js` — Upload ไฟล์ไปยัง Google Drive folder ที่กำหนด (~505 tok)
+- `imageDownscale.js` — รูปที่ย่อได้ไหม (ตัดสินจาก ext หรือ mime อย่างใดอย่างหนึ่ง) (~1294 tok)
 - `logger.js` — logger.js — simple file logger that mirrors console.log to logs/app.log (~456 tok)
 - `orgchartEmbed.js` — ดึง activity stats ของทุก member ใน role แล้ว sort ตาม score (~976 tok)
 - `parseSetting.js` — แปลงค่า setting ให้เป็น object/array เสมอ — parse ถ้าเป็น string, คืน fallback ถ้าพัง/ว่าง (~246 tok)
 - `parseSetting.js (2026-07-05)parseSetting.js` — normalize ค่า json setting จาก getSetting/getUserSetting (parse ถ้า string, fallback ถ้าพัง/null) · แทน pattern `typeof === 'string' ? JSON.parse` ~34 จุด (~180 tok)
-- `postsStorage.js` — absolute path จาก path ที่เก็บใน DB — กัน path traversal ก่อนแตะดิสก์เสมอ (~900 tok)
+- `postsStorage.js` — absolute path จาก path ที่เก็บใน DB — กัน path traversal ก่อนแตะดิสก์เสมอ (~993 tok)
 - `quoteStyleKeys.js` — คีย์ที่อ่านจาก DB/config อาจเป็นของเก่า — ผ่านตัวนี้ก่อนเทียบกับ QUOTE_STYLE_KEYS เสมอ (~2038 tok)
-- `quoteStyles.js` — สีจริงของ scrim + luminance ที่ readableOnDark ต้องใช้ (บวกแสงรูปที่ลอดผ่าน ~5%) (~18421 tok)
+- `quoteStyles.js` — สีจริงของ scrim + luminance ที่ readableOnDark ต้องใช้ (บวกแสงรูปที่ลอดผ่าน ~5%) (~18530 tok)
 - `videoQuoteOverlay.js` — รันคำสั่งแล้วคืน stdout · ล้ม = โยนพร้อม stderr ท้ายๆ (ffmpeg พ่นยาวมาก เอาแค่ที่มีประโยชน์) (~1765 tok)
 - `videoUtils.js` — fs: probeVideoCodec, convertToMp4, convertVideoIfNeeded (~449 tok)
 - `voiceRecorder.js` — prism: startRecording, silenceTimer, stopRecording + 3 more (~1777 tok)
@@ -1368,7 +1369,7 @@
 
 ## web/app/api/posts/[id]/
 
-- `route.js` — GET /api/posts/[id] (~1150 tok)
+- `route.js` — GET /api/posts/[id] (~1514 tok)
 
 ## web/app/api/posts/[id]/ai-suggestions/
 
@@ -1428,7 +1429,7 @@
 
 ## web/app/api/posts/[id]/status/
 
-- `route.js` — POST /api/posts/[id]/status — { status:'draft'|'review'|'approved' } (~445 tok)
+- `route.js` — POST /api/posts/[id]/status — { status:'draft'|'review'|'approved' } (~455 tok)
 
 ## web/app/api/posts/ai/caption/
 
@@ -1468,7 +1469,7 @@
 
 ## web/app/api/posts/categories/
 
-- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~824 tok)
+- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~879 tok)
 
 ## web/app/api/posts/jobs/[jobId]/
 
@@ -2261,10 +2262,10 @@
 - `platformAuth.js` — web/lib/platformAuth.js — server helper สำหรับ platform session (คู่กับ lib/auth.js ของ PPLE) (~166 tok)
 - `platformSignIn.js` — web/lib/platformSignIn.js — client helper: trigger NextAuth (platform instance) แบบ manual (~441 tok)
 - `postAssign.js` — มอบหมาย / ถอนตัว งานสื่อ — **ทางเดียวที่ระบบอนุญาตให้เปลี่ยนผู้รับผิดชอบโพสต์** (~860 tok)
-- `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~1705 tok)
+- `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~2476 tok)
 - `postsAiQuota.js` — โควตา AI ต่อคนต่อวัน (grill ข้อ 13) — key เดียวของโปรเจกต์ ต้องกันบิลพุ่งจากสมาชิกหลักพัน (~594 tok)
 - `postsGuard.js` — postsGuard — ด่านเดียวที่ route ของ posts ใช้โหลด context + ตัดสินสิทธิ์ (~841 tok)
-- `postsStorage.js` — ที่เก็บไฟล์สื่อของ posts — **นอก `public/`** (grill ข้อ 5) (~2009 tok)
+- `postsStorage.js` — ที่เก็บไฟล์สื่อของ posts — **นอก `public/`** (grill ข้อ 5) (~2346 tok)
 - `postsThumbs.js` — Thumbnail แบบ lazy + cache ลงดิสก์ สำหรับรูปในโมดูล posts (~1174 tok)
 - `provinceCode.js` — Province → รหัสมหาดไทย (2 หลัก) — ใช้สร้าง case ref `<code>-<พ.ศ.2หลัก>-<random4>` (~398 tok)
 - `publishTargets.js` — publishTargets — "โพสต์ในนามใคร" ของกล่องเผยแพร่ (posts) (~2041 tok)
@@ -2309,7 +2310,7 @@
 - `orgScopeNodes.live.test.js` — Live check (ต่อ DB จริง) — ตัวจัดผังพื้นที่ (org_scope_nodes) (~1124 tok)
 - `payersDiff.live.test.js` — diff test ชั่วคราว — เทียบ payers เก่า (dc_guild_roles + geography.js) (~450 tok)
 - `permissions.test.js` — permissions.test.js — พิสูจน์ว่า capability ใหม่ (แทน name-check ใน step 11) (~1424 tok)
-- `postsAccess.test.js` — posts ไม่มี geography scope → ไม่ต้องใช้ fixture rolesToAccess เหมือน calling/finance (~3029 tok)
+- `postsAccess.test.js` — posts ไม่มี geography scope → ไม่ต้องใช้ fixture rolesToAccess เหมือน calling/finance (~3801 tok)
 - `resolveAccess.test.js` — mock pg pool (default export) ก่อน import resolveAccess (~1300 tok)
 - `resolveAccessV2.live.js` — Live check (ไม่ใช่ unit test — ต่อ DB จริง) — ORG_ACCESS_REDESIGN ขั้น 4 (~1029 tok)
 - `resolveAccessV2.test.js` — Declares makeTree (~1697 tok)

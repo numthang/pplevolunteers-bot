@@ -3,6 +3,7 @@ const sharp  = require('sharp');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path   = require('path');
 const fs     = require('fs');
+const { shrinkImage } = require('./imageDownscale');
 
 GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Bold.ttf'),
@@ -105,9 +106,15 @@ function scrimOf(accent, mix = SCRIM_MIX) {
  * ปลายเข้มใช้ scrimOf() ตัวเดียวกับเงา รูปกับเงาจึงเป็นสีเดียวกัน มองไม่เห็นรอยต่อ
  */
 async function prepImage(buf, { saturation = 1.0, duotone = false, accent = ORANGE } = {}) {
-  if (!duotone) return await sharp(buf).modulate({ saturation }).toBuffer();
+  // ⛔ การ์ดสไตล์ "มีรูป" เรนเดอร์ที่ **ขนาดเท่ารูปพื้นหลัง** (const W = img.width)
+  //    พื้นหลัง 60 ล้านพิกเซลจึงได้การ์ด PNG 35 MB ที่โพสต์ไม่ออกสักแพลตฟอร์ม (โพสต์ 1051, 2026-09-05)
+  //    → กันที่นี่ที่เดียว ทุกสไตล์เรียกตัวนี้อยู่แล้ว (บอทกับเว็บใช้ renderer ตัวเดียวกัน)
+  const fit = await shrinkImage(buf, { ext: 'png', maxBytes: Infinity, quality: 95 });
+  const src = fit.buffer;
 
-  const img = await loadImage(await sharp(buf).greyscale().toBuffer());
+  if (!duotone) return await sharp(src).modulate({ saturation }).toBuffer();
+
+  const img = await loadImage(await sharp(src).greyscale().toBuffer());
   const cv  = createCanvas(img.width, img.height);
   const ctx = cv.getContext('2d');
   ctx.drawImage(img, 0, 0);
