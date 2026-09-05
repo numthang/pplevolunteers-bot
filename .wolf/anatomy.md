@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T10:18:37.271Z
-> Files: 1131 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T10:29:46.734Z
+> Files: 1132 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -533,6 +533,7 @@
 ## scripts/posts/
 
 - `gc-media.js` — ทุก path ที่ยังมีคนอ้างถึง (relative จาก repo root) (~1980 tok)
+- `shrinkExistingMedia.js` — ย้าย path เก่า → ใหม่ในทุกคอลัมน์ที่เก็บ path ของไฟล์ posts (~2120 tok)
 
 ## scripts/roles/
 
@@ -611,7 +612,7 @@
 - `aiCrypto.js` — master key → 32 bytes (scrypt ช้าพอที่ brute-force จาก DB dump ไม่คุ้ม) (~691 tok)
 - `generateOrgChart.js` — utils/generateOrgChart.js (~1538 tok)
 - `googleDrive.js` — Upload ไฟล์ไปยัง Google Drive folder ที่กำหนด (~505 tok)
-- `imageDownscale.js` — รูปที่ย่อได้ไหม (ตัดสินจาก ext หรือ mime อย่างใดอย่างหนึ่ง) (~1294 tok)
+- `imageDownscale.js` — รูปที่ย่อได้ไหม (ตัดสินจาก ext หรือ mime อย่างใดอย่างหนึ่ง) (~1365 tok)
 - `logger.js` — logger.js — simple file logger that mirrors console.log to logs/app.log (~456 tok)
 - `orgchartEmbed.js` — ดึง activity stats ของทุก member ใน role แล้ว sort ตาม score (~976 tok)
 - `parseSetting.js` — แปลงค่า setting ให้เป็น object/array เสมอ — parse ถ้าเป็น string, คืน fallback ถ้าพัง/ว่าง (~246 tok)

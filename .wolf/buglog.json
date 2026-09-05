@@ -7622,6 +7622,58 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-05T10:18:37.307Z"
+    },
+    {
+      "id": "bug-436",
+      "timestamp": "2026-09-05T10:28:27.062Z",
+      "error_message": "Significant refactor of imageDownscale.js",
+      "file": "utils/imageDownscale.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→3 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T10:28:27.062Z"
+    },
+    {
+      "id": "bug-437",
+      "timestamp": "2026-09-05T10:29:46.770Z",
+      "error_message": "Null/undefined access in shrinkExistingMedia.js",
+      "file": "scripts/posts/shrinkExistingMedia.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T10:29:46.770Z"
+    },
+    {
+      "id": "bug-438",
+      "timestamp": "2026-09-05T14:59:33.000Z",
+      "error_message": "งานสื่อ (post_episodes) ถูกเปิดใหม่เงียบๆ ไม่มีแจ้งลิงก์ — user นึกว่า kanban สร้างให้เอง",
+      "file": "handlers/aiThreadHandler.js",
+      "root_cause": "ข้อความแจ้งลิงก์แบ็ค '/posts/{id}' ถูกเขียน inline อยู่ใน handleBasketAdd() ที่เดียว แต่ ensureOpenEpisode() เปิด episode ใบใหม่ได้จากทุกตัวหย่อนของ — setCaption/appendCaption ที่เรียกจาก aiThreadHandler (ปุ่ม '🧺 ใช้เป็น caption ในตะกร้า'), basketAiHandler (AI เรียบเรียง), handleBasketCaptionEditModal ก็เปิดใบใหม่ได้เหมือนกันแต่ไม่มีใครแจ้ง · setCaption คืน {episodeId, created} มาให้อยู่แล้วแต่ทุกจุดโยนทิ้ง · เคสจริง prod: post 1052 + การ์ด KB-1280 เกิดขึ้นเงียบๆ ตอน 2026-09-04 13:07 แล้ว user มาเจอตอนสร้าง KB-1281 ทีหลัง จึงเข้าใจผิดว่า kanban ไปสร้าง posts (ซึ่งผิดทิศทางที่ออกแบบไว้)",
+      "fix": "แยก postLabel()/openedPostLine() เป็น helper ใน basketHandler.js แล้ว export ให้ทุก handler ใช้ · ต่อ openedPostLine(episodeId, created) เข้ากับข้อความตอบของ handleAiThreadAddCaption, handleBasketAiAppendModal, handleBasketAiReplaceModal, handleBasketCaptionEditModal · handleBasketAdd เปลี่ยนมาใช้ helper แทนโค้ด inline (พฤติกรรมเดิม)",
+      "tags": [
+        "posts",
+        "basket",
+        "kanban",
+        "discord",
+        "ux",
+        "silent-write",
+        "backlink"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T14:59:33.000Z"
     }
   ]
 }

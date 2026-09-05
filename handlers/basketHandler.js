@@ -116,6 +116,30 @@ function stripDiscordMarkdown(text) {
     .trim();
 }
 
+/**
+ * ป้ายลิงก์โพสต์ — ทรงเดียวกับการ์ด kanban: ไอคอนสื่อ + เลขโพสต์ (user เคาะ 2026-09-05)
+ * ไม่ตั้ง WEB_BASE_URL → ตกเป็นตัวหนา ข้อความไม่พัง
+ */
+function postLabel(episodeId) {
+  const url = process.env.WEB_BASE_URL && episodeId
+    ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
+    : null;
+  return url ? `[🖼️ ${episodeId}](${url})` : `**🖼️ ${episodeId}**`;
+}
+
+/**
+ * บรรทัด "เปิดโพสต์ใหม่" — **แจ้งครั้งเดียวตอนเปิดใบใหม่จริง** (`created` ที่ตัวหย่อนของคืนมา)
+ *
+ * ⛔ **ทุกทางที่เรียก setCaption/appendCaption/addImages/addVideo ต้องต่อบรรทัดนี้เสมอ**
+ *    ตัวหย่อนของทุกตัวเปิด `post_episodes` ใบใหม่ได้เอง (ensureOpenEpisode) → ทางที่ลืมต่อ
+ *    คือทางที่เปิดงานสื่อ**เงียบๆ** แล้วไม่มีใครรู้ว่ามี
+ *    เคสจริง 2026-09-04: ปุ่ม "🧺 ใช้เป็น caption ในตะกร้า" ใต้ผล AI สรุปเธรด เปิดโพสต์ 1052
+ *    + การ์ด KB-1280 โดยไม่แจ้งอะไรเลย — user นึกว่าระบบสร้างเองมั่ว ต้องมาไล่ DB ถึงรู้ว่าตัวเองกด
+ */
+function openedPostLine(episodeId, created) {
+  return created ? `\nเปิดโพสต์ใหม่ของห้องนี้แล้ว → ${postLabel(episodeId)}` : '';
+}
+
 function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
   const mediaLabel = videoCount > 0
     ? (imgCount > 0 ? `${imgCount} รูป + ${videoCount} วิดีโอ` : `${videoCount} วิดีโอ 🎬`)
@@ -459,12 +483,8 @@ async function handleBasketAdd(interaction) {
    * ⛔ ห้ามใส่ MessageFlags.SuppressEmbeds ที่ editReply นี้ — จะกลืน embed ตะกร้าไปด้วย
    *    (masked link `[x](url)` ไม่ unfurl อยู่แล้ว ไม่ต้องกัน)
    */
-  const openedUrl = process.env.WEB_BASE_URL && episodeId
-    ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
-    : null;
-  // ทรงเดียวกับการ์ด kanban: ไอคอนสื่อ + เลขโพสต์ แทนคำว่า "จัดการโพสต์" (user เคาะ 2026-09-05)
-  const openedLabel = openedUrl ? `[🖼️ ${episodeId}](${openedUrl})` : `**🖼️ ${episodeId}**`;
-  const openedLine = createdNew ? `\nเปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}` : '';
+  const openedLabel = postLabel(episodeId);
+  const openedLine = openedPostLine(episodeId, createdNew);
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${openedLine}`, ...payload });
@@ -914,11 +934,11 @@ async function handleBasketCaptionEditModal(interaction) {
   const { guildId, channelId } = interaction;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  await setCaption(guildId, channelId, interaction.user.id, caption, null);
+  const { episodeId, created } = await setCaption(guildId, channelId, interaction.user.id, caption, null);
 
   const basket = await getBasket(guildId, channelId);
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
-  await interaction.editReply({ content: '✅ แก้ caption แล้ว', ...payload });
+  await interaction.editReply({ content: `✅ แก้ caption แล้ว${openedPostLine(episodeId, created)}`, ...payload });
 }
 
 // ─── สร้าง Discord Event จากโพสต์ ────────────────────────────────────────────
@@ -1051,4 +1071,6 @@ module.exports = {
   handleBasketEventModal,
   buildBasketPayload,
   stripDiscordMarkdown,
+  postLabel,
+  openedPostLine,
 };

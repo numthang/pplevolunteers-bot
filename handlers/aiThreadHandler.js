@@ -18,7 +18,7 @@ const { fetchAllMessages } = require('../services/fetchMessages');
 const { processMessages } = require('../services/aiSummarize');
 const { getModes, getMode } = require('../db/aiConfig');
 const { setCaption, getBasket } = require('../db/mediaBasket');
-const { buildBasketPayload, stripDiscordMarkdown } = require('./basketHandler');
+const { buildBasketPayload, stripDiscordMarkdown, openedPostLine } = require('./basketHandler');
 
 const REPLY_LIMIT = 1800;
 const CUSTOM_VALUE = '__custom__';
@@ -157,13 +157,15 @@ async function handleAiThreadAddCaption(interaction) {
 
   // ตะกร้าสื่อไม่เอา markdown — AI สรุปเธรดออกมาเป็นโพสต์จบแล้ว → แทนที่ caption
   const caption = stripDiscordMarkdown(data.caption);
-  await setCaption(data.guildId, data.channelId, interaction.user.id, caption, null);
+  // ⚠️ ปุ่มนี้ **เปิดงานสื่อใบใหม่ได้** ถ้าห้องนี้ยังไม่มีตะกร้าเปิดค้างอยู่ (setCaption → ensureOpenEpisode)
+  //    ป้ายปุ่มเขียนว่า "ใช้เป็น caption" ซึ่งอ่านไม่ออกเลยว่าเท่ากับเปิดโพสต์ใหม่ → ต้องแจ้งลิงก์เสมอ
+  const { episodeId, created } = await setCaption(data.guildId, data.channelId, interaction.user.id, caption, null);
   outputCache.delete(token);
 
   const basket  = await getBasket(data.guildId, data.channelId);
   const payload = await buildBasketPayload(basket, data.guildId, data.channelId, interaction.user.id);
   await interaction.reply({
-    content: '✅ หยิบลงตะกร้าสื่อแล้ว (แทนที่ caption เดิม)',
+    content: `✅ หยิบลงตะกร้าสื่อแล้ว (แทนที่ caption เดิม)${openedPostLine(episodeId, created)}`,
     ...payload,
     flags: MessageFlags.Ephemeral,
   });

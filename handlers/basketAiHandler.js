@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const { processText } = require('../services/aiSummarize');
 const { getModes, getMode } = require('../db/aiConfig');
 const { setCaption, getBasket } = require('../db/mediaBasket');
-const { buildBasketPayload, stripDiscordMarkdown } = require('./basketHandler');
+const { buildBasketPayload, stripDiscordMarkdown, openedPostLine } = require('./basketHandler');
 
 const REPLY_LIMIT = 1800;
 const CUSTOM_VALUE = '__custom__';
@@ -173,11 +173,11 @@ async function handleBasketAiAppendModal(interaction) {
   const text = interaction.fields.getTextInputValue('basket_ai_append_text')?.trim();
   if (!text) return interaction.reply({ content: '❌ caption ว่าง', flags: MessageFlags.Ephemeral });
 
-  await setCaption(interaction.guildId, interaction.channelId, interaction.user.id, text, null);
+  const { episodeId, created } = await setCaption(interaction.guildId, interaction.channelId, interaction.user.id, text, null);
 
   const basket  = await getBasket(interaction.guildId, interaction.channelId);
   const payload = await buildBasketPayload(basket, interaction.guildId, interaction.channelId, interaction.user.id);
-  await interaction.reply({ content: '✅ ต่อท้าย caption แล้ว', ...payload, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `✅ ต่อท้าย caption แล้ว${openedPostLine(episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
 }
 
 // ─── 3. กดแทนที่ → modal pre-fill AI text ให้ confirm/แก้ก่อนบันทึก ────────────
@@ -212,11 +212,11 @@ async function handleBasketAiReplaceModal(interaction) {
   if (!text) return interaction.reply({ content: '❌ caption ว่าง', flags: MessageFlags.Ephemeral });
 
   const [, guildId, channelId] = interaction.customId.split(':');
-  await setCaption(guildId, channelId, interaction.user.id, text, null);
+  const { episodeId, created } = await setCaption(guildId, channelId, interaction.user.id, text, null);
 
   const basket  = await getBasket(guildId, channelId);
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
-  await interaction.reply({ content: '✅ แทนที่ caption แล้ว', ...payload, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `✅ แทนที่ caption แล้ว${openedPostLine(episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
 }
 
 module.exports = {
