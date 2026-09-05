@@ -14,9 +14,14 @@ const EDITED_SQL = `(i.pick_title IS NOT NULL OR i.pick_detail IS NOT NULL OR i.
       OR i.pick_areas IS NOT NULL OR i.pick_assignees IS NOT NULL OR i.pick_status IS NOT NULL
       OR i.pick_event_date IS NOT NULL OR i.pick_no_event_date)`
 
-const LIST_SQL = `
-  SELECT i.id, i.thread_id, i.channel_id, i.title, i.url, i.thread_created_at,
-         i.first_message, i.message_count, i.image_count, i.participants,
+/**
+ * ⛔ **ห้ามใส่ `i.first_message` กลับเข้ามาในรายการ** — ข้อความเปิดกระทู้ดิบเป็นช่องที่หนักที่สุด
+ *    (วัดจริง 2026-09-05: 221 KB จาก 846 KB ของ 246 ใบ) และหน้าเว็บไม่ได้ใช้เลยสักที่
+ *    ตัวที่ใช้คือ `effective()` ตอนสร้างการ์ด ซึ่งอ่านทีละใบผ่าน ROW_SQL ที่ยังมีช่องนี้อยู่
+ */
+const COLS = `
+         i.id, i.thread_id, i.channel_id, i.title, i.url, i.thread_created_at,
+         i.message_count, i.image_count, i.participants,
          i.ai_summary, i.ai_is_project, i.ai_reason, i.ai_workstreams, i.ai_areas,
          i.ai_assignee_user_id, i.ai_at,
          -- ⚠️ คืน DATE เป็น "ข้อความ" เสมอ — ปล่อยให้ node-pg แปลงเป็น Date object จะกลายเป็น
@@ -36,7 +41,9 @@ const LIST_SQL = `
          COALESCE(au.username, au.firstname) AS author_name,
          COALESCE(tu.username, tu.firstname) AS touched_name,
          COALESCE(iu.username, iu.firstname) AS ai_assignee_name,
-         d.title AS dup_title, d.ref_no AS dup_ref_no
+         d.title AS dup_title, d.ref_no AS dup_ref_no`
+
+const FROM_SQL = `
     FROM kanban_forum_import i
     LEFT JOIN users au ON au.id = i.author_user_id
     LEFT JOIN users iu ON iu.id = i.ai_assignee_user_id
@@ -44,23 +51,47 @@ const LIST_SQL = `
     LEFT JOIN kanban_cards d ON d.id = i.dup_card_id
    WHERE i.org_id = $1`
 
+const LIST_SQL = `SELECT ${COLS} ${FROM_SQL}`
+/** ทีละใบ — มี first_message ด้วยเพราะ effective() ใช้เป็นตัวสำรองของรายละเอียดตอนสร้างการ์ด */
+const ROW_SQL = `SELECT i.first_message, ${COLS} ${FROM_SQL}`
+
 /**
  * รายการให้คัด — **ใบที่มีคนแก้แล้วลอยขึ้นบนสุดเสมอ** (หลายมือช่วยกันคัด คนกดนำเข้าต้องเห็นก่อน)
  * รองลงมาเรียง "AI ว่าเป็นงานจริง" แล้วค่อยตามวันที่ใหม่สุด
  */
-export async function listImportRows(orgId, { status = 'pending', channelId = null, editedOnly = false } = {}) {
+export async function listImportRows(orgId, { status = 'pending', channelId = null, editedOnly = false, limit = null, offset = 0 } = {}) {
   const params = [orgId]
-  let sql = LIST_SQL
-  if (status !== 'all') { params.push(status); sql += ` AND i.status = $${params.length}` }
-  if (channelId) { params.push(channelId); sql += ` AND i.channel_id = $${params.length}` }
-  if (editedOnly) sql += ` AND ${EDITED_SQL}`
-  sql += ` ORDER BY edited DESC, i.ai_is_project DESC NULLS LAST, i.thread_created_at DESC`
+  let sql = LIST_SQL + whereFilters({ status, channelId, editedOnly }, params)
+  // ⚠️ ต้องมี id ปิดท้ายเสมอ — ลำดับที่เสมอกันแล้วสลับตำแหน่งเองระหว่างหน้า = ใบซ้ำ/ใบหายตอนเลื่อน
+  sql += ` ORDER BY edited DESC, i.ai_is_project DESC NULLS LAST, i.thread_created_at DESC, i.id DESC`
+  if (limit) {
+    params.push(limit); sql += ` LIMIT $${params.length}`
+    params.push(offset); sql += ` OFFSET $${params.length}`
+  }
   const { rows } = await pool.query(sql, params)
   return rows
 }
 
+/** ตัวกรองชุดเดียวกันของทั้งรายการและตัวนับ — เขียนที่เดียว ไม่งั้นตัวเลข "เหลืออีก" ไม่ตรงกับของที่โหลดมา */
+function whereFilters({ status, channelId, editedOnly }, params) {
+  let sql = ''
+  if (status !== 'all') { params.push(status); sql += ` AND i.status = $${params.length}` }
+  if (channelId) { params.push(channelId); sql += ` AND i.channel_id = $${params.length}` }
+  if (editedOnly) sql += ` AND ${EDITED_SQL}`
+  return sql
+}
+
+/** จำนวนใบทั้งหมดของตัวกรองชุดนี้ — หน้าเว็บใช้ดูว่ายังเหลือให้เลื่อนอีกไหม */
+export async function countImportRows(orgId, { status = 'pending', channelId = null, editedOnly = false } = {}) {
+  const params = [orgId]
+  const sql = `SELECT count(*)::int AS n FROM kanban_forum_import i WHERE i.org_id = $1`
+    + whereFilters({ status, channelId, editedOnly }, params)
+  const { rows } = await pool.query(sql, params)
+  return rows[0]?.n ?? 0
+}
+
 export async function getImportRow(orgId, id) {
-  const { rows } = await pool.query(`${LIST_SQL} AND i.id = $2`, [orgId, id])
+  const { rows } = await pool.query(`${ROW_SQL} AND i.id = $2`, [orgId, id])
   return rows[0] ?? null
 }
 

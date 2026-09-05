@@ -25,6 +25,8 @@ const CHANNELS = [
   { id: '1258076247700013146', key: 'election' },
 ]
 const STATUSES = ['pending', 'skipped', 'imported']
+/** โหลดทีละหน้า — 246 ใบรวดเดียว = JSON 846 KB + DOM 246 แถว (วัดจริง 2026-09-05 · user ขอ) */
+const PAGE = 20
 
 const useIsoLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -72,8 +74,11 @@ export default function ForumImportHome() {
   const [channel, setChannel] = useState('')
   // หลายมือช่วยกันคัด — คนกดนำเข้าอยากเห็นเฉพาะใบที่มีคนตรวจ/แก้ไว้แล้ว (user เคาะ 2026-09-05)
   const [editedOnly, setEditedOnly] = useState(false)
-  const [data, setData] = useState({ rows: [], counts: {}, fields: [], options: [] })
+  const [data, setData] = useState({ rows: [], total: 0, counts: {}, fields: [], options: [] })
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const sentinelRef = useRef(null)
+  const loadedRef = useRef(0)          // จำนวนใบที่โหลดมาแล้ว — ตัวรีเฟรชต้องขอเท่าเดิม ไม่งั้นหน้าหดกลับเหลือ 20
   const [busyId, setBusyId] = useState(null)
   const [selected, setSelected] = useState(() => new Set())
   const [error, setError] = useState(null)
@@ -83,29 +88,51 @@ export default function ForumImportHome() {
   const [conflictId, setConflictId] = useState(null)   // ใบที่เพิ่งโดนอีกคนแก้ตัดหน้า
   const [lastIds, setLastIds] = useState([])          // ชุดที่เพิ่งสั่งนำเข้า — ปุ่ม "ยืนยันซ้ำ" ต้องยิงชุดเดิม
 
-  const load = useCallback(async ({ keepSelection = false, quiet = false } = {}) => {
-    if (!quiet) setLoading(true)
+  const load = useCallback(async ({ keepSelection = false, quiet = false, append = false, offset = 0, limit = PAGE } = {}) => {
+    if (append) setLoadingMore(true); else if (!quiet) setLoading(true)
     try {
-      const q = new URLSearchParams({ status })
+      const q = new URLSearchParams({ status, limit: String(limit), offset: String(offset) })
       if (channel) q.set('channel', channel)
       if (editedOnly) q.set('edited', '1')
       const res = await fetch(`/api/kanban/import/forum?${q}`)
       const json = await res.json()
       if (!res.ok) { setError(json.error || t('loadFailed')); return }
-      setData(json)
-      // รีเฟรชเงียบๆ ต้องไม่ล้างที่ติ๊กไว้ — แต่ใบที่หายไปแล้ว (คนอื่นนำเข้า/กดไม่เอา) ต้องหลุดจากชุดด้วย
-      setSelected((prev) => (keepSelection
-        ? new Set([...prev].filter((id) => (json.rows || []).some((r) => String(r.id) === id)))
-        : new Set()))
+      // ต่อท้ายตอนเลื่อน · ทับทั้งชุดตอนเปลี่ยนตัวกรอง/รีเฟรช — กันใบซ้ำด้วย id ที่มีอยู่แล้ว
+      setData((d) => {
+        const rows = append ? [...d.rows, ...json.rows.filter((r) => !d.rows.some((x) => String(x.id) === String(r.id)))]
+                            : json.rows
+        loadedRef.current = rows.length
+        return { ...json, rows }
+      })
+      // รีเฟรชเงียบๆ ต้องไม่ล้างที่ติ๊กไว้ · ใบที่หลุดจากรายการแล้วก็ต้องหลุดจากชุดที่ติ๊กด้วย
+      // (ตอนเลื่อนโหลดเพิ่มห้ามแตะ — ของที่ติ๊กไว้ในหน้าก่อนต้องอยู่ครบ)
+      if (!append) {
+        setSelected((prev) => (keepSelection
+          ? new Set([...prev].filter((id) => (json.rows || []).some((r) => String(r.id) === id)))
+          : new Set()))
+      }
       setError(null)
     } catch {
       setError(t('loadFailed'))
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }, [status, channel, editedOnly, t])
 
   useEffect(() => { load() }, [load])
+
+  /** เลื่อนถึงท้ายรายการ = โหลดอีก 20 ใบ (ไม่มีปุ่ม ไม่ต้องกด) */
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || loading || loadingMore) return
+    if (data.rows.length >= (data.total || 0)) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) load({ append: true, offset: data.rows.length })
+    }, { rootMargin: '400px' })   // เริ่มโหลดก่อนถึงจริง ไม่ให้เห็นรอยสะดุด
+    io.observe(el)
+    return () => io.disconnect()
+  }, [load, loading, loadingMore, data.rows.length, data.total])
 
   /**
    * ตามงานของคนอื่น — **รีเฟรชตอนกลับมาที่แท็บเท่านั้น ไม่ poll**
@@ -119,7 +146,7 @@ export default function ForumImportHome() {
       if (document.visibilityState !== 'visible') return
       const el = document.activeElement
       if (el && ['INPUT', 'TEXTAREA'].includes(el.tagName)) return
-      load({ keepSelection: true, quiet: true })
+      load({ keepSelection: true, quiet: true, limit: Math.max(PAGE, loadedRef.current) })
     }
     document.addEventListener('visibilitychange', refresh)
     window.addEventListener('focus', refresh)
@@ -157,7 +184,13 @@ export default function ForumImportHome() {
       if (!res.ok) { setError(json.error || t('saveFailed')); return null }
       setConflictId((c) => (c === String(id) ? null : c))
       // สถานะเปลี่ยน = แถวหลุดจากแท็บนี้ · แก้ค่าเฉยๆ = อัปเดตในที่ ไม่ต้องโหลดใหม่ทั้งหน้า
-      if (body.status) setData((d) => ({ ...d, rows: d.rows.filter((r) => String(r.id) !== String(id)) }))
+      if (body.status) {
+        setData((d) => {
+          const rows = d.rows.filter((r) => String(r.id) !== String(id))
+          loadedRef.current = rows.length
+          return { ...d, rows, total: Math.max((d.total || 1) - 1, rows.length) }
+        })
+      }
       else setData((d) => ({ ...d, rows: d.rows.map((r) => (String(r.id) === String(id) ? json.row : r)) }))
       return json.row
     } catch {
@@ -396,6 +429,14 @@ export default function ForumImportHome() {
               conflict={conflictId === String(row.id)}
             />
           ))}
+        </div>
+      )}
+
+      {!loading && data.rows.length < (data.total || 0) && (
+        <div ref={sentinelRef} className="py-6 text-center text-xs text-warm-400 dark:text-disc-muted">
+          {loadingMore
+            ? <Loader2 className="animate-spin inline" size={16} />
+            : t('more', { n: (data.total || 0) - data.rows.length })}
         </div>
       )}
 
