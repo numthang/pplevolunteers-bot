@@ -7,8 +7,8 @@
 import { kanbanContext } from '@/lib/kanbanGuard.js'
 import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
 import * as importDB from '@/db/kanban/forumImport.js'
+import { fetchThreadImages } from '@/lib/forumThreadImages.js'
 
-const API = 'https://discord.com/api/v10'
 const MAX_INDEX = 3   // ดูได้ 4 รูปแรกเท่ากับที่จะนำเข้าจริง
 
 export async function GET(_req, { params }) {
@@ -23,11 +23,9 @@ export async function GET(_req, { params }) {
   const row = await importDB.getImportRow(ctx.orgId, id)
   if (!row) return new Response('Not found', { status: 404 })
 
-  const msg = await fetch(`${API}/channels/${row.thread_id}/messages/${row.thread_id}`, {
-    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-  }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-
-  const images = (msg?.attachments || []).filter((a) => (a.content_type || '').startsWith('image/'))
+  // ⚠️ ต้องใช้ลำดับเดียวกับตอนนำเข้าจริง (ทั้งเธรด เรียงเก่า→ใหม่) ไม่งั้นรูปที่เห็นตอนคัด
+  //    กับรูปที่ติดไปกับการ์ดจะคนละใบกัน
+  const images = await fetchThreadImages(row.thread_id, MAX_INDEX + 1)
   const att = images[n]
   if (!att) return new Response('Not found', { status: 404 })
 

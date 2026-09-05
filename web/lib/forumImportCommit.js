@@ -18,17 +18,12 @@ import * as attDB from '@/db/kanban/attachments.js'
 import { saveKanbanBuffer, isAllowedMime, MAX_FILE_SIZE, MAX_FILES_PER_CARD } from '@/lib/kanbanUploads.js'
 import pool from '@/db/index.js'
 
-const API = 'https://discord.com/api/v10'
+import { fetchThreadImages } from '@/lib/forumThreadImages.js'
 
-/** รูปจากข้อความเปิดกระทู้ → uploads/kanban (ต้องโหลด bytes เอง — URL ของ Discord หมดอายุ) */
+/** รูปจากกระทู้ (ทั้งเธรด ไม่ใช่แค่ข้อความเปิด) → uploads/kanban — ต้องโหลด bytes เอง URL ดิสฯ หมดอายุ */
 async function importImages(orgId, cardId, threadId, userId) {
-  const msg = await fetch(`${API}/channels/${threadId}/messages/${threadId}`, {
-    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-  }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-
-  const images = (msg?.attachments || [])
+  const images = (await fetchThreadImages(threadId, MAX_FILES_PER_CARD))
     .filter((a) => isAllowedMime((a.content_type || '').split(';')[0].trim()) && a.size <= MAX_FILE_SIZE)
-    .slice(0, MAX_FILES_PER_CARD)
 
   let n = 0
   for (const [i, att] of images.entries()) {
@@ -39,10 +34,10 @@ async function importImages(orgId, cardId, threadId, userId) {
       if (buf.length > MAX_FILE_SIZE) continue
       const mime = (att.content_type || 'image/jpeg').split(';')[0].trim()
       const meta = await saveKanbanBuffer(cardId, buf, { mime, originalName: att.filename || null })
-      // ON CONFLICT (discord_attachment_id) กันรูปซ้ำถ้ามีการนำเข้าซ้ำรอบสอง
+      // ON CONFLICT (discord_attachment_id) กันรูปซ้ำถ้ามีการนำเข้า/ตามเก็บรอบสอง
       await attDB.insertAttachment(orgId, cardId, {
         ...meta, sort_order: i, created_by: userId,
-        discord_attachment_id: String(att.id), discord_message_id: String(threadId),
+        discord_attachment_id: String(att.id), discord_message_id: String(att.message_id),
       })
       n++
     } catch { /* รูปเดียวพัง ไม่ควรทำให้ทั้งการ์ดพัง */ }
@@ -50,15 +45,6 @@ async function importImages(orgId, cardId, threadId, userId) {
   return n
 }
 
-/**
- * สร้างการ์ดจากแถวในตารางพัก
- *
- * ⛔ ใบที่ธง "น่าจะซ้ำ" คะแนน >= 0.9 ถูกปฏิเสธเสมอ เว้นแต่ส่ง force มาด้วย
- *    (เจ็บมาแล้ว 2026-09-04: สโมคของผมเลือกใบที่คะแนนซ้ำ 1.000 มานำเข้าโดยไม่ดูธงของตัวเอง
- *     ได้การ์ดซ้ำกับ KB-1267 ที่ผูกงานสื่ออยู่ — ธงที่ไม่มีใครบังคับใช้ก็แค่ของประดับ)
- * @param {{force?: boolean}} [opts] force = คนยืนยันแล้วว่ารู้ว่าซ้ำและยังจะเอา
- * @returns {Promise<{created: object[], failed: object[]}>}
- */
 export async function commitImportRows(orgId, ids, userId, { force = false } = {}) {
   // field "สายงาน"/"พื้นที่" ของ org นี้ — ค่าที่คัดไว้เป็น option id ของ 2 ช่องนี้
   const defs = await fieldDB.listFieldDefs(orgId)
