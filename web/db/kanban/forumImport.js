@@ -17,7 +17,7 @@ const LIST_SQL = `
          to_char(i.ai_event_date,   'YYYY-MM-DD') AS ai_event_date,
          to_char(i.pick_event_date, 'YYYY-MM-DD') AS pick_event_date,
          i.pick_title, i.pick_detail, i.pick_workstreams, i.pick_areas, i.pick_assignee_user_id,
-         i.pick_no_event_date, i.pick_assignees,
+         i.pick_no_event_date, i.pick_assignees, i.pick_status,
          i.status, i.card_id, i.dup_card_id, i.dup_score,
          i.author_user_id, i.author_discord_id,
          COALESCE(au.username, au.firstname) AS author_name,
@@ -67,6 +67,8 @@ export function effective(row) {
       .map(Number).filter(Boolean),
     // วันจัดงาน = ทั้ง due_at และ completed_at (user เคาะ 2026-09-04) · ไม่มี = completed_at ใช้วันตั้งกระทู้
     eventDate: row.pick_no_event_date ? null : (row.pick_event_date ?? row.ai_event_date ?? null),
+    // งานที่ยังไม่จบก็มีปนมา (user ทัก 2026-09-05) — ค่าตั้งต้นยังเป็น done เหมือนเดิม
+    statusType: row.pick_status ?? 'done',
   }
 }
 
@@ -76,6 +78,7 @@ const PICK_COLUMNS = {
   workstreams: 'pick_workstreams',
   areas: 'pick_areas',
   assignees: 'pick_assignees',
+  statusType: 'pick_status',
   eventDate: 'pick_event_date',
   noEventDate: 'pick_no_event_date',
 }

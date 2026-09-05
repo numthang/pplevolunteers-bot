@@ -2190,7 +2190,8 @@
       "updated": "Last updated",
       "created": "Created",
       "active": "Sort: {label}",
-      "clear": "Reset to default"
+      "defaultShort": "Default",
+      "defaultFull": "Default (Due date → Priority → Newest first)"
     },
     "settings": {
       "toggleLabel": "Settings (coming soon)"
@@ -2335,7 +2336,9 @@
       "eventDateLabel": "Event date",
       "eventDateHint": "= card's completed + due date",
       "noEventDateHint": "empty = completed on posting date ({date}), no due date",
-      "noKnownPeople": "Nobody in this thread matches a system account"
+      "noKnownPeople": "Nobody in this thread matches a system account",
+      "statusLabel": "Status",
+      "openStatusHint": "= card due date (open work gets no completion date)"
     },
     "result": {
       "done": "Imported {n}",

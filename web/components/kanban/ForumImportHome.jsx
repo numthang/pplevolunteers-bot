@@ -16,6 +16,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslations } from 'next-intl'
 import { AlertTriangle, Check, ExternalLink, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
 import ImageLightbox from '../ImageLightbox.jsx'
+import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 
 const CHANNELS = [
   { id: '1126210980045664346', key: 'workgroup' },
@@ -65,6 +66,7 @@ function ChipPicker({ options, value = [], onChange, disabled }) {
 
 export default function ForumImportHome() {
   const t = useTranslations('kanbanImport')
+  const tk = useTranslations('kanban')          // ชื่อสถานะการ์ด — ใช้คีย์เดิมของโมดูล ไม่แปลซ้ำ
   const [status, setStatus] = useState('pending')
   const [channel, setChannel] = useState('')
   const [data, setData] = useState({ rows: [], counts: {}, fields: [], options: [] })
@@ -255,6 +257,17 @@ export default function ForumImportHome() {
                 value={[]}
                 onChange={(v) => applyToSelected({ areas: v })}
               />
+              {/* สถานะทั้งชุด — คัดทีละกองแล้วตั้งสถานะทีเดียวเป็นงานที่ทำบ่อยที่สุดของหน้านี้ */}
+              <div className="flex flex-wrap gap-1 pt-1 border-t border-warm-100 dark:border-disc-border">
+                {STATUS_TYPES.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => applyToSelected({ statusType: st })}
+                    className="px-2 py-0.5 rounded-full text-xs border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-teal hover:text-teal transition"
+                  >{tk(`status.${st}`)}</button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -302,6 +315,7 @@ export default function ForumImportHome() {
               checked={selected.has(String(row.id))}
               onToggle={() => toggle(row.id)}
               onPatch={(body) => patchRow(row.id, body)}
+              tk={tk}
               onPreview={(index) => setPreview({ rowId: row.id, index })}
             />
           ))}
@@ -321,7 +335,7 @@ export default function ForumImportHome() {
 }
 
 /** 1 กระทู้ — ติ๊กเลือก + แก้ค่าที่จะใช้ตอนนำเข้า */
-function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPreview }) {
+function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, onPreview }) {
   const [title, setTitle] = useState(row.pick_title ?? row.title ?? '')
   const [detail, setDetail] = useState(row.pick_detail ?? row.ai_summary ?? '')
   const detailRef = useRef(null)
@@ -334,6 +348,7 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
   const areas = row.pick_areas ?? row.ai_areas ?? []
   const people = row.participants || []
   const assignees = (row.pick_assignees ?? (row.ai_assignee_user_id ? [row.ai_assignee_user_id] : [])).map(String)
+  const cardStatus = row.pick_status ?? 'done'
   const eventDate = row.pick_no_event_date ? '' : String(row.pick_event_date ?? row.ai_event_date ?? '').slice(0, 10)
   const guessed = (key) => row[`pick_${key}`] == null && (row[`ai_${key}`]?.length || row[`ai_${key}`] != null)
 
@@ -403,6 +418,22 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
       )}
 
       <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100 dark:border-disc-border">
+        <Field label={t('row.statusLabel')} guessed={false} t={t}>
+          <div className="flex flex-wrap gap-1">
+            {STATUS_TYPES.map((st) => (
+              <button
+                key={st}
+                type="button"
+                disabled={busy}
+                onClick={() => onPatch({ statusType: st })}
+                className={`px-2 py-0.5 rounded-full text-xs border transition ${
+                  cardStatus === st ? 'bg-teal text-white border-teal'
+                                    : 'border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-teal'
+                }`}
+              >{tk(`status.${st}`)}</button>
+            ))}
+          </div>
+        </Field>
         <Field
           label={t('row.eventDateLabel')}
           guessed={row.pick_event_date == null && !row.pick_no_event_date && row.ai_event_date != null}
@@ -416,7 +447,9 @@ function ImportRow({ row, t, optionsOf, busy, checked, onToggle, onPatch, onPrev
             className="rounded-lg border border-warm-200 dark:border-disc-border bg-transparent px-2 py-1 text-base text-warm-700 dark:text-disc-text focus:border-teal focus:outline-none"
           />
           <span className="text-xs text-warm-400 dark:text-disc-muted">
-            {eventDate ? t('row.eventDateHint') : t('row.noEventDateHint', { date: String(row.thread_created_at).slice(0, 10) })}
+            {['done', 'cancelled'].includes(cardStatus)
+              ? (eventDate ? t('row.eventDateHint') : t('row.noEventDateHint', { date: String(row.thread_created_at).slice(0, 10) }))
+              : t('row.openStatusHint')}
           </span>
         </Field>
         <Field label={t('row.workstreams')} guessed={guessed('workstreams')} t={t}>

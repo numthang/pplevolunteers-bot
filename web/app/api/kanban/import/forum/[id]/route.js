@@ -6,6 +6,7 @@
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
 import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
 import * as importDB from '@/db/kanban/forumImport.js'
+import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 
 const ids = (v) => (Array.isArray(v) ? [...new Set(v.map(String).filter((s) => /^\d+$/.test(s)))] : [])
 
@@ -38,6 +39,11 @@ export async function PATCH(req, { params }) {
   if ('areas' in body) patch.areas = ids(body.areas)
   // ใส่ได้หลายคน · [] = ตั้งใจไม่มีใคร (ต่างจากไม่ส่งฟิลด์นี้มา = ยังไม่แตะ ใช้ที่ AI เดา)
   if ('assignees' in body) patch.assignees = ids(body.assignees).map(Number)
+  if ('statusType' in body) {
+    const v = String(body.statusType || '')
+    if (!STATUS_TYPES.includes(v)) return err(400, 'สถานะไม่ถูกต้อง')
+    patch.statusType = v
+  }
   if ('eventDate' in body) {
     const v = String(body.eventDate ?? '').trim()
     if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return err(400, 'รูปแบบวันที่ต้องเป็น YYYY-MM-DD')

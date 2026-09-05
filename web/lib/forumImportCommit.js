@@ -17,6 +17,7 @@ import * as fieldDB from '@/db/kanban/fields.js'
 import * as attDB from '@/db/kanban/attachments.js'
 import { saveKanbanBuffer, isAllowedMime, MAX_FILE_SIZE, MAX_FILES_PER_CARD } from '@/lib/kanbanUploads.js'
 import pool from '@/db/index.js'
+import { CLOSED_STATUS } from '@/lib/kanbanAccess.js'
 
 import { fetchThreadImages } from '@/lib/forumThreadImages.js'
 
@@ -75,7 +76,7 @@ export async function commitImportRows(orgId, ids, userId, { force = false } = {
         assigneeIds: eff.assigneeIds,
         startAt: threadDate,
         dueAt: eff.eventDate || null,
-        statusType: 'done',
+        statusType: eff.statusType,
         sourceUrl: row.url,
         sourceMessageId: row.thread_id,
       }, userId)
@@ -84,12 +85,16 @@ export async function commitImportRows(orgId, ids, userId, { force = false } = {
       await pool.query(
         // ⚠️ cast ให้ครบทุกตัว — $3 ถูกใช้ทั้งเดี่ยวๆ และใน COALESCE คู่กับ date
         //    ไม่ cast = "inconsistent types deduced for parameter $3" (เจอตอนสโมค 2026-09-04)
+        // ⚠️ งานที่ยังไม่ปิด (ไม่ใช่ done/cancelled) ต้องไม่มี completed_at — การ์ด "กำลังทำ"
+        //    ที่มีวันเสร็จติดมาคือข้อมูลขัดกันเองตั้งแต่วันแรก
         `UPDATE kanban_cards
             SET created_at = $3::timestamptz,
                 updated_at = $3::timestamptz,
-                completed_at = COALESCE($4::date::timestamptz, $3::timestamptz)
+                completed_at = CASE WHEN $5::boolean
+                                    THEN COALESCE($4::date::timestamptz, $3::timestamptz)
+                                    ELSE NULL END
           WHERE org_id = $1 AND id = $2`,
-        [orgId, card.id, threadDate, eff.eventDate || null]
+        [orgId, card.id, threadDate, eff.eventDate || null, CLOSED_STATUS.includes(eff.statusType)]
       )
 
       for (const [label, value] of [['สายงาน', eff.workstreams], ['พื้นที่', eff.areas]]) {
