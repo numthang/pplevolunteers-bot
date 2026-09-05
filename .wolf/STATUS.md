@@ -1,4 +1,25 @@
-# STATUS — 2026-09-05 (บ่าย)
+# STATUS — 2026-09-05 (เย็น)
+
+## 🆕 ย่อรูปทุกทางเข้าของ posts (`17b3598` · local เท่านั้น · **ยังไม่ deploy**)
+
+**อาการที่ user เจอ:** โพสต์ https://pplevolunteers.org/posts/1051 ยิงแล้วล้ม **ทั้ง 5 แพลตฟอร์ม**
+(X "62857454 bytes too large" · FB "reduce the amount of data" · Threads/IG timeout ·
+ห้องข่าว Discord "Request entity too large")
+
+**ต้นเหตุ (ตรวจจาก DB+ดิสก์ prod จริง):** สื่อชิ้นเดียวในโพสต์นั้น — การ์ดคำคม PNG **6936×8670 = 35 MB**
+เพราะสไตล์ "มีรูป" เรนเดอร์ **เท่าขนาดรูปพื้นหลัง** (พื้นหลังเป็นรูป 60 ล้านพิกเซล 7 MB)
+ติดลายน้ำแล้ว re-encode เป็น PNG อีกรอบ = 60 MB · ทั้งท่อไม่เคยย่อรูปเลยตั้งแต่วันแรก
+เพดานที่มีคือ **ขนาดไฟล์ขาเข้า 12 MB** ซึ่ง jpeg 60 MP ผ่านสบาย (buglog `bug-465`)
+
+- `utils/imageDownscale.js` (ใหม่) — ด้านยาว ≤ 2048 · เกิน 4 MB → jpeg q88 · png มี alpha คง png
+  · gif/คลิป/เสียงไม่แตะ · รูปในกรอบอยู่แล้วคืน buffer เดิม (ไม่ re-encode ทิ้งคุณภาพ)
+- ต่อ 4 จุด: `quoteStyles.js prepImage()` · `publishPipeline.js prepareImages()` (ก่อน+หลังลายน้ำ)
+  · `utils/postsStorage.js saveBuffer()` (ตะกร้าดิสฯ) · `web/lib/postsStorage.js savePostFile()`
+- **คลังภาพต้องย่อก่อนคิด sha256/width/height/bytes** ไม่งั้นค่าใน DB ไม่ตรงไฟล์บนดิสก์ → `shrinkForStorage()`
+- เทส noise 6936×8670: การ์ด 3.29 MB → หลังลายน้ำ 2.77 MB · web build ผ่าน · vitest 506 ผ่าน
+- ⬜ **ขั้นต่อไป: deploy** (build เว็บ + restart บอท · ไม่มี migration) แล้วให้ user กด "ลองใหม่" ที่โพสต์ 1051
+  — ท่อย่อตอนยิง ทำให้ใช้การ์ดเดิมที่ค้างอยู่ได้เลย ไม่ต้องทำการ์ดใหม่
+- ⬜ cases/kanban ยังไม่ต่อตัวย่อ + ไฟล์เก่า 26 ใบเกิน 8 MB ค้างดิสก์ → `md/PENDING.md`
 
 ## 🆕 Posts — โหมด AI "ร่างตามคำแนะนำ" (`5c73c8b` · local เท่านั้น · **user ยังไม่กดทดสอบ**)
 
