@@ -6,6 +6,7 @@ My Tasks and bug issue
 - bot สร้างเป็น kanban due date ให้ใส่วันที่ปัจจุบันเป็น default ไว้หน่อย 
 - ตอน backfillpost ได้นำเข้า กระทู้สื่อเลือกตั้งไหม อันนี้ 1260552093266345994 ถ้าไม่มีก็ฝากทำเพิ่มอีกตัว เงื่อนไข งานสื่อพวกนี้เสร็จหมดแล้ว created_at = completed_at มีเงื่อนไขไหนผมตกหล่นอะไรอีกไหม
 
+- https://pplevolunteers.org/kanban?card=KB-1281 ผมทำนำเข้า จากกระทู้ 1521024037298372698 แล้วมีปัญหา ว่ามันไปสร้างงานสื่อด้วย ซึ่งไม่ถูกนะครับ posts, cases สร้าง kanban, แต่ถ้าสร้าง kanban ไม่ควรจะไปสร้าง posts, cases มาเป็นอันนี้อีก https://pplevolunteers.org/posts/1052 
 
 
 # PLATFOR{m}.ORG
