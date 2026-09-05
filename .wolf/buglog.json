@@ -7169,6 +7169,85 @@
         "import",
         "dedupe"
       ]
+    },
+    {
+      "id": "bug-408",
+      "timestamp": "2026-09-05T04:59:55.722Z",
+      "error_message": "Significant refactor of KanbanHome.jsx",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 15→6 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T04:59:55.722Z"
+    },
+    {
+      "id": "bug-409",
+      "timestamp": "2026-09-05T05:34:22.982Z",
+      "error_message": "Significant refactor of PostMediaPanel.jsx",
+      "file": "web/components/posts/PostMediaPanel.jsx",
+      "root_cause": "16 lines replaced/restructured",
+      "fix": "Rewrote 24→4 lines (16 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T05:34:22.982Z"
+    },
+    {
+      "id": "bug-410",
+      "timestamp": "2026-09-05T05:34:44.502Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/PostMediaPanel.jsx",
+      "root_cause": "Had ' · ลากที่ ⠿ หรือกด ◀▶ เพื่อเรียง'",
+      "fix": "Changed to ' · ลากที่ ⠿ เพื่อเรียง'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T05:34:44.502Z"
+    },
+    {
+      "id": "bug-411",
+      "timestamp": "2026-09-05T06:13:26.693Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:13:26.693Z",
+      "error_message": "EACCES: permission denied, mkdir /www/wwwroot/uploads",
+      "file": "web/lib/kanbanUploads.js",
+      "root_cause": "getKanbanUploadDir() คิดจาก process.cwd()+/.. ซึ่งถูกเฉพาะตอนรันจาก web/ (เว็บ) — สคริปต์รันจากรากโปรเจกต์เลยเล็งออกนอกโปรเจกต์ · เว็บไม่พังเลยไม่มีใครเห็นจนมีเส้นสคริปต์",
+      "fix": "ตรวจ basename(cwd) แล้วถอยขึ้นรากโปรเจกต์เอง · caseUploads/cropDocument ยังมีบั๊กเดียวกันค้างอยู่",
+      "tags": [
+        "uploads",
+        "cwd",
+        "script",
+        "prod"
+      ]
+    },
+    {
+      "id": "bug-412",
+      "timestamp": "2026-09-05T06:13:26.693Z",
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:13:26.693Z",
+      "error_message": "รูปบนการ์ดที่ import มาไม่ครบ (ได้แค่รูปในข้อความเปิดกระทู้)",
+      "file": "web/lib/forumThreadImages.js",
+      "root_cause": "ดึงเฉพาะ starter message เพื่อประหยัด API — แต่งานจริงโพสต์ภาพหน้างานเป็นคอมเมนต์ตามหลัง",
+      "fix": "ไล่ทั้งเธรดด้วย after=<threadId> (คืนเรียงเก่า→ใหม่) เอา 4 รูปแรก · ใช้ตัวเดียวกันทั้งพรีวิวและตอนนำเข้าเพื่อให้ลำดับตรงกัน",
+      "tags": [
+        "discord",
+        "images",
+        "kanban"
+      ]
     }
   ]
 }
