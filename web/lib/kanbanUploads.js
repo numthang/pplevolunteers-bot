@@ -27,8 +27,19 @@ const EXT_BY_MIME = {
   'audio/ogg': 'ogg',
 }
 
+/**
+ * โฟลเดอร์เก็บไฟล์ — `<รากโปรเจกต์>/uploads/kanban`
+ *
+ * ⚠️ ห้ามคิดจาก cwd ตรงๆ ว่า `cwd/../uploads` (แบบที่ caseUploads/cropDocument ทำอยู่)
+ *    เว็บรันจาก `web/` จึงได้ path ถูก แต่ **สคริปต์รันจากรากโปรเจกต์** แล้วได้ path นอกโปรเจกต์
+ *    (เคสจริงบน prod 2026-09-05: `EACCES: mkdir '/www/wwwroot/uploads'` — ตามเก็บรูปไม่ได้สักใบ
+ *     ทั้งที่ตอนเว็บนำเข้าเองทำงานปกติ = บั๊กที่โผล่เฉพาะเส้นสคริปต์)
+ */
 export function getKanbanUploadDir() {
-  return process.env.KANBAN_UPLOAD_DIR ?? path.join(process.cwd(), '..', 'uploads', 'kanban')
+  if (process.env.KANBAN_UPLOAD_DIR) return process.env.KANBAN_UPLOAD_DIR
+  const cwd = process.cwd()
+  const root = path.basename(cwd) === 'web' ? path.join(cwd, '..') : cwd
+  return path.join(root, 'uploads', 'kanban')
 }
 
 /** เขียน buffer ลงดิสก์ → คืน metadata ที่เอาไปลง DB ได้ตรงๆ */
