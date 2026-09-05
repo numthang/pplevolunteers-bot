@@ -19,7 +19,7 @@ export async function GET(req, { params }) {
       edit: canEditPost(ctx.post, ctx.access, ctx.userId, ctx.policy),
       delete: canDeletePost(ctx.post, ctx.access, ctx.userId),
       publish: canPublishPost(ctx.post, ctx.access, ctx.userId, ctx.policy),
-      approve: canApprove(ctx.access),
+      approve: canApprove(ctx.post, ctx.access, ctx.userId, ctx.policy),
       requestChanges: canRequestChanges(ctx.post, ctx.access, ctx.userId, ctx.policy),
       promote: canPromoteToOrg(ctx.post, ctx.access, ctx.userId, usage),
       // มอบหมาย/ถอดคนอื่นได้ = เขียนโพสต์ใบนี้ได้ · ร่างส่วนตัวใส่คนอื่นไม่ได้ (lib/postAssign.js)

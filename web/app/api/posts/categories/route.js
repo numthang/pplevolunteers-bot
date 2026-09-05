@@ -1,5 +1,5 @@
 import { postsContext } from '@/lib/postsGuard.js'
-import { canApprove, isAdmin } from '@/lib/postsAccess.js'
+import { isMediaTeam, isAdmin } from '@/lib/postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
 
 /**
@@ -26,7 +26,9 @@ export async function GET(req) {
     const stateCounts = await postDB.countPostsByState(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility, source })
     // canManage: หน้า list ไม่มี per-post `can` ให้เช็ค (ไม่ผูกกับโพสต์ใดโพสต์หนึ่ง) — ส่งสิทธิ์เปลี่ยนชื่อหมวดมาด้วยเลย
     // ให้ UI ซ่อนปุ่มได้ตรงกับ pattern เดิม (can.approve/can.promote) แทนที่จะโชว์ปุ่มให้ทุกคนแล้วรอ 403 (/scrutinize 2026-08-01)
-    return Response.json({ success: true, data, sourceCounts, statusCounts, stateCounts, canManage: canApprove(ctx.access) })
+    // ⚠️ ใช้ isMediaTeam ตรงๆ ไม่ใช่ canApprove — เปลี่ยนชื่อหมวดกระทบทั้งองค์กร ต้องจำกัดทีมสื่อเสมอ
+    //    ไม่ผูกกับ canApprove ที่เปิดกว้างให้ "ใครก็อนุมัติโพสต์ได้" แล้ว (2026-09-05)
+    return Response.json({ success: true, data, sourceCounts, statusCounts, stateCounts, canManage: isMediaTeam(ctx.access) })
   } catch (error) {
     console.error('[GET /api/posts/categories]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -40,7 +42,7 @@ export async function PATCH(req) {
   const ctx = await postsContext()
   if (ctx.error) return ctx.error
 
-  if (!canApprove(ctx.access)) {
+  if (!isMediaTeam(ctx.access)) {
     return Response.json({ error: 'ไม่มีสิทธิ์เปลี่ยนชื่อหมวด' }, { status: 403 })
   }
 

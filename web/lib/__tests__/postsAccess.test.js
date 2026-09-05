@@ -78,13 +78,23 @@ describe('userId = null (debug mode / ไม่ล็อกอิน)', () => {
   it('admin ยังผ่าน (role-based ไม่ใช่ ownership)', () => expect(pa.canReadPost(personal, acc('admin'), null, P)).toBe(true))
 })
 
-// ---- canApprove ----
+// ---- canApprove (เปิดกว้าง 2026-09-05 — ผูกกับ canReadPost ไม่ใช่ isMediaTeam แล้ว) ----
 describe('canApprove', () => {
-  it('editor อนุมัติได้',      () => expect(pa.canApprove(acc('editor'))).toBe(true))
-  it('เลขาธิการอนุมัติได้',    () => expect(pa.canApprove(acc('secretary_general'))).toBe(true))
-  it('admin อนุมัติได้',       () => expect(pa.canApprove(acc('admin'))).toBe(true))
-  it('member อนุมัติไม่ได้',   () => expect(pa.canApprove(acc('member'))).toBe(false))
-  it('เหรัญญิกอนุมัติไม่ได้',  () => expect(pa.canApprove(acc('treasurer'))).toBe(false))
+  it('member อนุมัติโพสต์ org ได้ (เปิดกว้างทุกคน)', () => expect(pa.canApprove(orgPost, acc('member'), OTHER, P)).toBe(true))
+  it('เหรัญญิกอนุมัติโพสต์ org ได้เหมือนกัน',        () => expect(pa.canApprove(orgPost, acc('treasurer'), OTHER, P)).toBe(true))
+  it('editor อนุมัติได้',      () => expect(pa.canApprove(orgPost, acc('editor'), OTHER, P)).toBe(true))
+  it('เจ้าของอนุมัติงานตัวเองก็ยังได้ในโค้ด — ห้ามแค่ทางสังคม ไม่ได้บังคับด้วยระบบ', () => {
+    expect(pa.canApprove(orgPost, acc('member'), OWNER, P)).toBe(true)
+  })
+  it('policy read:team → member ที่มองไม่เห็นโพสต์ อนุมัติไม่ได้', () => {
+    expect(pa.canApprove(orgPost, acc('member'), OTHER, teamRead)).toBe(false)
+  })
+  it('personal ของคนอื่น อนุมัติไม่ได้ (มองไม่เห็น)', () => {
+    expect(pa.canApprove(personal, acc('editor'), OTHER, P)).toBe(false)
+  })
+  it('admin เห็น personal ของคนอื่น เลยอนุมัติได้ (god-mode)', () => {
+    expect(pa.canApprove(personal, acc('admin'), OTHER, P)).toBe(true)
+  })
 })
 
 // ---- ล็อกหลังอนุมัติ ----

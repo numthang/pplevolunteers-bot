@@ -37,9 +37,13 @@ export function isAdmin(access) {
   return normalizeAccess(access).permissions.has('admin')
 }
 
-/** อนุมัติได้ = บรรณาธิการขึ้นไป (เจ้าของอนุมัติงานตัวเองไม่ได้) */
-export function canApprove(access) {
-  return isMediaTeam(access)
+/**
+ * อนุมัติได้ = ใครก็ได้ที่อ่านโพสต์นี้ได้ (เปิดกว้าง 2026-09-05 — user เคาะ: ไม่บังคับห้าม
+ * อนุมัติงานตัวเองในโค้ด แค่รู้กันทางสังคมว่าไม่ควรอนุมัติงานตัวเอง)
+ * ผูกกับ canReadPost เพื่อไม่ให้อนุมัติโพสต์ที่มองไม่เห็น (เช่น personal ของคนอื่น, org ที่ตั้ง read:'team')
+ */
+export function canApprove(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  return canReadPost(post, access, userId, policy)
 }
 
 /**

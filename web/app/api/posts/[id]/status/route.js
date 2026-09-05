@@ -21,7 +21,7 @@ export async function POST(req, { params }) {
   const leavingApproved = ctx.post.status === 'approved' && status !== 'approved'
 
   let allowed
-  if (goingToApproved) allowed = canApprove(ctx.access)
+  if (goingToApproved) allowed = canApprove(ctx.post, ctx.access, ctx.userId, ctx.policy)
   else if (leavingApproved) allowed = canRequestChanges(ctx.post, ctx.access, ctx.userId, ctx.policy)
   else allowed = canWritePost(ctx.post, ctx.access, ctx.userId, ctx.policy)
 
