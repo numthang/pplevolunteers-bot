@@ -2338,7 +2338,8 @@
       "noEventDateHint": "empty = completed on posting date ({date}), no due date",
       "noKnownPeople": "Nobody in this thread matches a system account",
       "statusLabel": "Status",
-      "openStatusHint": "= card due date (open work gets no completion date)"
+      "openStatusHint": "= card due date (open work gets no completion date)",
+      "import": "Import this"
     },
     "result": {
       "done": "Imported {n}",

@@ -75,8 +75,9 @@ export default function ForumImportHome() {
   const [selected, setSelected] = useState(() => new Set())
   const [error, setError] = useState(null)
   const [preview, setPreview] = useState(null)   // { rowId, index }
-  const [importing, setImporting] = useState(false)
+  const [importing, setImporting] = useState(false)   // ใบเดียว = เก็บ id · ทั้งชุด = true
   const [result, setResult] = useState(null)
+  const [lastIds, setLastIds] = useState([])          // ชุดที่เพิ่งสั่งนำเข้า — ปุ่ม "ยืนยันซ้ำ" ต้องยิงชุดเดิม
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -140,14 +141,17 @@ export default function ForumImportHome() {
   }
 
   /** สร้างการ์ดจริงจากใบที่ติ๊กไว้ — ทำทีละใบฝั่ง server (โหลดรูปจากดิสฯ ด้วย) จึงอาจใช้เวลาสักครู่ */
-  const commit = async (force = false) => {
-    setImporting(true)
+  const commit = async (force = false, ids = null) => {
+    const target = ids ?? [...selected]
+    if (!target.length) return
+    setLastIds(target)
+    setImporting(ids?.length === 1 ? ids[0] : true)
     setResult(null)
     try {
       const res = await fetch('/api/kanban/import/forum/commit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...selected], force }),
+        body: JSON.stringify({ ids: target, force }),
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error || t('saveFailed')); return }
@@ -288,7 +292,7 @@ export default function ForumImportHome() {
               </ul>
               <button
                 type="button"
-                onClick={() => commit(true)}
+                onClick={() => commit(true, lastIds)}
                 disabled={importing}
                 className="self-start px-3 py-1 rounded-lg text-base border border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition"
               >{t('result.dupForce')}</button>
@@ -317,6 +321,8 @@ export default function ForumImportHome() {
               onPatch={(body) => patchRow(row.id, body)}
               tk={tk}
               onPreview={(index) => setPreview({ rowId: row.id, index })}
+              onImport={() => commit(false, [String(row.id)])}
+              importing={importing === String(row.id)}
             />
           ))}
         </div>
@@ -335,7 +341,7 @@ export default function ForumImportHome() {
 }
 
 /** 1 กระทู้ — ติ๊กเลือก + แก้ค่าที่จะใช้ตอนนำเข้า */
-function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, onPreview }) {
+function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, onPreview, onImport, importing }) {
   const [title, setTitle] = useState(row.pick_title ?? row.title ?? '')
   const [detail, setDetail] = useState(row.pick_detail ?? row.ai_summary ?? '')
   const detailRef = useRef(null)
@@ -478,12 +484,24 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
 
       <div className="flex gap-2">
         {row.status === 'pending' ? (
-          <button
+          <>
+            {/* นำเข้าใบเดียวโดยไม่ต้องติ๊กก่อน — คัดทีละใบเป็นวิธีใช้จริงพอๆ กับกวาดทีละกอง */}
+            <button
+              type="button"
+              onClick={onImport}
+              disabled={busy || importing}
+              className="px-3 py-1 rounded-lg text-base bg-teal text-white hover:bg-teal/90 transition inline-flex items-center gap-1 disabled:opacity-60"
+            >
+              {importing ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {t('row.import')}
+            </button>
+            <button
             type="button"
             onClick={() => onPatch({ status: 'skipped' })}
             disabled={busy}
             className="px-3 py-1 rounded-lg text-base border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-red-400 hover:text-red-500 transition inline-flex items-center gap-1"
-          ><X size={14} /> {t('row.skip')}</button>
+            ><X size={14} /> {t('row.skip')}</button>
+          </>
         ) : row.status === 'skipped' ? (
           <button
             type="button"
