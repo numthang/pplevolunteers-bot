@@ -2363,6 +2363,25 @@
         "Fields still tagged “AI guess” are unconfirmed · edits save instantly, no save button",
         "Edited rows fade out, get an “Edited” tag and float to the top — the owner presses Import, you don't have to",
         "The “possible duplicate” flag is mostly wrong (media and prep threads look alike) — glance at the KB-xxx link and move on"
+      ],
+      "fieldsTitle": "How to fill each field",
+      "fields": [
+        {
+          "label": "Title",
+          "hint": "Rewrite as needed — too long, unclear or not concise? Make it short and instantly understandable"
+        },
+        {
+          "label": "Status",
+          "hint": "Most are already done · not finished but someone is clearly on it = “Unclaimed” · unsure = “Parked”"
+        },
+        {
+          "label": "Area",
+          "hint": "Which area hosted the work — the province team or the district team"
+        },
+        {
+          "label": "Assignees",
+          "hint": "Whoever coordinated or hosted that piece of work"
+        }
       ]
     }
   }

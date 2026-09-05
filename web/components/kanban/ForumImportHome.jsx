@@ -187,6 +187,15 @@ export default function ForumImportHome() {
         <ol className="mt-1 list-decimal pl-4 text-xs text-warm-500 dark:text-disc-muted space-y-0.5">
           {t.raw('rules.items').map((line, i) => <li key={i}>{line}</li>)}
         </ol>
+        {/* กติกาต่อช่อง — แยกจากลำดับขั้นตอนข้างบน ไม่งั้นรายการเดียวยาว 9 ข้อ อ่านไม่จบ */}
+        <p className="mt-2 text-xs font-medium text-teal">{t('rules.fieldsTitle')}</p>
+        <ul className="mt-0.5 text-xs text-warm-500 dark:text-disc-muted space-y-0.5">
+          {t.raw('rules.fields').map((f) => (
+            <li key={f.label}>
+              <span className="font-medium text-warm-600 dark:text-disc-text">{f.label}</span> — {f.hint}
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* แท็บสถานะ + ตัวกรองห้อง */}
