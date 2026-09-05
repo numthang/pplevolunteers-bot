@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-04T14:02:50.683Z
-> Files: 1129 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T06:39:43.599Z
+> Files: 1130 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -179,7 +179,7 @@
 
 - `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~546 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
-- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3864 tok)
+- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~4132 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
 - `callingCategories.js` — Exports CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS (~595 tok)
 - `case-options.json` (~191 tok)
@@ -226,7 +226,7 @@
 - `guilds.js` — pool: upsertGuilds (~150 tok)
 - `index.js` — Declares pool (~100 tok)
 - `kanbanCards.js` — ลิงก์เปิดการ์ดบนเว็บ — ลอกแนวจาก getCaseManageUrl() ใน db/case.js เป๊ะๆ (~3209 tok)
-- `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~3941 tok)
+- `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~4272 tok)
 - `members.js` — pool: upsertMember, _deriveRoleFields, upsertMemberFromDiscord, getMember, syncMemberRoles (~1617 tok)
 - `newsWatch.js` — คืน Set ของ item_key ที่เคยเห็นแล้ว (ของ guild นี้) (~477 tok)
 - `org.js` — db/org.js — Org layer: resolve guild ในเครือเดียวกัน (ใช้ให้ roster match/dedup มองข้าม guild) (~914 tok)
@@ -246,7 +246,7 @@
 - `anonHandler.js` — handlers/anonHandler.js (~208 tok)
 - `antiSpamHandler.js` — Anti-spam: duplicate ข้ามห้อง + mass-mention + honeypot channel (~1540 tok)
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
-- `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13094 tok)
+- `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13630 tok)
 - `caseImportHandler.js` — เลขเคสในข้อความบอท **ต้องเป็นลิงก์กลับหน้าจัดการเสมอ** (user เคาะ 2026-09-01) (~2229 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~3501 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~50395 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~51944 tok)
 - `WEB.md` — Web App — Next.js Frontend (~6698 tok)
 
 ## md/archive/
@@ -563,7 +563,7 @@
 
 ## scripts/test/
 
-- `basketEpisode.test.js` — เทสตะกร้าสื่อหลังยุบเข้า post_episodes (ก้อน 4c) — ยิง DB จริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1540 tok)
+- `basketEpisode.test.js` — เทสตะกร้าสื่อหลังยุบเข้า post_episodes (ก้อน 4c) — ยิง DB จริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1707 tok)
 - `linkToComment.test.js` — เทสตัวแยกลิงก์ออกจาก caption → คอมเมนต์แรก (pure ล้วน ไม่ยิงเน็ต ไม่แตะ DB) (~1066 tok)
 - `publishPipeline.test.js` — เทสท่อโพสต์กลางแบบไม่ยิงออกเน็ต — stub metaApi/xApi/newsShare แล้วดูว่า "อาร์กิวเมนต์ตรงตำแหน่ง" (~2581 tok)
 - `publishWorker.test.js` — เทส worker คิวโพสต์ — ไม่ยิงออกเน็ตจริง (stub publishOne) แต่ใช้ DB จริง แล้วลบข้อมูลทดสอบทิ้ง (~2488 tok)
@@ -1432,7 +1432,7 @@
 
 ## web/app/api/posts/ai/caption/
 
-- `route.js` — POST /api/posts/ai/caption — โควต + หัวข้อ + ไอเดียภาพประกอบ (ก้อน 5, ปรับ 2026-08-01) (~1371 tok)
+- `route.js` — POST /api/posts/ai/caption — โควต + หัวข้อ + ไอเดียภาพประกอบ (ก้อน 5, ปรับ 2026-08-01) (~961 tok)
 
 ## web/app/api/posts/ai/compose/
 
@@ -1441,6 +1441,10 @@
 ## web/app/api/posts/ai/draft/
 
 - `route.js` — POST /api/posts/ai/draft — ร่างโพสต์เดียว (ไม่เขียนลง DB) (~683 tok)
+
+## web/app/api/posts/ai/guided/
+
+- `route.js` — POST /api/posts/ai/guided — AI หาจุดที่ควรแก้ที่สุด แล้วแก้ให้ในรอบเดียว (2026-09-05) (~795 tok)
 
 ## web/app/api/posts/ai/polish/
 
@@ -2040,7 +2044,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~27033 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~27150 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~809 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
@@ -2082,8 +2086,8 @@
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
 - `ImageEditorModal.jsx` — MAX_SIDE (~9837 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
-- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12806 tok)
-- `PostMediaPanel.jsx` — ACCEPT (~8044 tok)
+- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~14007 tok)
+- `PostMediaPanel.jsx` — ACCEPT (~7480 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
@@ -2171,7 +2175,7 @@
 
 ## web/db/posts/
 
-- `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
+- `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, articleTips } (ทุ (~548 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
 - `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~9046 tok)
@@ -2349,8 +2353,8 @@
 
 ## web/locales/
 
-- `en.json` (~27196 tok)
-- `th.json` (~26003 tok)
+- `en.json` (~27807 tok)
+- `th.json` (~26632 tok)
 
 ## web/public/media-temp/
 

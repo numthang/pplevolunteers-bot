@@ -7248,6 +7248,151 @@
         "images",
         "kanban"
       ]
+    },
+    {
+      "id": "bug-413",
+      "timestamp": "2026-09-05T06:31:47.616Z",
+      "error_message": "Wrong reference: CTA should be 1",
+      "file": "config/aiPrompts.js",
+      "root_cause": "Used \"CTA\" instead of \"1\"",
+      "fix": "Changed CTA → 1",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:31:47.616Z"
+    },
+    {
+      "id": "bug-414",
+      "timestamp": "2026-09-05T06:32:06.838Z",
+      "error_message": "Incorrect value in code",
+      "file": "config/aiPrompts.js",
+      "root_cause": "Had \"cta\"",
+      "fix": "Changed to \"articleTips\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:32:06.838Z"
+    },
+    {
+      "id": "bug-415",
+      "timestamp": "2026-09-05T06:32:19.862Z",
+      "error_message": "Wrong condition in logic",
+      "file": "web/app/api/posts/ai/caption/route.js",
+      "root_cause": "Condition was: if (!quotes.length && !headlines.length && !imageIdeas)",
+      "fix": "Changed to: if (!quotes.length && !headlines.length && !imageIdeas)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:32:19.862Z"
+    },
+    {
+      "id": "bug-416",
+      "timestamp": "2026-09-05T06:32:28.947Z",
+      "error_message": "Wrong reference: cta should be articleTips",
+      "file": "web/app/api/posts/ai/caption/route.js",
+      "root_cause": "Used \"cta\" instead of \"articleTips\"",
+      "fix": "Changed cta → articleTips",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:32:28.947Z"
+    },
+    {
+      "id": "bug-417",
+      "timestamp": "2026-09-05T06:32:38.467Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/posts/ai/caption/route.js",
+      "root_cause": "Was returning: Response.json({ success: true, data: { quotes, hea",
+      "fix": "Now returns: Response.json({ success: true, data: { quotes, hea",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:32:38.467Z"
+    },
+    {
+      "id": "bug-418",
+      "timestamp": "2026-09-05T06:32:49.546Z",
+      "error_message": "Wrong reference: cta should be articleTips",
+      "file": "web/db/posts/aiSuggestions.js",
+      "root_cause": "Used \"cta\" instead of \"articleTips\"",
+      "fix": "Changed cta → articleTips",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:32:49.546Z"
+    },
+    {
+      "id": "bug-419",
+      "timestamp": "2026-09-05T06:33:54.597Z",
+      "error_message": "Significant refactor of PostEditor.jsx",
+      "file": "web/components/posts/PostEditor.jsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 9→22 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:33:54.597Z"
+    },
+    {
+      "id": "bug-420",
+      "timestamp": "2026-09-05T06:34:33.467Z",
+      "error_message": "Missing error handling in function()",
+      "file": "web/components/posts/PostEditor.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T06:34:33.467Z"
+    },
+    {
+      "id": "bug-421",
+      "timestamp": "2026-09-05T13:46:05",
+      "error_message": "column \"pick_no_assignee\" does not exist (errorMissingColumn) ตอนรัน migration 1788630000000",
+      "file": "migrations/1788630000000_kanban-forum-import-touched-by.sql, web/db/kanban/forumImport.js",
+      "root_cause": "เขียนเงื่อนไข \"มีคนแก้แล้ว\" โดยไล่ชื่อ pick_* จาก migration เก่า (1788541000000) ทั้งที่ pick_no_assignee ถูก DROP ทิ้งไปแล้วใน 1788542000000 ตอนเปลี่ยนผู้รับผิดชอบเป็น array — อ่านไฟล์ migration ที่ ADD แต่ไม่ได้ไล่ต่อว่าถูก drop ทีหลังไหม",
+      "fix": "ถอด pick_no_assignee ออกจาก EDITED_SQL และจาก UPDATE backfill ในไฟล์ migration · เช็คคอลัมน์จริงด้วย information_schema.columns ก่อนเขียน SQL ที่อ้าง pick_* หลายตัว",
+      "tags": [
+        "migration",
+        "postgres",
+        "kanban",
+        "forum-import",
+        "schema-drift"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T13:46:05"
     }
   ]
 }

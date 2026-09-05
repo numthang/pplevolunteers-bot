@@ -7,7 +7,7 @@
 // (หมวด/สถานะ/เจ้าของ ย้ายไป PostMetaPanel.jsx คอลัมน์ขวา)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images, GripVertical, Pencil, Trash2 } from 'lucide-react'
+import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images, GripVertical, Trash2 } from 'lucide-react'
 import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
 import VideoQuoteModal from './VideoQuoteModal.jsx'
 import AssetPickerModal from './AssetPickerModal.jsx'
@@ -192,17 +192,6 @@ export default function PostMediaPanel({ id, compact = false }) {
     }
   }
 
-  // เลื่อนทีละช่อง — ของคู่กับการลาก (จอสัมผัส/เมาส์ทีเดียวไม่พลาด) ยกมาจากหน้าตะกร้าเดิม
-  function move(i, dir) {
-    const imgs = media.filter(m => m.kind !== 'video')
-    const j = i + dir
-    if (j < 0 || j >= imgs.length) return
-    ;[imgs[i], imgs[j]] = [imgs[j], imgs[i]]
-    const next = [...imgs, ...media.filter(m => m.kind === 'video')]
-    setMedia(next)
-    saveOrder(next)
-  }
-
   // ── ลากเรียง — Pointer Events ไม่ใช่ HTML5 drag-and-drop ─────────────────────
   // HTML5 DnD ไม่มีบนจอสัมผัสเลย → มือถือลากเรียงไม่ได้มาตลอด (แจ้ง 2026-08-07)
   // ลากได้จาก "ที่จับ" (⠿) จุดเดียว จะได้ไม่ชนกับการเลื่อนหน้าจอและการกดดูรูปเต็ม
@@ -273,7 +262,7 @@ export default function PostMediaPanel({ id, compact = false }) {
       <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
         สื่อ ({media.length})
         {canEdit && images.length > 0 ? ' — แตะรูปเพื่อแก้ไข' : ''}
-        {canEdit && images.length > 1 ? ' · ลากที่ ⠿ หรือกด ◀▶ เพื่อเรียง' : ''}
+        {canEdit && images.length > 1 ? ' · ลากที่ ⠿ เพื่อเรียง' : ''}
       </h2>
 
       {canEdit && (
@@ -386,13 +375,6 @@ export default function PostMediaPanel({ id, compact = false }) {
                     <X size={13} />
                   </button>
                 )}
-                {/* ป้าย ✏️ เป็นแค่ "ป้ายบอก" ว่าจิ้มรูปแล้วแก้ได้ — ตัวรับคลิกคือทั้งรูป ไม่ใช่ปุ่มนี้
-                    (จิ้มโดนป้ายพอดีก็ยังเข้าหน้าแก้ไข เพราะ pointer-events ปล่อยทะลุลงรูป) */}
-                {canEdit && !broken && m.path && (
-                  <span className="absolute top-1.5 right-9 w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white pointer-events-none">
-                    <Pencil size={12} />
-                  </span>
-                )}
                 {/* ที่จับสำหรับลาก — touch-none = จับแล้วหน้าจอไม่เลื่อนตาม (บนมือถือลากได้จากตรงนี้เท่านั้น) */}
                 {canEdit && images.length > 1 && (
                   <button
@@ -403,26 +385,6 @@ export default function PostMediaPanel({ id, compact = false }) {
                   >
                     <GripVertical size={14} />
                   </button>
-                )}
-                {canEdit && images.length > 1 && (
-                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90">
-                    <button
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      title="เลื่อนไปข้างหน้า"
-                      className="w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition"
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <button
-                      onClick={() => move(i, 1)}
-                      disabled={i === images.length - 1}
-                      title="เลื่อนไปข้างหลัง"
-                      className="w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
                 )}
               </div>
             )

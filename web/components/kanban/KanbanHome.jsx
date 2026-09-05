@@ -274,9 +274,9 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     title={`${t(`linked.kind.${card.link.entity_type}`)} · ${t('linked.open')}`}
-                    className="inline-flex items-center gap-0.5 text-teal hover:underline align-middle"
+                    className="inline-flex items-center gap-0.5 text-cyan-600 dark:text-cyan-400 hover:underline align-middle"
                   >
-                    {LinkIcon && <LinkIcon size={13} className="shrink-0" />}
+                    {LinkIcon && <LinkIcon size={16} className="shrink-0" />}
                     {card.link.entity_type === 'case' ? card.link.ref : String(card.link.entity_id).padStart(4, '0')}
                   </a>
                 )
@@ -1325,7 +1325,9 @@ export default function KanbanHome() {
               }`}
             >
               <ArrowUpDown size={16} />
-              {sort && <span className="max-w-[140px] truncate">{t('sort.active', { label: sort.label })}</span>}
+              <span className="max-w-[140px] truncate">
+                {sort ? t('sort.active', { label: sort.label }) : t('sort.defaultShort')}
+              </span>
             </button>
 
             {sortOpen && (
@@ -1342,6 +1344,19 @@ export default function KanbanHome() {
                 </div>
 
                 <div className="max-h-72 overflow-y-auto flex flex-col">
+                  {!sortQuery.trim() && (
+                    <button
+                      onClick={() => { setSort(null); setSortOpen(false) }}
+                      className={`flex items-center gap-2 px-2 py-1.5 mb-1 text-sm rounded-md text-left border-b border-warm-200 dark:border-disc-border ${
+                        !sort
+                          ? 'bg-teal/10 text-teal font-medium'
+                          : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      }`}
+                    >
+                      <ArrowUpDown size={14} className="shrink-0" />
+                      <span className="flex-1 truncate">{t('sort.defaultFull')}</span>
+                    </button>
+                  )}
                   {filteredSortOptions.length === 0 && (
                     <p className="px-2 py-3 text-sm text-warm-400 dark:text-disc-muted text-center">{t('sort.noOptions')}</p>
                   )}
@@ -1365,15 +1380,6 @@ export default function KanbanHome() {
                     )
                   })}
                 </div>
-
-                {sort && (
-                  <button
-                    onClick={() => { setSort(null); setSortOpen(false) }}
-                    className="w-full mt-1.5 h-8 text-sm text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 rounded-md hover:bg-warm-50 dark:hover:bg-disc-hover"
-                  >
-                    {t('sort.clear')}
-                  </button>
-                )}
               </div>
             )}
           </div>
