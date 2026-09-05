@@ -4,7 +4,7 @@
 //
 // ⚠️ เขียนลง pick_* เท่านั้น ไม่แตะ ai_* — รันสคริปต์ AI ใหม่ทับได้โดยของที่คนแก้ไม่หาย
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
-import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
+import { canImportForum } from '@/lib/kanbanAccess.js'
 import * as importDB from '@/db/kanban/forumImport.js'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 
@@ -13,7 +13,7 @@ const ids = (v) => (Array.isArray(v) ? [...new Set(v.map(String).filter((s) => /
 export async function PATCH(req, { params }) {
   const ctx = await kanbanContext()
   if (ctx.error) return ctx.error
-  if (!isKanbanAdmin(ctx.access)) return err(403, 'หน้านี้สำหรับผู้ดูแลเท่านั้น')
+  if (!canImportForum(ctx.access)) return err(403, 'ไม่มีสิทธิ์ใช้หน้านี้')
 
   const { id } = await params
   const row = await importDB.getImportRow(ctx.orgId, id)

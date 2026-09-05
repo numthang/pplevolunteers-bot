@@ -5,7 +5,7 @@
 // ⚠️ ห้ามส่ง URL ของ Discord กลับไปให้เบราว์เซอร์โหลดเอง — URL มี signature หมดอายุ 24 ชม.
 //    และการให้เบราว์เซอร์ยิงตรงเท่ากับเปิดเผย CDN path ของเซิร์ฟเวอร์ที่ล็อกสิทธิ์ไว้
 import { kanbanContext } from '@/lib/kanbanGuard.js'
-import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
+import { canImportForum } from '@/lib/kanbanAccess.js'
 import * as importDB from '@/db/kanban/forumImport.js'
 import { fetchThreadImages } from '@/lib/forumThreadImages.js'
 
@@ -14,7 +14,7 @@ const MAX_INDEX = 3   // ดูได้ 4 รูปแรกเท่ากั�
 export async function GET(_req, { params }) {
   const ctx = await kanbanContext()
   if (ctx.error) return new Response('Unauthorized', { status: 401 })
-  if (!isKanbanAdmin(ctx.access)) return new Response('Forbidden', { status: 403 })
+  if (!canImportForum(ctx.access)) return new Response('Forbidden', { status: 403 })
 
   const { id, idx } = await params
   const n = Number(idx)

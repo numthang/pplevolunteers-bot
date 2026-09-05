@@ -2293,7 +2293,7 @@
     },
     "title": "Import forum threads",
     "subtitle": "Pick real work from the workgroup / district / members forums and turn it into cards",
-    "adminOnly": "Admins only",
+    "adminOnly": "Admins, secretary-general and provincial coordinators only",
     "loadFailed": "Could not load the list",
     "saveFailed": "Could not save",
     "empty": "Nothing here",

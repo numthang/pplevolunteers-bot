@@ -68,6 +68,21 @@ export function isKanbanAdmin(access = {}) {
 }
 
 /**
+ * คัดกระทู้ดิสฯ เข้า KANBAN (`/kanban/import/forum`) — กว้างกว่า isKanbanAdmin
+ *
+ * user สั่งเปิดให้ **กรรมการจังหวัด** 2026-09-05: งานคัดกระทู้เป็นงานของคนที่รู้จักงานในพื้นที่จริง
+ * ไม่ใช่งานแอดมินระบบ · `province_coordinator` (ผู้ประสานงานจังหวัด) ได้ด้วยเพราะระบบตั้งสิทธิ์
+ * 2 ตัวนี้ให้เท่ากันมาตลอด (ดู permissions.js §district_coordinator)
+ *
+ * ⚠️ หน้านี้สร้างการ์ดทีละหลายสิบใบเข้ากระดานที่คนทั้ง org เห็น — ถ้าจะเปิดกว้างกว่านี้ให้คิดก่อน
+ */
+export function canImportForum(access = {}) {
+  const p = normalizeAccess(access).permissions || new Set()
+  return p.has('admin') || p.has('secretary_general')
+      || p.has('province_coordinator') || p.has('district_coordinator')
+}
+
+/**
  * ลบถาวร (เทถังขยะ) — **admin เท่านั้น** แคบกว่า isKanbanAdmin ที่รวมเลขาธิการด้วย
  *
  * ใช้แค่ 2 ที่: ลบ field ถาวร · ลบการ์ดถาวร — ทั้งคู่ย้อนไม่ได้และกระทบทั้งกระดาน

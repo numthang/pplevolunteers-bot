@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
-import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
+import { canImportForum } from '@/lib/kanbanAccess.js'
 import ForumImportHome from '@/components/kanban/ForumImportHome.jsx'
 
 export async function generateMetadata() {
@@ -17,7 +17,7 @@ export default async function ForumImportPage() {
 
   const t = await getTranslations('kanbanImport')
   const { access } = await getEffectiveOrgIdentity(session)
-  if (!isKanbanAdmin(access)) {
+  if (!canImportForum(access)) {
     return (
       <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">
         {t('adminOnly')}
