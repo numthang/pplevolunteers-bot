@@ -1,6 +1,6 @@
 # STATUS — 2026-09-05 (เย็น)
 
-## 🆕 ย่อรูปทุกทางเข้าของ posts (`1caf562` · **ขึ้น prod แล้ว 2026-09-05 17:05** · user ยังไม่กด "ลองใหม่")
+## ✅ ย่อรูปทุกทางเข้าของ posts (`1caf562` · **ขึ้น prod + user ยิงจริงผ่านครบ 5 แพลตฟอร์มแล้ว 2026-09-05**)
 
 **อาการที่ user เจอ:** โพสต์ https://pplevolunteers.org/posts/1051 ยิงแล้วล้ม **ทั้ง 5 แพลตฟอร์ม**
 (X "62857454 bytes too large" · FB "reduce the amount of data" · Threads/IG timeout ·
@@ -17,7 +17,9 @@
   · `utils/postsStorage.js saveBuffer()` (ตะกร้าดิสฯ) · `web/lib/postsStorage.js savePostFile()`
 - **คลังภาพต้องย่อก่อนคิด sha256/width/height/bytes** ไม่งั้นค่าใน DB ไม่ตรงไฟล์บนดิสก์ → `shrinkForStorage()`
 - เทส noise 6936×8670: การ์ด 3.29 MB → หลังลายน้ำ 2.77 MB · web build ผ่าน · vitest 506 ผ่าน
-- ✅ deploy แล้ว (pull → build 0 warning → pm2 restart pple-web/pple-dcbot) · **เหลือให้ user กด "ลองใหม่" ที่โพสต์ 1051**
+- ✅ deploy แล้ว + **user กด "ลองใหม่" ที่โพสต์ 1051 ผ่านหมดทุกแพลตฟอร์ม** = ยืนยันว่าแก้ถูกจุด
+- ⚠️ ทางเดินของ cache (`eef1c1a`) **ยังไม่เคยถูกใช้บน prod** — user ยิงก่อนที่มันจะขึ้น · โพสต์ชุดหน้าคือรอบแรกจริง
+  ถ้าเจอ "รูปผิดใบ/ผิดงาน" ให้สงสัยตัวนี้ก่อนแล้ว `git revert eef1c1a` (แยก commit ไว้ให้ถอนได้เดี่ยวๆ)
   — ท่อย่อตอนยิง ทำให้ใช้การ์ดเดิมที่ค้างอยู่ได้เลย ไม่ต้องทำการ์ดใหม่
 - ⚠️ `1caf562` แก้ warning ตอน build บน prod: `serverExternalPackages` ไม่ครอบไฟล์นอก `web/` → webpack ลาก sharp เข้ามา bundle · ต้องโหลดผ่าน createRequire ที่ราก
 - ✅ **`eef1c1a` เตรียมรูปครั้งเดียวต่อ batch** — คิวเก็บ 1 แถว/แพลตฟอร์ม เดิมจึงติดลายน้ำชุดเดิมซ้ำ 5 รอบ
