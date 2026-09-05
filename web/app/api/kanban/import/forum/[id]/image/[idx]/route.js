@@ -7,7 +7,7 @@
 import { kanbanContext } from '@/lib/kanbanGuard.js'
 import { canImportForum } from '@/lib/kanbanAccess.js'
 import * as importDB from '@/db/kanban/forumImport.js'
-import { fetchThreadImages } from '@/lib/forumThreadImages.js'
+import { fetchThreadImagesCached } from '@/lib/forumThreadImages.js'
 
 const MAX_INDEX = 3   // ดูได้ 4 รูปแรกเท่ากับที่จะนำเข้าจริง
 
@@ -25,7 +25,8 @@ export async function GET(_req, { params }) {
 
   // ⚠️ ต้องใช้ลำดับเดียวกับตอนนำเข้าจริง (ทั้งเธรด เรียงเก่า→ใหม่) ไม่งั้นรูปที่เห็นตอนคัด
   //    กับรูปที่ติดไปกับการ์ดจะคนละใบกัน
-  const images = await fetchThreadImages(row.thread_id, MAX_INDEX + 1)
+  // จำผลไว้สั้นๆ — 4 index ของกระทู้เดียวกันเคยไล่ดึงข้อความทั้งเธรดคนละรอบ (ดู fetchThreadImagesCached)
+  const images = await fetchThreadImagesCached(row.thread_id, MAX_INDEX + 1)
   const att = images[n]
   if (!att) return new Response('Not found', { status: 404 })
 

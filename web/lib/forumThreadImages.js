@@ -56,3 +56,24 @@ export async function fetchThreadImages(threadId, limit = 4) {
   }
   return out
 }
+
+/**
+ * แบบจำผลไว้ 10 นาที — **ใช้เฉพาะตอนแสดงรูปในหน้าคัด**
+ *
+ * หน้าคัดยิงรูปทีละ index (0-3) แยกคำขอ ทุกคำขอเดิมไล่ดึงข้อความทั้งเธรดใหม่หมด
+ * = 1 กระทู้ที่มี 4 รูปยิง Discord ซ้ำ 4 รอบเพื่อได้รายการเดียวกันเป๊ะ (เปิดหน้า 200+ ใบ = หลักพันคำขอ)
+ * ⛔ ห้ามเอาไปใช้ตอน "นำเข้าจริง" — ตรงนั้นต้องได้ URL สดเพราะจะโหลด bytes เก็บทันที
+ *    (CDN URL ของ Discord มี signature หมดอายุ · TTL ที่นี่สั้นกว่ามากจึงปลอดภัยสำหรับแค่การแสดงผล)
+ */
+const TTL_MS = 10 * 60 * 1000
+const memo = new Map()   // threadId → { at, limit, images }
+
+export async function fetchThreadImagesCached(threadId, limit = 4) {
+  const hit = memo.get(threadId)
+  if (hit && hit.limit >= limit && Date.now() - hit.at < TTL_MS) return hit.images
+  const images = await fetchThreadImages(threadId, limit)
+  memo.set(threadId, { at: Date.now(), limit, images })
+  // กันหน่วยความจำบวมในกระบวนการที่รันยาว — ตัดของเก่าทิ้งเมื่อเกินพัน
+  if (memo.size > 1000) for (const [k, v] of memo) { if (Date.now() - v.at > TTL_MS) memo.delete(k) }
+  return images
+}

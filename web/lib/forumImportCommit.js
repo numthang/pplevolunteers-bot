@@ -68,6 +68,12 @@ export async function commitImportRows(orgId, ids, userId, { force = false } = {
     const eff = importDB.effective(row)
     if (!eff.title) { failed.push({ id, reason: 'ไม่มีชื่อ' }); continue }
 
+    // ⭐ จองก่อนสร้าง — 2 คนกดนำเข้าใบเดียวกันพร้อมกันแล้วได้การ์ด 2 ใบ (ดู claimForImport)
+    if (!(await importDB.claimForImport(orgId, id))) {
+      failed.push({ id, reason: 'มีคนอื่นนำเข้าใบนี้ไปแล้ว' })
+      continue
+    }
+
     try {
       const threadDate = row.thread_created_at
       const card = await cardDB.createCard(orgId, {
@@ -105,15 +111,13 @@ export async function commitImportRows(orgId, ids, userId, { force = false } = {
 
       const images = await importImages(orgId, card.id, row.thread_id, userId)
 
-      await pool.query(
-        `UPDATE kanban_forum_import SET status = 'imported', card_id = $3, updated_at = CURRENT_TIMESTAMP
-          WHERE org_id = $1 AND id = $2`,
-        [orgId, id, card.id]
-      )
+      await importDB.attachCard(orgId, id, card.id)
 
       created.push({ id, cardId: String(card.id), refNo: card.ref_no, images })
     } catch (e) {
       console.error('[forumImport] commit', id, e.message)
+      // สร้างการ์ดพังกลางทาง — ต้องคืนใบให้กลับไปรอคัด ไม่งั้นค้างเป็น "นำเข้าแล้ว" ที่ไม่มีการ์ด
+      await importDB.releaseClaim(orgId, id, row.status).catch(() => {})
       failed.push({ id, reason: e.message })
     }
   }

@@ -128,6 +128,37 @@ export async function updatePick(orgId, id, patch = {}, userId = null) {
   return getImportRow(orgId, id)
 }
 
+/**
+ * จองใบนี้ก่อนสร้างการ์ด — **กันการ์ดซ้ำเมื่อ 2 คนกดนำเข้าใบเดียวกันพร้อมกัน**
+ *
+ * ⛔ ห้ามกลับไปเป็น "อ่านมาเช็ค status แล้วค่อยสร้าง" — ระหว่างสร้างการ์ดมีการโหลดรูปจากดิสฯ
+ *    ซึ่งกินเวลาเป็นวินาที ช่องว่างนั้นกว้างพอให้อีกคนอ่านเจอ status เดิมแล้วสร้างการ์ดใบที่ 2
+ * คืน true = จองได้ (เราเป็นคนเดียวที่จะสร้าง) · false = คนอื่นชิงไปแล้ว ให้ข้ามใบนี้
+ */
+export async function claimForImport(orgId, id) {
+  const { rowCount } = await pool.query(
+    `UPDATE kanban_forum_import SET status = 'imported', updated_at = CURRENT_TIMESTAMP
+      WHERE org_id = $1 AND id = $2 AND status <> 'imported'`, [orgId, id]
+  )
+  return rowCount === 1
+}
+
+/** คืนใบที่จองไว้ให้กลับเป็นสถานะเดิม — ใช้ตอนสร้างการ์ดพังกลางทาง ไม่งั้นใบนั้นค้างเป็น "นำเข้าแล้ว" ทั้งที่ไม่มีการ์ด */
+export async function releaseClaim(orgId, id, status = 'pending') {
+  await pool.query(
+    `UPDATE kanban_forum_import SET status = $3, card_id = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE org_id = $1 AND id = $2 AND card_id IS NULL`, [orgId, id, status]
+  )
+}
+
+/** ผูกการ์ดที่สร้างเสร็จเข้ากับใบที่จองไว้ (status ถูกตั้งเป็น imported ตั้งแต่ตอนจองแล้ว) */
+export async function attachCard(orgId, id, cardId) {
+  await pool.query(
+    `UPDATE kanban_forum_import SET card_id = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE org_id = $1 AND id = $2`, [orgId, id, cardId]
+  )
+}
+
 /** pending ⇄ skipped (กด "ไม่เอา" / เอากลับมา) — imported เปลี่ยนที่นี่ไม่ได้ ต้องผ่านตัวสร้างการ์ด */
 export async function setStatus(orgId, id, status, userId = null) {
   if (!['pending', 'skipped'].includes(status)) return null

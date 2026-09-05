@@ -82,8 +82,8 @@ export default function ForumImportHome() {
   const [result, setResult] = useState(null)
   const [lastIds, setLastIds] = useState([])          // ชุดที่เพิ่งสั่งนำเข้า — ปุ่ม "ยืนยันซ้ำ" ต้องยิงชุดเดิม
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async ({ keepSelection = false, quiet = false } = {}) => {
+    if (!quiet) setLoading(true)
     try {
       const q = new URLSearchParams({ status })
       if (channel) q.set('channel', channel)
@@ -92,7 +92,10 @@ export default function ForumImportHome() {
       const json = await res.json()
       if (!res.ok) { setError(json.error || t('loadFailed')); return }
       setData(json)
-      setSelected(new Set())
+      // รีเฟรชเงียบๆ ต้องไม่ล้างที่ติ๊กไว้ — แต่ใบที่หายไปแล้ว (คนอื่นนำเข้า/กดไม่เอา) ต้องหลุดจากชุดด้วย
+      setSelected((prev) => (keepSelection
+        ? new Set([...prev].filter((id) => (json.rows || []).some((r) => String(r.id) === id)))
+        : new Set()))
       setError(null)
     } catch {
       setError(t('loadFailed'))
@@ -102,6 +105,28 @@ export default function ForumImportHome() {
   }, [status, channel, editedOnly, t])
 
   useEffect(() => { load() }, [load])
+
+  /**
+   * ตามงานของคนอื่น — **รีเฟรชตอนกลับมาที่แท็บเท่านั้น ไม่ poll**
+   *
+   * มีคนคัดพร้อมกันแค่ 2-3 คน (user ยืนยัน 2026-09-05) · push realtime (SSE/websocket)
+   * ไม่คุ้มกับจำนวนคนขนาดนี้ และหน้านี้หนักอยู่แล้วเพราะรูปดึงสดจากดิสฯ
+   * ⛔ ห้ามรีเฟรชขณะพิมพ์อยู่ — เปลี่ยนข้อมูลใต้มือคนที่กำลังแก้ = งานหาย
+   */
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      const el = document.activeElement
+      if (el && ['INPUT', 'TEXTAREA'].includes(el.tagName)) return
+      load({ keepSelection: true, quiet: true })
+    }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [load])
 
   const optionsOf = useMemo(() => {
     const byLabel = {}
@@ -477,6 +502,8 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
               key={i}
               src={`/api/kanban/import/forum/${row.id}/image/${i}`}
               alt=""
+              loading="lazy"
+              decoding="async"
               onClick={() => onPreview(i)}
               className="w-16 h-16 object-cover rounded-lg border border-warm-200 dark:border-disc-border cursor-zoom-in bg-warm-100 dark:bg-disc-hover"
             />
