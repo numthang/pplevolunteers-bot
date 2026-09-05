@@ -462,8 +462,9 @@ async function handleBasketAdd(interaction) {
   const openedUrl = process.env.WEB_BASE_URL && episodeId
     ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
     : null;
-  const openedLabel = openedUrl ? `[จัดการโพสต์](${openedUrl})` : '**หน้าโพสต์**';
-  const openedLine = createdNew ? `\n🆕 เปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}` : '';
+  // ทรงเดียวกับการ์ด kanban: ไอคอนสื่อ + เลขโพสต์ แทนคำว่า "จัดการโพสต์" (user เคาะ 2026-09-05)
+  const openedLabel = openedUrl ? `[🖼️ ${episodeId}](${openedUrl})` : `**🖼️ ${episodeId}**`;
+  const openedLine = createdNew ? `\nเปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}` : '';
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${openedLine}`, ...payload });
@@ -477,7 +478,7 @@ async function handleBasketAdd(interaction) {
   if (createdNew) {
     try {
       await interaction.channel?.send({
-        content: `🆕 <@${interaction.user.id}> เปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}`,
+        content: `<@${interaction.user.id}> เปิดโพสต์ใหม่ของห้องนี้แล้ว → ${openedLabel}`,
         reply: { messageReference: msg.id, failIfNotExists: false },
         allowedMentions: { parse: [] },
         flags: MessageFlags.SuppressEmbeds,
