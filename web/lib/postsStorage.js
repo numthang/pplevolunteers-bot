@@ -90,6 +90,29 @@ export function absPath(relPath) {
 }
 
 /**
+ * require ของ **repo root** — ⛔ ห้ามเปลี่ยนเป็น `import` หรือ `await import()`
+ *
+ * `utils/imageDownscale.js` อยู่นอก `web/` → `serverExternalPackages: ['sharp']` ใน next.config.js
+ * **ไม่มีผลกับมัน** · webpack เลยลาก `sharp/lib/*` เข้ามา bundle แล้วได้ warning ตอน build
+ * ("Can't resolve '@img/sharp-libvips-dev/include'" — เจอบน prod 2026-09-05)
+ * createRequire ทำให้ไฟล์นั้นถูกโหลดตอน runtime และ `require('sharp')` ข้างในวิ่งไปเจอของราก
+ * (ท่าเดียวกับ `lib/quoteRender.js` — อ่านคอมเมนต์ยาวๆ ที่นั่นก่อนคิดจะแก้)
+ */
+function requireFromRoot(modPath) {
+  const { createRequire } = process.getBuiltinModule('node:module')
+  // `REPO_ROOT` คิดจาก cwd (`web/` → `../`) ซึ่งถูกเฉพาะตอนเว็บรัน — สคริปต์/เทสที่รันจาก
+  // **รากโปรเจกต์** จะได้ path เลยรากขึ้นไป 1 ชั้นแล้ว MODULE_NOT_FOUND → ลองรากอีกตัวก่อนยอมแพ้
+  for (const base of [REPO_ROOT, process.cwd()]) {
+    try {
+      return createRequire(resolve(base, 'package.json'))(modPath)
+    } catch (err) {
+      if (err.code !== 'MODULE_NOT_FOUND') throw err
+    }
+  }
+  throw new Error(`postsStorage: หา ${modPath} จาก repo root ไม่เจอ (cwd=${process.cwd()})`)
+}
+
+/**
  * ย่อรูปให้อยู่ในกรอบก่อนเก็บ (ด้านยาว ≤ 2048) — คืน `{ buffer, mime }` ชุดใหม่
  *
  * ทำไมต้อง export ออกมาให้เรียกเองได้ ทั้งที่ `savePostFile()` ย่อให้อยู่แล้ว:
@@ -100,8 +123,7 @@ export function absPath(relPath) {
  * ⛔ ห้ามเรียกกับวิดีโอ — คืนของเดิมเฉยๆ ไม่พัง แต่ก็ไม่มีประโยชน์
  */
 export async function shrinkForStorage(buffer, mime) {
-  // CJS ที่ repo root — โหลดตอนใช้จริงเหมือน sharp (native dep อยู่ข้างใน กัน bundler ลากเข้า client)
-  const { shrinkImage } = await import('../../utils/imageDownscale.js')
+  const { shrinkImage } = requireFromRoot('./utils/imageDownscale.js')
   const fit = await shrinkImage(buffer, { mime })
   return fit.changed ? { buffer: fit.buffer, mime: fit.mime } : { buffer, mime }
 }
