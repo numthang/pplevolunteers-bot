@@ -872,6 +872,11 @@ sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git pull -q origin maste
   `flex justify-between` คู่ label|value แตกทันทีเมื่อมีชื่อไทยหลายคน (user เจอเอง)
 
 ## Do-Not-Repeat
+- **ห้ามลงมือเมื่อ user ถามว่า "จะช่วยไหม / คุ้มไหม / ควรทำไหม / ดีกว่าไหม"** (โดนทักรอบที่ 4 · 2026-09-05)
+  — คำถามเชิงประเมินคือ **ขอคำตอบ ไม่ใช่ใบสั่งงาน** · วัดตัวเลข/วิเคราะห์ได้เต็มที่ (อ่านอย่างเดียว)
+  แล้ว **ตอบพร้อมตัวเลข + ข้อแลกเปลี่ยน จบตรงนั้น** ปิดท้ายด้วย "ทำเลยไหม"
+  · ต่อให้คำตอบคือ "ช่วย" การชิงทำก็ตัดสิทธิ์ user ที่จะชั่งข้อเสีย
+  · รูปแบบเดียวกับ "ทำไงอ่ะ" (รอบ 1-2) และ "ทำไม/อะไร/ตรงไหน" (รอบ 3) — ดู memory feedback_dry_run_scope_and_approval
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
