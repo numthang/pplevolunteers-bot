@@ -8,7 +8,7 @@
 // ที่มีปุ่ม "กู้คืนฉบับนี้" (กู้คืนแคปชันทับเนื้อหา = ไม่มีความหมาย)
 import pool from '../index.js'
 
-/** เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips } (ทุกฟิลด์เป็น array ของ string) */
+/** เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, articleTips } (ทุกฟิลด์เป็น array ของ string) */
 export async function saveSuggestion({ episodeId, kind = 'caption', payload, userId = null, userName = null }) {
   const { rows } = await pool.query(
     `INSERT INTO post_ai_suggestions (episode_id, kind, payload, created_by_user_id, created_by_name)

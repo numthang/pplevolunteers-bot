@@ -7,15 +7,28 @@ import PostRevisions from './PostRevisions.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 
 
-// AI ทุกแบบอยู่ในเมนูเดียว — draft/caption/review ยิงคนละ endpoint · ที่เหลือคือ tone ของ polish
+// AI ทุกแบบอยู่ในเมนูเดียว — draft/guided/caption/review ยิงคนละ endpoint · ที่เหลือคือ tone ของ polish
+//
+// จัดกลุ่มด้วย optgroup เพราะ 5 ใน 7 รายการเขียนทับเนื้อหา — เรียงเป็นลิสต์เดียวแล้วแยกไม่ออก
+// ว่าอันไหนกินของในกล่อง (user ทัก 2026-09-05: "ร่างใหม่ทั้งหมด กับ เกลาสำนวน ไม่ค่อยชัดเจน")
+// คำอธิบายอยู่ในตารางนี้ที่เดียว → tooltip ปุ่มอ่านจากที่นี่ ไม่มีทางหลุดคนละเรื่องกับ label
 const AI_MODES = [
-  ['draft', 'ร่างใหม่ทั้งหมด'],
-  ['polish', 'เกลาสำนวน'],
-  ['shorter', 'ย่อให้สั้น'],
-  ['friendly', 'เป็นกันเองขึ้น'],
-  ['caption', 'ให้คำแนะนำ'],
-  ['review', 'ตรวจก่อนเผยแพร่'],
+  ['แก้เนื้อหาให้', [
+    ['draft', 'ร่างใหม่ทั้งหมด', 'เขียนใหม่ทั้งก้อนจากชื่อ/ไอเดีย (ทับของเดิม)'],
+    ['guided', 'ร่างตามคำแนะนำ', 'AI หาจุดที่ควรแก้ที่สุด แล้วแก้ให้เลย — ไม่เติมข้อมูลใหม่ (ทับของเดิม)'],
+    ['polish', 'เกลาสำนวน', 'ขัดภาษาของที่มีอยู่ ไม่ขยับโครง ไม่เพิ่มประเด็นใหม่'],
+    ['shorter', 'ย่อให้สั้น', 'ย่อประมาณครึ่งหนึ่ง เก็บใจความสำคัญไว้ครบ'],
+    ['friendly', 'เป็นกันเองขึ้น', 'ปรับให้อ่านง่ายเหมือนเล่าให้เพื่อนฟัง'],
+  ]],
+  ['ไม่แตะเนื้อหา', [
+    ['caption', 'ให้คำแนะนำ', 'เสนอโควต/หัวข้อ/ไอเดียภาพ/hashtag ไว้อ่านเอง'],
+    ['review', 'ตรวจก่อนเผยแพร่', 'ชี้จุดเสี่ยงทางกฎหมาย/ภาพลักษณ์ ไม่แก้ให้'],
+  ]],
 ]
+
+const AI_MODE_HINT = Object.fromEntries(
+  AI_MODES.flatMap(([, rows]) => rows).map(([value, , hint]) => [value, hint])
+)
 
 // ป้ายหมวดความเสี่ยงจาก /api/posts/ai/review — key ต้องตรงกับ RISK_CATEGORIES ฝั่ง route
 const RISK_LABEL = {
@@ -255,8 +268,11 @@ export default function PostEditor({ id }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [polishing, setPolishing] = useState(false)
+  const [guiding, setGuiding] = useState(false)
+  // สิ่งที่ AI บอกว่ามันแก้ให้ (โหมด guided) — ไม่เก็บลง DB โดยตั้งใจ ดูหัวข้อ handleGuided
+  const [aiNote, setAiNote] = useState('')
   // AI ทุกแบบรวมเป็นเมนูเดียว — เดิมแยก 3 ปุ่มแล้วอ่านไม่ออกว่าต่างกันยังไง
-  const [aiMode, setAiMode] = useState('caption')  // draft | polish | shorter | friendly | caption | review
+  const [aiMode, setAiMode] = useState('caption')  // draft | guided | polish | shorter | friendly | caption | review
   const [confirmAsk, setConfirmAsk] = useState(null)  // { title, message, confirmLabel, danger, onConfirm }
   const [suggesting, setSuggesting] = useState(false)
   const [reviewing, setReviewing] = useState(false)
@@ -625,6 +641,34 @@ export default function PostEditor({ id }) {
     }
   }
 
+  // ร่างตามคำแนะนำ — AI หาจุดที่ควรแก้ที่สุดแล้วแก้ให้เลย (คนละอย่างกับ polish ที่แตะแค่ภาษา)
+  //
+  // ⛔ ไม่มี ConfirmDialog โดยตั้งใจ — user สั่งว่าต้อง "กดทีเดียวจบ" และมันแก้ของที่มีอยู่
+  //    (ห้ามเติมข้อมูลใหม่) เหมือน polish ที่ก็ทับ body โดยไม่ถามเหมือนกัน · ตาข่ายคือ snapshot ลงประวัติ
+  // ⛔ advice ไม่เก็บลง post_ai_suggestions — การ์ดข้อเสนอแตกแค่ 2 ทาง (review / 6 หมวดของ caption)
+  //    แถวชนิดใหม่จะได้การ์ดเปล่าที่มีแต่วันที่ (กับดักเดียวกับที่คอมเมนต์ ReviewResult เตือนไว้)
+  async function handleGuided() {
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหาให้แก้'); return }
+    setGuiding(true)
+    setAiError('')
+    try {
+      const res = await fetch('/api/posts/ai/guided', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id, body }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setAiError(data.error || 'ร่างตามคำแนะนำไม่สำเร็จ'); return }
+      await snapshotCurrent()   // เก็บฉบับก่อนแก้ไว้ก่อนทับ — ทำหลังสำเร็จ ไม่งั้น AI พังก็เสีย revision เปล่า
+      setBody(data.data.body)
+      setAiNote(data.data.advice || '')
+    } catch {
+      setAiError('ร่างตามคำแนะนำไม่สำเร็จ')
+    } finally {
+      setGuiding(false)
+    }
+  }
+
   async function handleSuggest() {
     if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยขอโควต/หัวข้อ'); return }
     setSuggesting(true)
@@ -645,7 +689,6 @@ export default function PostEditor({ id }) {
           headlines: data.data.headlines,
           imageIdeas: data.data.imageIdeas,
           hashtags: data.data.hashtags,
-          cta: data.data.cta,
           articleTips: data.data.articleTips,
         },
         created_at: new Date().toISOString(),
@@ -762,7 +805,9 @@ export default function PostEditor({ id }) {
 
   // ปุ่ม AI ปุ่มเดียว — แยกทางตาม aiMode ที่เลือกใน dropdown
   function runAi() {
+    setAiNote('')   // ล้างที่เดียวจบ — ป้ายจากรอบที่แล้วห้ามค้างมาอธิบายเนื้อหาที่ถูกทับไปแล้ว
     if (aiMode === 'draft') return handleAiDraft()
+    if (aiMode === 'guided') return handleGuided()
     if (aiMode === 'caption') return handleSuggest()
     if (aiMode === 'review') return handleReview()
     return handlePolish(aiMode)   // polish | shorter | friendly
@@ -796,7 +841,7 @@ export default function PostEditor({ id }) {
 
   const readOnly = !can.edit
   const status = post.status
-  const aiBusy = aiLoading || polishing || suggesting || reviewing
+  const aiBusy = aiLoading || polishing || guiding || suggesting || reviewing
 
   return (
     <div className="flex flex-col gap-3">
@@ -870,14 +915,18 @@ export default function PostEditor({ id }) {
               onChange={e => setAiMode(e.target.value)}
               className="h-9 px-2 text-sm rounded-l-lg border border-r-0 border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
             >
-              {AI_MODES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+              {AI_MODES.map(([group, rows]) => (
+                <optgroup key={group} label={group}>
+                  {rows.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                </optgroup>
+              ))}
             </select>
             {/* สีที่ 3 ของแถวปุ่ม — teal = บันทึก · ส้ม = ส่งตรวจ ถูกจองไปแล้ว
                 ม่วงเลยเป็นสี AI ประจำหน้านี้ (กันอ่านสลับกับ 2 ปุ่มนั้น) */}
             <button
               onClick={runAi}
               disabled={aiBusy || (aiMode !== 'draft' && !/\S/.test(body))}
-              title={aiMode === 'draft' ? 'เขียนใหม่ทั้งก้อน (ทับของเดิม)' : aiMode === 'caption' ? 'เสนอโควต/หัวข้อ/ไอเดียภาพ ไม่แตะเนื้อหา' : 'ขัดภาษาของที่มีอยู่ ไม่เพิ่มประเด็นใหม่'}
+              title={AI_MODE_HINT[aiMode]}
               className="flex items-center gap-1.5 h-9 px-3 text-sm font-medium rounded-r-lg bg-violet-600 text-white hover:opacity-90 disabled:opacity-40 transition"
             >
               {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
@@ -902,6 +951,15 @@ export default function PostEditor({ id }) {
       </div>
 
       {aiError && <p className="text-sm text-red-500">{aiError}</p>}
+
+      {/* AI แก้อะไรให้ (โหมด "ร่างตามคำแนะนำ") — ป้ายชั่วคราว หายเมื่อรีเฟรชหรือสั่ง AI รอบใหม่
+          ตัวเนื้อหาที่แก้แล้วอยู่ในกล่องจริง ส่วนฉบับก่อนแก้อยู่ในประวัติด้านล่าง */}
+      {aiNote && (
+        <p className="flex items-start gap-1.5 text-sm text-warm-600 dark:text-disc-muted">
+          <Sparkles size={14} className="mt-0.5 shrink-0 text-violet-600" />
+          <span>AI แก้ให้แล้ว: {aiNote} — ฉบับก่อนแก้อยู่ใน &ldquo;ประวัติการแก้ไข&rdquo; ด้านล่าง</span>
+        </p>
+      )}
       {statusError && <p className="text-sm text-red-500">{statusError}</p>}
 
       {/* ข้อเสนอจาก AI — เก็บถาวรใน post_ai_suggestions แล้ว (2026-07-31) เปิดหน้ามาก็ยังอยู่

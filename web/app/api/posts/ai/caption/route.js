@@ -43,9 +43,8 @@ export async function POST(req) {
     const headlines = clean(out.headlines)
     const imageIdeas = clean(out.imageIdeas)
     const hashtags = clean(out.hashtags)
-    const cta = clean(out.cta).slice(0, 1)          // เหลือแค่ 1 แบบ — เยอะแล้วอ่านไม่ไหว เหมือน articleTips
     const articleTips = clean(out.articleTips).slice(0, 1) // ขอแค่ 1 ข้อ แต่ต้องมีตัวอย่างประกอบ — เยอะแล้วอ่านไม่ไหว
-    if (!quotes.length && !headlines.length && !imageIdeas.length && !hashtags.length && !cta.length && !articleTips.length) {
+    if (!quotes.length && !headlines.length && !imageIdeas.length && !hashtags.length && !articleTips.length) {
       throw new AiError('AI ตอบกลับมาไม่ครบ ลองอีกครั้ง')
     }
 
@@ -56,7 +55,7 @@ export async function POST(req) {
       saved = await saveSuggestion({
         episodeId: ctx.post.id,
         kind: 'caption',
-        payload: { quotes, headlines, imageIdeas, hashtags, cta, articleTips },
+        payload: { quotes, headlines, imageIdeas, hashtags, articleTips },
         userId: ctx.userId,
         userName: editorName(ctx.session),
       })
@@ -64,7 +63,7 @@ export async function POST(req) {
       console.error('[caption saveSuggestion]', e.message)
     }
 
-    return Response.json({ success: true, data: { quotes, headlines, imageIdeas, hashtags, cta, articleTips, saved } })
+    return Response.json({ success: true, data: { quotes, headlines, imageIdeas, hashtags, articleTips, saved } })
   } catch (error) {
     // โควตายืม key กลางหมด = 429 (ผู้ใช้แก้เองได้ด้วยการใส่ key องค์กร) · AI ล่มจริง = 502
     if (error instanceof AiError) return Response.json({ error: error.message }, { status: error.code === 'quota' ? 429 : 502 })
