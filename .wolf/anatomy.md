@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T09:58:03.326Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T10:18:37.271Z
 > Files: 1131 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -589,7 +589,7 @@
 - `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~3582 tok)
 - `postsRetention.js` — services/postsRetention.js — เก็บกวาดไฟล์สื่อของ posts/ตะกร้าที่ "หมดหน้าที่แล้ว" (~831 tok)
 - `publishPipeline.js` — สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้ (~4465 tok)
-- `publishWorker.js` — งานที่เลยเวลามานานเกิน grace (บอทดับข้ามคืน) → ไม่ยิงเงียบๆ ให้คนตัดสินใจเอง (~3899 tok)
+- `publishWorker.js` — งานที่เลยเวลามานานเกิน grace (บอทดับข้ามคืน) → ไม่ยิงเงียบๆ ให้คนตัดสินใจเอง (~4322 tok)
 - `ragSearch.js` — MAX_CONTENT_PER_POST: getExcludedChannels, buildRagContext (~232 tok)
 - `serverProvisioner.js` — แทนที่ {{org_name}} ใน string (~5478 tok)
 - `sms.js` — SMS gateway ตั้งค่าครบไหม (~490 tok)
