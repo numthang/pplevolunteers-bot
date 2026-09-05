@@ -2323,7 +2323,7 @@
       "author": "by {name}",
       "messages": "{n} messages",
       "openThread": "Open thread",
-      "maybeDuplicate": "Possible duplicate of {ref} “{title}” ({pct}% similar)",
+      "maybeDuplicate": "Possible duplicate ({pct}% similar)",
       "detailPlaceholder": "Detail for the card",
       "workstreams": "Workstream",
       "areas": "Area",
@@ -2357,12 +2357,12 @@
     "rules": {
       "title": "How to sort these",
       "items": [
-        "Open the real thread before deciding — the summary is only an AI guess",
-        "Not work (chat/announcement)? Just hit “Skip”",
-        "Real work: fix the title, detail, workstream, area, assignees, due date and status, then leave it",
+        "No need to open every thread — open it only when you're unsure",
+        "For rows that are real work (meetings and coordination count too), fix the title, detail, workstream, area, assignees, due date and status",
+        "Hit “Skip” only for rows that really aren't work (greetings, quick Q&A)",
         "Fields still tagged “AI guess” are unconfirmed · edits save instantly, no save button",
-        "Edited rows get an “Edited” tag and float to the top — the owner presses Import, you don't have to",
-        "Rows flagged “possible duplicate” — check the existing card first"
+        "Edited rows fade out, get an “Edited” tag and float to the top — the owner presses Import, you don't have to",
+        "The “possible duplicate” flag is mostly wrong (media and prep threads look alike) — glance at the KB-xxx link and move on"
       ]
     }
   }

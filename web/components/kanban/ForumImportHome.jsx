@@ -389,9 +389,11 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
     : null
 
   return (
+    // ⭐ ใบที่ยังไม่มีคนแตะ = สว่างเต็ม (นั่นคืองานที่เหลือ) · ใบที่แก้แล้ว = จางลงทั้งใบเหมือนเมลที่อ่านแล้ว
+    //    (user เคาะ 2026-09-05: "ทำให้สีจางลงทั้ง card") · เอาเมาส์ชี้หรือติ๊กเลือก = กลับมาชัดเต็ม
     <div className={`rounded-xl border p-3 flex flex-col gap-2 transition ${
       checked ? 'border-teal bg-teal/5'
-              : row.edited ? 'border-teal/40 bg-teal/[0.03] dark:bg-card-bg'
+              : row.edited ? 'border-teal/30 bg-warm-100/70 dark:bg-disc-hover/40 opacity-60 hover:opacity-100 focus-within:opacity-100'
                            : 'border-warm-200 dark:border-disc-border bg-white dark:bg-card-bg'
     }`}>
       <div className="flex items-start gap-2">
@@ -432,10 +434,20 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
         {busy && <Loader2 size={14} className="animate-spin text-warm-400 shrink-0 mt-1.5" />}
       </div>
 
+      {/* ธงนี้ **ไม่แม่น** — กระทู้งานสื่อกับเตรียมงานชื่อคล้ายกันเป็นปกติ (user 2026-09-05)
+          หน้าที่มันคือพาไปดูการ์ดเดิมให้เร็วที่สุด ไม่ใช่ห้ามนำเข้า → ต้องมีลิงก์ ไม่ใช่ข้อความเฉยๆ */}
       {row.dup_card_id && (
-        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-          <AlertTriangle size={12} />
-          {t('row.maybeDuplicate', { ref: `KB-${row.dup_ref_no}`, title: row.dup_title, pct: Math.round(row.dup_score * 100) })}
+        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 flex-wrap">
+          <AlertTriangle size={12} className="shrink-0" />
+          {t('row.maybeDuplicate', { pct: Math.round(row.dup_score * 100) })}
+          <a
+            href={`/kanban?card=KB-${row.dup_ref_no}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 underline hover:text-teal"
+          >
+            KB-{row.dup_ref_no} “{row.dup_title}” <ExternalLink size={11} />
+          </a>
         </p>
       )}
 
