@@ -1,6 +1,6 @@
 # STATUS — 2026-09-05 (เย็น)
 
-## 🆕 ย่อรูปทุกทางเข้าของ posts (`17b3598` · local เท่านั้น · **ยังไม่ deploy**)
+## 🆕 ย่อรูปทุกทางเข้าของ posts (`1caf562` · **ขึ้น prod แล้ว 2026-09-05 17:05** · user ยังไม่กด "ลองใหม่")
 
 **อาการที่ user เจอ:** โพสต์ https://pplevolunteers.org/posts/1051 ยิงแล้วล้ม **ทั้ง 5 แพลตฟอร์ม**
 (X "62857454 bytes too large" · FB "reduce the amount of data" · Threads/IG timeout ·
@@ -17,8 +17,9 @@
   · `utils/postsStorage.js saveBuffer()` (ตะกร้าดิสฯ) · `web/lib/postsStorage.js savePostFile()`
 - **คลังภาพต้องย่อก่อนคิด sha256/width/height/bytes** ไม่งั้นค่าใน DB ไม่ตรงไฟล์บนดิสก์ → `shrinkForStorage()`
 - เทส noise 6936×8670: การ์ด 3.29 MB → หลังลายน้ำ 2.77 MB · web build ผ่าน · vitest 506 ผ่าน
-- ⬜ **ขั้นต่อไป: deploy** (build เว็บ + restart บอท · ไม่มี migration) แล้วให้ user กด "ลองใหม่" ที่โพสต์ 1051
+- ✅ deploy แล้ว (pull → build 0 warning → pm2 restart pple-web/pple-dcbot) · **เหลือให้ user กด "ลองใหม่" ที่โพสต์ 1051**
   — ท่อย่อตอนยิง ทำให้ใช้การ์ดเดิมที่ค้างอยู่ได้เลย ไม่ต้องทำการ์ดใหม่
+- ⚠️ `1caf562` แก้ warning ตอน build บน prod: `serverExternalPackages` ไม่ครอบไฟล์นอก `web/` → webpack ลาก sharp เข้ามา bundle · ต้องโหลดผ่าน createRequire ที่ราก
 - ⬜ cases/kanban ยังไม่ต่อตัวย่อ + ไฟล์เก่า 26 ใบเกิน 8 MB ค้างดิสก์ → `md/PENDING.md`
 
 ## 🆕 Posts — โหมด AI "ร่างตามคำแนะนำ" (`5c73c8b` · local เท่านั้น · **user ยังไม่กดทดสอบ**)

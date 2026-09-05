@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T09:26:00.753Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T09:58:03.326Z
 > Files: 1131 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2265,7 +2265,7 @@
 - `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~2476 tok)
 - `postsAiQuota.js` — โควตา AI ต่อคนต่อวัน (grill ข้อ 13) — key เดียวของโปรเจกต์ ต้องกันบิลพุ่งจากสมาชิกหลักพัน (~594 tok)
 - `postsGuard.js` — postsGuard — ด่านเดียวที่ route ของ posts ใช้โหลด context + ตัดสินสิทธิ์ (~841 tok)
-- `postsStorage.js` — ที่เก็บไฟล์สื่อของ posts — **นอก `public/`** (grill ข้อ 5) (~2346 tok)
+- `postsStorage.js` — ที่เก็บไฟล์สื่อของ posts — **นอก `public/`** (grill ข้อ 5) (~2640 tok)
 - `postsThumbs.js` — Thumbnail แบบ lazy + cache ลงดิสก์ สำหรับรูปในโมดูล posts (~1174 tok)
 - `provinceCode.js` — Province → รหัสมหาดไทย (2 หลัก) — ใช้สร้าง case ref `<code>-<พ.ศ.2หลัก>-<random4>` (~398 tok)
 - `publishTargets.js` — publishTargets — "โพสต์ในนามใคร" ของกล่องเผยแพร่ (posts) (~2041 tok)

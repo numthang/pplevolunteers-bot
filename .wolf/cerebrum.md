@@ -115,6 +115,9 @@
 - `scripts/smoke/kanbanLabels.mjs` ตายแล้ว (ตารางป้ายถูก DROP ไปตั้งแต่ 2026-08-19) — รันแล้ว MODULE_NOT_FOUND
 
 ## Key Learnings
+- **โมดูล CJS ที่ repo root ห้ามให้ `web/` `import`/`await import()` ตรงๆ ถ้ามันแตะ native dep** — `serverExternalPackages` ใน next.config.js **ไม่ครอบไฟล์นอก `web/`** · webpack จะตาม `require('sharp')` เข้าไป bundle แล้วได้ warning "Can't resolve '@img/sharp-libvips-dev/include'" (2026-09-05) → โหลดด้วย createRequire ที่ปักหมุดที่ราก แบบเดียวกับ `lib/quoteRender.js`
+- **`REPO_ROOT` ใน `web/lib/postsStorage.js` คิดจาก `process.cwd()`** (`web/` → `../`) — ถูกเฉพาะตอนเว็บรัน · สคริปต์/เทสที่รันจากรากโปรเจกต์จะได้ path เลยรากไป 1 ชั้น (MODULE_NOT_FOUND เงียบๆ)
+- **การ์ดคำคมสไตล์ "มีรูป" เรนเดอร์ที่ขนาดเท่ารูปพื้นหลัง** (`const W = img.width` ใน quoteStyles.js) — พื้นหลัง 60 ล้านพิกเซล = การ์ด PNG 35 MB ที่โพสต์ไม่ออกสักแพลตฟอร์ม · เพดานเดียวที่มีคือ **ขนาดไฟล์ขาเข้า** ซึ่งกันเคสนี้ไม่ได้เลย (bug-465) → ตัวย่อกลางอยู่ที่ `utils/imageDownscale.js` ใช้ร่วมทั้งบอทและเว็บ
 
 - **ลิงก์ PDF หนังสือร้องเรียนสาธารณะ = capability URL** (`/complaint/[ref]/letter/[draftId]` · route handler ไม่มี gate) — ความลับคือ draftId (uuid v4 ใน `cases.letters`) เห็นได้เฉพาะคนที่ผ่าน `gateCase` · รู้ ref เฉยๆ เปิดไม่ได้ · ลบร่าง = ลิงก์ตาย 404 ทันที · **สร้าง PDF สดทุกครั้ง ไม่แช่ไฟล์** (user เคาะ 2026-09-01) → แก้ร่างแล้วลิงก์เดิมได้ฉบับใหม่ + หัว/ท้ายจดหมายตาม `case_letter_config` ล่าสุดเสมอ · ตัวประกอบ PDF อยู่ `web/lib/caseLetterPdf.js` ใช้ร่วมกับ `/api/case/[ref]/letter/generate` (ลอกโค้ดซ้ำ 2 ที่ = หัวจดหมายเพี้ยนคนละใบ)
 - **sharp: `.resize()` ทำก่อน `.composite()` เสมอในไปป์ไลน์เดียวกัน** — ต่อ `.resize()` ท้าย composite จะย่อ "ผืน" ก่อน แล้วรูปที่จะวางทับกลายเป็นใหญ่กว่า → `Image to composite must have same dimensions or smaller` · ต้องย่อผืนกับตัวรูปให้พอดีก่อนแล้วค่อย composite (bug-462)

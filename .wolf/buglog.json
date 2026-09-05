@@ -7558,6 +7558,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-05T09:31:58.464645Z"
+    },
+    {
+      "id": "bug-432",
+      "timestamp": "2026-09-05T09:53:41.527Z",
+      "error_message": "Significant refactor of postsStorage.js",
+      "file": "web/lib/postsStorage.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→3 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:53:41.527Z"
+    },
+    {
+      "id": "bug-433",
+      "timestamp": "2026-09-05T09:53:59.087Z",
+      "error_message": "Missing await",
+      "file": "web/lib/postsStorage.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:53:59.087Z"
+    },
+    {
+      "id": "bug-434",
+      "timestamp": "2026-09-05T09:58:03.359Z",
+      "error_message": "Missing error handling in requireFromRoot()",
+      "file": "web/lib/postsStorage.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-05T09:58:03.359Z"
     }
   ]
 }
