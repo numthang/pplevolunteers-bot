@@ -15,7 +15,14 @@ user สั่ง "posts ก่อน นอกนั้นจดไว้" — 
 - ⚠️ allowlist มีไฟล์เสียง (mp3/m4a/ogg) ปนอยู่ — ตัวย่อข้ามให้เองแล้ว แต่อย่าไปแตะ `EXT_BY_MIME`
 - ✅ **ไฟล์เก่าที่ค้างดิสก์ — เขียนสคริปต์แล้ว** `scripts/posts/shrinkExistingMedia.js` (dry run เป็นค่าเริ่มต้น)
   dry run บน prod 2026-09-05: **389 ไฟล์ · 1,602 MB → 283 MB (คืนได้ 1.32 GB)**
-  ⬜ ยังไม่ได้รัน `--apply` จริง — รอ user เคาะ (แนะนำ `--limit=20` ก่อนแล้วเปิดดูรูปในเว็บ)
+  ⬜ **ยังไม่ได้รัน `--apply`** — คำสั่งนี้โดน auto-mode classifier ของ Claude Code บล็อก (เขียนทับไฟล์ prod)
+  → **user ต้องรันเอง**: `sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && node scripts/posts/shrinkExistingMedia.js --apply --limit=20"`
+  ✅ `gc-media.js` รันจริงแล้ว 2026-09-05 — ลบกำพร้า 30 ไฟล์ · คืน 45.2 MB (+thumbs 7 ไฟล์)
+  **`gc-media.js` ไม่มีอะไรเรียกอัตโนมัติเลย** (รันมือล้วนๆ ตั้งแต่วันแรก) — ควรผูกเข้ารอบ CLEANUP_MS
+  ของ `publishWorker` เหมือน `runRetention` แต่ยังไม่ได้ทำ
+  **ข้อเท็จจริงที่เพิ่งรู้:** retention ไม่ได้ช่วยกองนี้เลย — รูปเกิน 2 MB บน prod 467 ใบ (1,820 MB)
+  เป็นรูปใน**โพสต์ที่ยังไม่เคยเผยแพร่ 1,500 MB** ซึ่ง `postsRetention` ไม่แตะตลอดกาล
+  (แตะเฉพาะที่เผยแพร่แล้ว · รูป 180 วัน คลิป 30 วัน · การ์ดคำคมกับ bg_path ไม่แตะเลย)
 
 ## ✨ Posts — โหมด AI "ร่างตามคำแนะนำ" (เสร็จ local 2026-09-05 · **ยังไม่ push/deploy · user ยังไม่กดทดสอบ**)
 
