@@ -23,7 +23,7 @@ export async function PATCH(req, { params }) {
   const body = await req.json().catch(() => ({}))
 
   if (body.status) {
-    const updated = await importDB.setStatus(ctx.orgId, id, body.status)
+    const updated = await importDB.setStatus(ctx.orgId, id, body.status, ctx.userId)
     if (!updated) return err(400, 'สถานะไม่ถูกต้อง')
     return Response.json({ row: updated })
   }
@@ -51,5 +51,5 @@ export async function PATCH(req, { params }) {
     patch.noEventDate = !v
   }
 
-  return Response.json({ row: await importDB.updatePick(ctx.orgId, id, patch) })
+  return Response.json({ row: await importDB.updatePick(ctx.orgId, id, patch, ctx.userId) })
 }

@@ -39,11 +39,14 @@ async function askAiJson(system, user, { orgId, maxTokens = 1200 }) {
 const TOKEN = process.env.DISCORD_BOT_TOKEN
 const API = 'https://discord.com/api/v10'
 
-// 3 ห้องที่ user เคาะ 2026-09-04 (ดู md/PENDING.md)
+// ห้องที่ user เคาะ — 3 ห้องแรก 2026-09-04 · เพิ่ม "เลือกตั้ง" 2026-09-05 (ดู md/PENDING.md)
+// ⚠️ เพิ่มห้องที่นี่แล้วต้องไปเพิ่มใน web/components/kanban/ForumImportHome.jsx (CHANNELS)
+//    + คีย์ channel.<key> ใน web/locales/{th,en}.json ด้วย ไม่งั้นชิปกรองห้องในหน้าคัดไม่มีให้กด
 const CHANNELS = {
   '1126210980045664346': 'คณะทำงาน',
   '1223929014998274128': 'อำเภอ',
   '1126491108004855878': 'สมาชิกพรรค',
+  '1258076247700013146': 'เลือกตั้ง',
 }
 
 const arg = (n, d = null) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1] }

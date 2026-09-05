@@ -1,6 +1,7 @@
 // /api/kanban/import/forum — รายการกระทู้ที่รอคัดเข้า KANBAN
 //
-// GET ?status=pending|skipped|imported|all&channel=<id> → { rows, counts, options }
+// GET ?status=pending|skipped|imported|all&channel=<id>&edited=1 → { rows, counts, options }
+//   edited=1 = เอาเฉพาะใบที่มีคนแก้ไว้แล้ว (หลายมือช่วยกันคัด — คนกดนำเข้าดูแค่ใบที่ตรวจแล้ว)
 //
 // แอดมิน/เลขาธิการ/กรรมการจังหวัด/ผู้ประสานงานจังหวัด — หน้านี้สร้างการ์ดทีละหลายสิบใบเข้ากระดานที่คนทั้ง org เห็น
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
@@ -18,6 +19,7 @@ export async function GET(req) {
   const rows = await importDB.listImportRows(ctx.orgId, {
     status: url.searchParams.get('status') || 'pending',
     channelId: url.searchParams.get('channel') || null,
+    editedOnly: url.searchParams.get('edited') === '1',
   })
 
   // ตัวเลือกของช่อง "สายงาน"/"พื้นที่" — หน้าเว็บต้องแปลง id ที่ AI เดาไว้เป็นชื่อ และให้คนเลือกเพิ่ม/ถอด

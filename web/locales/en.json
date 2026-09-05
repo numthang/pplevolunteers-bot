@@ -2292,7 +2292,7 @@
       "title": "Import forum threads"
     },
     "title": "Import forum threads",
-    "subtitle": "Pick real work from the workgroup / district / members forums and turn it into cards",
+    "subtitle": "Pick the threads that are real work from the workgroup / district / members / election forums and import them as cards",
     "adminOnly": "Admins, secretary-general and provincial coordinators only",
     "loadFailed": "Could not load the list",
     "saveFailed": "Could not save",
@@ -2306,7 +2306,8 @@
       "all": "All forums",
       "workgroup": "Workgroup",
       "district": "District",
-      "members": "Members"
+      "members": "Members",
+      "election": "Election"
     },
     "bulk": {
       "selected": "{n} selected",
@@ -2333,19 +2334,36 @@
       "unskip": "Restore",
       "imported": "Imported",
       "posted": "posted {date}",
-      "eventDateLabel": "Event date",
-      "eventDateHint": "= card's completed + due date",
+      "eventDateLabel": "Due date",
+      "eventDateHint": "= also the card's completion date",
       "noEventDateHint": "empty = completed on posting date ({date}), no due date",
       "noKnownPeople": "Nobody in this thread matches a system account",
       "statusLabel": "Status",
       "openStatusHint": "= card due date (open work gets no completion date)",
-      "import": "Import this"
+      "import": "Import this",
+      "edited": "Edited",
+      "editedBy": "Edited by {name} · {at}",
+      "editedAt": "Edited · {at}"
     },
     "result": {
       "done": "Imported {n}",
       "failed": "{n} failed",
       "dupBlocked": "Likely duplicates were blocked — check whether it's the same work",
       "dupForce": "Import anyway"
+    },
+    "filter": {
+      "editedOnly": "Edited"
+    },
+    "rules": {
+      "title": "How to sort these",
+      "items": [
+        "Open the real thread before deciding — the summary is only an AI guess",
+        "Not work (chat/announcement)? Just hit “Skip”",
+        "Real work: fix the title, detail, workstream, area, assignees, due date and status, then leave it",
+        "Fields still tagged “AI guess” are unconfirmed · edits save instantly, no save button",
+        "Edited rows get an “Edited” tag and float to the top — the owner presses Import, you don't have to",
+        "Rows flagged “possible duplicate” — check the existing card first"
+      ]
     }
   }
 }

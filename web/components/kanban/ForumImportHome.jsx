@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { AlertTriangle, Check, ExternalLink, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, Check, ExternalLink, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react'
 import ImageLightbox from '../ImageLightbox.jsx'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 
@@ -22,6 +22,7 @@ const CHANNELS = [
   { id: '1126210980045664346', key: 'workgroup' },
   { id: '1223929014998274128', key: 'district' },
   { id: '1126491108004855878', key: 'members' },
+  { id: '1258076247700013146', key: 'election' },
 ]
 const STATUSES = ['pending', 'skipped', 'imported']
 
@@ -69,6 +70,8 @@ export default function ForumImportHome() {
   const tk = useTranslations('kanban')          // ชื่อสถานะการ์ด — ใช้คีย์เดิมของโมดูล ไม่แปลซ้ำ
   const [status, setStatus] = useState('pending')
   const [channel, setChannel] = useState('')
+  // หลายมือช่วยกันคัด — คนกดนำเข้าอยากเห็นเฉพาะใบที่มีคนตรวจ/แก้ไว้แล้ว (user เคาะ 2026-09-05)
+  const [editedOnly, setEditedOnly] = useState(false)
   const [data, setData] = useState({ rows: [], counts: {}, fields: [], options: [] })
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
@@ -84,6 +87,7 @@ export default function ForumImportHome() {
     try {
       const q = new URLSearchParams({ status })
       if (channel) q.set('channel', channel)
+      if (editedOnly) q.set('edited', '1')
       const res = await fetch(`/api/kanban/import/forum?${q}`)
       const json = await res.json()
       if (!res.ok) { setError(json.error || t('loadFailed')); return }
@@ -95,7 +99,7 @@ export default function ForumImportHome() {
     } finally {
       setLoading(false)
     }
-  }, [status, channel, t])
+  }, [status, channel, editedOnly, t])
 
   useEffect(() => { load() }, [load])
 
@@ -177,6 +181,14 @@ export default function ForumImportHome() {
         <p className="text-base text-warm-400 dark:text-disc-muted mt-0.5">{t('subtitle')}</p>
       </div>
 
+      {/* กติกาการใช้หน้านี้ — หลายมือช่วยกันคัด คนใหม่ต้องอ่านจบใน 10 วินาที ห้ามยาวกว่านี้ */}
+      <div className="rounded-xl border border-teal/30 bg-teal/5 px-3 py-2">
+        <p className="text-base font-medium text-teal">{t('rules.title')}</p>
+        <ol className="mt-1 list-decimal pl-4 text-xs text-warm-500 dark:text-disc-muted space-y-0.5">
+          {t.raw('rules.items').map((line, i) => <li key={i}>{line}</li>)}
+        </ol>
+      </div>
+
       {/* แท็บสถานะ + ตัวกรองห้อง */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-1">
@@ -214,6 +226,20 @@ export default function ForumImportHome() {
               }`}
             >{t(`channel.${c.key}`)}</button>
           ))}
+          {/* ตัวกรอง "มีคนแก้แล้ว" — ใบพวกนี้ลอยขึ้นบนสุดอยู่แล้ว ชิปนี้ไว้ตัดที่เหลือทิ้งตอนจะกดนำเข้ารวด */}
+          {status === 'pending' && (
+            <button
+              type="button"
+              onClick={() => setEditedOnly((v) => !v)}
+              className={`ml-1 px-2 py-0.5 rounded-full text-xs border transition inline-flex items-center gap-1 ${
+                editedOnly ? 'bg-teal text-white border-teal'
+                           : 'border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:border-teal'
+              }`}
+            >
+              <Pencil size={10} />
+              {t('filter.editedOnly')} {counts.edited ? <span className="opacity-70">{counts.edited}</span> : null}
+            </button>
+          )}
         </div>
       </div>
 
@@ -357,11 +383,16 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
   const cardStatus = row.pick_status ?? 'done'
   const eventDate = row.pick_no_event_date ? '' : String(row.pick_event_date ?? row.ai_event_date ?? '').slice(0, 10)
   const guessed = (key) => row[`pick_${key}`] == null && (row[`ai_${key}`]?.length || row[`ai_${key}`] != null)
-
+  // ⚠️ touched_at เป็น timestamptz — อย่า slice ISO string ตรงๆ (UTC จะถอยวันตอนหัวค่ำไทย)
+  const touchedAt = row.touched_at
+    ? new Date(row.touched_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+    : null
 
   return (
     <div className={`rounded-xl border p-3 flex flex-col gap-2 transition ${
-      checked ? 'border-teal bg-teal/5' : 'border-warm-200 dark:border-disc-border bg-white dark:bg-card-bg'
+      checked ? 'border-teal bg-teal/5'
+              : row.edited ? 'border-teal/40 bg-teal/[0.03] dark:bg-card-bg'
+                           : 'border-warm-200 dark:border-disc-border bg-white dark:bg-card-bg'
     }`}>
       <div className="flex items-start gap-2">
         <input
@@ -378,6 +409,15 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
             className="w-full bg-transparent text-base font-medium text-warm-700 dark:text-disc-text border-b border-transparent hover:border-warm-200 focus:border-teal focus:outline-none"
           />
           <div className="flex items-center gap-2 flex-wrap text-xs text-warm-400 dark:text-disc-muted">
+            {/* ป้าย "มีคนแก้แล้ว" — สัญญาณเดียวที่บอกว่าใบนี้ผ่านสายตาคนแล้ว (ไม่มีปุ่ม "ตรวจแล้ว" แยก) */}
+            {row.edited && (
+              <span className="px-1.5 py-0.5 rounded bg-teal/15 text-teal inline-flex items-center gap-1">
+                <Pencil size={10} />
+                {row.touched_name && touchedAt ? t('row.editedBy', { name: row.touched_name, at: touchedAt })
+                  : touchedAt ? t('row.editedAt', { at: touchedAt })
+                  : t('row.edited')}
+              </span>
+            )}
             {row.ai_is_project === true && <span className="px-1.5 py-0.5 rounded bg-teal/15 text-teal">{t('row.isProject')}</span>}
             {row.ai_is_project === false && <span className="px-1.5 py-0.5 rounded bg-warm-100 dark:bg-disc-hover">{t('row.isChat')}</span>}
             <span>{t('row.posted', { date: String(row.thread_created_at).slice(0, 10) })}</span>

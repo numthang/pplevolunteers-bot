@@ -6,6 +6,14 @@
 // ค่าที่ใช้จริงตอนนำเข้า = pick_ ?? ai_ ?? ค่าตั้งต้น — ประกอบที่ effective() ที่เดียว
 import pool from '../index.js'
 
+/**
+ * "มีคนแตะใบนี้แล้ว" — คิดจาก pick_* ล้วนๆ ไม่มีปุ่ม "ตรวจแล้ว" ให้กดเพิ่ม (user เคาะ 2026-09-05)
+ * ⚠️ เพิ่ม pick_* ตัวใหม่เมื่อไหร่ ต้องมาต่อเงื่อนไขตรงนี้ด้วย ไม่งั้นใบที่แก้ช่องนั้นจะไม่ขึ้นป้าย
+ */
+const EDITED_SQL = `(i.pick_title IS NOT NULL OR i.pick_detail IS NOT NULL OR i.pick_workstreams IS NOT NULL
+      OR i.pick_areas IS NOT NULL OR i.pick_assignees IS NOT NULL OR i.pick_status IS NOT NULL
+      OR i.pick_event_date IS NOT NULL OR i.pick_no_event_date)`
+
 const LIST_SQL = `
   SELECT i.id, i.thread_id, i.channel_id, i.title, i.url, i.thread_created_at,
          i.first_message, i.message_count, i.image_count, i.participants,
@@ -20,22 +28,29 @@ const LIST_SQL = `
          i.pick_no_event_date, i.pick_assignees, i.pick_status,
          i.status, i.card_id, i.dup_card_id, i.dup_score,
          i.author_user_id, i.author_discord_id,
+         i.touched_at, i.touched_by, ${EDITED_SQL} AS edited,
          COALESCE(au.username, au.firstname) AS author_name,
+         COALESCE(tu.username, tu.firstname) AS touched_name,
          COALESCE(iu.username, iu.firstname) AS ai_assignee_name,
          d.title AS dup_title, d.ref_no AS dup_ref_no
     FROM kanban_forum_import i
     LEFT JOIN users au ON au.id = i.author_user_id
     LEFT JOIN users iu ON iu.id = i.ai_assignee_user_id
+    LEFT JOIN users tu ON tu.id = i.touched_by
     LEFT JOIN kanban_cards d ON d.id = i.dup_card_id
    WHERE i.org_id = $1`
 
-/** รายการให้คัด — ตั้งต้นเรียง "AI ว่าเป็นงานจริง" ขึ้นก่อน แล้วค่อยตามวันที่ใหม่สุด */
-export async function listImportRows(orgId, { status = 'pending', channelId = null } = {}) {
+/**
+ * รายการให้คัด — **ใบที่มีคนแก้แล้วลอยขึ้นบนสุดเสมอ** (หลายมือช่วยกันคัด คนกดนำเข้าต้องเห็นก่อน)
+ * รองลงมาเรียง "AI ว่าเป็นงานจริง" แล้วค่อยตามวันที่ใหม่สุด
+ */
+export async function listImportRows(orgId, { status = 'pending', channelId = null, editedOnly = false } = {}) {
   const params = [orgId]
   let sql = LIST_SQL
   if (status !== 'all') { params.push(status); sql += ` AND i.status = $${params.length}` }
   if (channelId) { params.push(channelId); sql += ` AND i.channel_id = $${params.length}` }
-  sql += ` ORDER BY i.ai_is_project DESC NULLS LAST, i.thread_created_at DESC`
+  if (editedOnly) sql += ` AND ${EDITED_SQL}`
+  sql += ` ORDER BY edited DESC, i.ai_is_project DESC NULLS LAST, i.thread_created_at DESC`
   const { rows } = await pool.query(sql, params)
   return rows
 }
@@ -45,12 +60,16 @@ export async function getImportRow(orgId, id) {
   return rows[0] ?? null
 }
 
-/** นับตามสถานะ — ไว้โชว์ตัวเลขบนแท็บ */
+/** นับตามสถานะ — ไว้โชว์ตัวเลขบนแท็บ · `edited` = ใบที่รอคัดและมีคนแก้ไว้แล้ว (ตัวเลขบนชิปกรอง) */
 export async function countByStatus(orgId) {
   const { rows } = await pool.query(
-    `SELECT status, count(*)::int AS n FROM kanban_forum_import WHERE org_id = $1 GROUP BY status`, [orgId]
+    `SELECT i.status, count(*)::int AS n,
+            count(*) FILTER (WHERE ${EDITED_SQL})::int AS edited
+       FROM kanban_forum_import i WHERE i.org_id = $1 GROUP BY i.status`, [orgId]
   )
-  return Object.fromEntries(rows.map((r) => [r.status, r.n]))
+  const out = Object.fromEntries(rows.map((r) => [r.status, r.n]))
+  out.edited = rows.find((r) => r.status === 'pending')?.edited ?? 0
+  return out
 }
 
 /** ค่าที่จะใช้จริงตอนสร้างการ์ด — คนเคาะชนะ AI เสมอ */
@@ -87,7 +106,7 @@ const PICK_COLUMNS = {
  * บันทึกค่าที่คนแก้ (ทีละช่อง — หน้าเว็บเซฟทันทีตอนออกจากช่อง)
  * ⚠️ null = "กลับไปใช้ค่าที่ AI เดา" ไม่ใช่ "ค่าว่าง" — ช่องที่อยากให้ว่างจริงๆ ส่ง '' หรือ []
  */
-export async function updatePick(orgId, id, patch = {}) {
+export async function updatePick(orgId, id, patch = {}, userId = null) {
   const sets = []
   const params = [orgId, id]
   for (const [key, column] of Object.entries(PICK_COLUMNS)) {
@@ -98,6 +117,10 @@ export async function updatePick(orgId, id, patch = {}) {
   }
   if (!sets.length) return getImportRow(orgId, id)
 
+  // ป้าย "แก้แล้วโดย …" — คนล่าสุดชนะ (ไม่ใช่ audit log · ดู migration touched-by)
+  params.push(userId ?? null)
+  sets.push(`touched_by = $${params.length}::int`, 'touched_at = CURRENT_TIMESTAMP')
+
   await pool.query(
     `UPDATE kanban_forum_import SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
       WHERE org_id = $1 AND id = $2`, params
@@ -106,11 +129,12 @@ export async function updatePick(orgId, id, patch = {}) {
 }
 
 /** pending ⇄ skipped (กด "ไม่เอา" / เอากลับมา) — imported เปลี่ยนที่นี่ไม่ได้ ต้องผ่านตัวสร้างการ์ด */
-export async function setStatus(orgId, id, status) {
+export async function setStatus(orgId, id, status, userId = null) {
   if (!['pending', 'skipped'].includes(status)) return null
   await pool.query(
-    `UPDATE kanban_forum_import SET status = $3, updated_at = CURRENT_TIMESTAMP
-      WHERE org_id = $1 AND id = $2 AND status <> 'imported'`, [orgId, id, status]
+    `UPDATE kanban_forum_import SET status = $3, touched_by = $4::int,
+            touched_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE org_id = $1 AND id = $2 AND status <> 'imported'`, [orgId, id, status, userId ?? null]
   )
   return getImportRow(orgId, id)
 }
