@@ -80,6 +80,7 @@ export default function ForumImportHome() {
   const [preview, setPreview] = useState(null)   // { rowId, index }
   const [importing, setImporting] = useState(false)   // ใบเดียว = เก็บ id · ทั้งชุด = true
   const [result, setResult] = useState(null)
+  const [conflictId, setConflictId] = useState(null)   // ใบที่เพิ่งโดนอีกคนแก้ตัดหน้า
   const [lastIds, setLastIds] = useState([])          // ชุดที่เพิ่งสั่งนำเข้า — ปุ่ม "ยืนยันซ้ำ" ต้องยิงชุดเดิม
 
   const load = useCallback(async ({ keepSelection = false, quiet = false } = {}) => {
@@ -139,13 +140,22 @@ export default function ForumImportHome() {
   const patchRow = async (id, body) => {
     setBusyId(id)
     try {
+      // แนบ "รุ่น" ของแถวที่หน้าจอนี้ถืออยู่ไปด้วย — ฝั่งฐานใหม่กว่า = ไม่ให้เขียนทับ (409)
+      const current = (data.rows || []).find((r) => String(r.id) === String(id))
       const res = await fetch(`/api/kanban/import/forum/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, version: current?.version ?? null }),
       })
       const json = await res.json()
+      if (res.status === 409) {
+        // อีกคนแก้ไปก่อน — สลับใบนี้เป็นค่าล่าสุดแล้วบอกให้กดใหม่ ไม่ใช่เขียนทับของเขาทิ้ง
+        setData((d) => ({ ...d, rows: d.rows.map((r) => (String(r.id) === String(id) ? json.row : r)) }))
+        setConflictId(String(id))
+        return null
+      }
       if (!res.ok) { setError(json.error || t('saveFailed')); return null }
+      setConflictId((c) => (c === String(id) ? null : c))
       // สถานะเปลี่ยน = แถวหลุดจากแท็บนี้ · แก้ค่าเฉยๆ = อัปเดตในที่ ไม่ต้องโหลดใหม่ทั้งหน้า
       if (body.status) setData((d) => ({ ...d, rows: d.rows.filter((r) => String(r.id) !== String(id)) }))
       else setData((d) => ({ ...d, rows: d.rows.map((r) => (String(r.id) === String(id) ? json.row : r)) }))
@@ -383,6 +393,7 @@ export default function ForumImportHome() {
               onPreview={(index) => setPreview({ rowId: row.id, index })}
               onImport={() => commit(false, [String(row.id)])}
               importing={importing === String(row.id)}
+              conflict={conflictId === String(row.id)}
             />
           ))}
         </div>
@@ -401,7 +412,7 @@ export default function ForumImportHome() {
 }
 
 /** 1 กระทู้ — ติ๊กเลือก + แก้ค่าที่จะใช้ตอนนำเข้า */
-function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, onPreview, onImport, importing }) {
+function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, onPreview, onImport, importing, conflict }) {
   const [title, setTitle] = useState(row.pick_title ?? row.title ?? '')
   const [detail, setDetail] = useState(row.pick_detail ?? row.ai_summary ?? '')
   const detailRef = useRef(null)
@@ -467,6 +478,12 @@ function ImportRow({ row, t, tk, optionsOf, busy, checked, onToggle, onPatch, on
         </div>
         {busy && <Loader2 size={14} className="animate-spin text-warm-400 shrink-0 mt-1.5" />}
       </div>
+
+      {conflict && (
+        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-2 py-1">
+          {t('row.conflict')}
+        </p>
+      )}
 
       {/* ธงนี้ **ไม่แม่น** — กระทู้งานสื่อกับเตรียมงานชื่อคล้ายกันเป็นปกติ (user 2026-09-05)
           หน้าที่มันคือพาไปดูการ์ดเดิมให้เร็วที่สุด ไม่ใช่ห้ามนำเข้า → ต้องมีลิงก์ ไม่ใช่ข้อความเฉยๆ */}

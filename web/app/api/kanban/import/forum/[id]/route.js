@@ -51,5 +51,10 @@ export async function PATCH(req, { params }) {
     patch.noEventDate = !v
   }
 
-  return Response.json({ row: await importDB.updatePick(ctx.orgId, id, patch, ctx.userId) })
+  // version = "รุ่นของแถวที่หน้าจอคนนี้เห็นตอนกด" — ฝั่งฐานใหม่กว่า = ปฏิเสธ แล้วส่งค่าล่าสุดกลับไป
+  const { row: saved, conflict } = await importDB.updatePick(ctx.orgId, id, patch, ctx.userId, body.version || null)
+  if (conflict) {
+    return Response.json({ error: 'มีคนอื่นเพิ่งแก้ใบนี้ไปก่อน — นี่คือค่าล่าสุดแล้ว', row: saved }, { status: 409 })
+  }
+  return Response.json({ row: saved })
 }

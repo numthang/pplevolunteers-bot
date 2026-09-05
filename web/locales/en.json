@@ -2343,7 +2343,8 @@
       "import": "Import this",
       "edited": "Edited",
       "editedBy": "Edited by {name} · {at}",
-      "editedAt": "Edited · {at}"
+      "editedAt": "Edited · {at}",
+      "conflict": "Someone else just edited this row — what you see now is the latest. Make your change again if you still want it."
     },
     "result": {
       "done": "Imported {n}",

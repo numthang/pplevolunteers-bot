@@ -29,6 +29,10 @@ const LIST_SQL = `
          i.status, i.card_id, i.dup_card_id, i.dup_score,
          i.author_user_id, i.author_discord_id,
          i.touched_at, i.touched_by, ${EDITED_SQL} AS edited,
+         -- "รุ่น" ของแถว ใช้กันคนเขียนทับกัน — ⚠️ ต้องเป็น **ข้อความ** ที่มีไมโครวินาทีครบ
+         --    ถ้าปล่อยให้ node-pg แปลงเป็น Date จะเหลือแค่มิลลิวินาที ส่งกลับมาเทียบแล้ว
+         --    จะน้อยกว่าค่าจริงเสมอ = ชนกันหลอกๆ ทุกครั้งที่กดแก้
+         to_char(i.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS version,
          COALESCE(au.username, au.firstname) AS author_name,
          COALESCE(tu.username, tu.firstname) AS touched_name,
          COALESCE(iu.username, iu.firstname) AS ai_assignee_name,
@@ -106,7 +110,7 @@ const PICK_COLUMNS = {
  * บันทึกค่าที่คนแก้ (ทีละช่อง — หน้าเว็บเซฟทันทีตอนออกจากช่อง)
  * ⚠️ null = "กลับไปใช้ค่าที่ AI เดา" ไม่ใช่ "ค่าว่าง" — ช่องที่อยากให้ว่างจริงๆ ส่ง '' หรือ []
  */
-export async function updatePick(orgId, id, patch = {}, userId = null) {
+export async function updatePick(orgId, id, patch = {}, userId = null, version = null) {
   const sets = []
   const params = [orgId, id]
   for (const [key, column] of Object.entries(PICK_COLUMNS)) {
@@ -115,17 +119,28 @@ export async function updatePick(orgId, id, patch = {}, userId = null) {
     params.push(Array.isArray(value) ? JSON.stringify(value) : value)
     sets.push(`${column} = $${params.length}${Array.isArray(value) ? '::jsonb' : ''}`)
   }
-  if (!sets.length) return getImportRow(orgId, id)
+  if (!sets.length) return { row: await getImportRow(orgId, id), conflict: false }
 
   // ป้าย "แก้แล้วโดย …" — คนล่าสุดชนะ (ไม่ใช่ audit log · ดู migration touched-by)
   params.push(userId ?? null)
   sets.push(`touched_by = $${params.length}::int`, 'touched_at = CURRENT_TIMESTAMP')
 
-  await pool.query(
-    `UPDATE kanban_forum_import SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE org_id = $1 AND id = $2`, params
+  /**
+   * ⭐ เขียนได้ก็ต่อเมื่อแถวยังไม่ถูกใครแก้หลังจากที่หน้าจอคนนี้โหลดไป
+   *
+   * ปัญหาที่กัน: ทุกช่องส่ง **ทั้งชุด** ไม่ใช่เฉพาะตัวที่เพิ่งกด — คนที่ถือหน้าจอเก่ากดติ๊กสายงาน
+   * 1 ตัว จะเขียนทับสายงานที่อีกคนเพิ่งเพิ่มไว้หายเงียบๆ (user ถาม 2026-09-05)
+   * ไม่ส่ง version มา = เขียนทับตามเดิม (ของเก่า/สโมคที่ไม่มีรุ่นในมือ)
+   */
+  let guard = ''
+  if (version) { params.push(version); guard = ` AND i.updated_at <= $${params.length}::timestamptz` }
+
+  const { rowCount } = await pool.query(
+    `UPDATE kanban_forum_import i SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE i.org_id = $1 AND i.id = $2${guard}`, params
   )
-  return getImportRow(orgId, id)
+  // เขียนไม่ลง = มีคนแก้ไปก่อน → คืนค่าล่าสุดให้หน้าจอ ไม่ใช่ error เฉยๆ
+  return { row: await getImportRow(orgId, id), conflict: rowCount === 0 }
 }
 
 /**
