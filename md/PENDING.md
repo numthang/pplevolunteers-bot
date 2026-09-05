@@ -13,10 +13,9 @@ user สั่ง "posts ก่อน นอกนั้นจดไว้" — 
 - ⬜ `web/lib/kanbanUploads.js` — `save()` ตัวเดียวคุมทั้ง `saveKanbanFile`/`saveKanbanBuffer` (นำเข้ากระทู้ผ่าน `forumImportCommit.js`)
 - ⚠️ ทั้ง 2 ไฟล์เก็บ `mime` ลง DB ด้วย → ต้องใช้ mime ที่ **ตัวย่อคืนมา** ไม่ใช่ของไฟล์ต้นฉบับ (png → jpeg ได้)
 - ⚠️ allowlist มีไฟล์เสียง (mp3/m4a/ogg) ปนอยู่ — ตัวย่อข้ามให้เองแล้ว แต่อย่าไปแตะ `EXT_BY_MIME`
-- ⬜ **ไฟล์เก่าที่ค้างดิสก์** — `storage/posts` มีไฟล์เกิน 8 MB อยู่ 26/2338 ใบ (ใหญ่สุด 35 MB)
-  ถ้าจะไล่ย่อย้อนหลังต้องเขียน `scripts/posts/` ที่ **อัปเดต path ใน DB ด้วย** (`post_episode_media.path`,
-  `post_episode_media.bg_path`, `post_assets.path/mime/width/height/bytes/sha256`) เพราะย่อแล้วนามสกุลเปลี่ยน
-  — ห้ามทำเป็น migration (ต้องรันซ้ำได้)
+- ✅ **ไฟล์เก่าที่ค้างดิสก์ — เขียนสคริปต์แล้ว** `scripts/posts/shrinkExistingMedia.js` (dry run เป็นค่าเริ่มต้น)
+  dry run บน prod 2026-09-05: **389 ไฟล์ · 1,602 MB → 283 MB (คืนได้ 1.32 GB)**
+  ⬜ ยังไม่ได้รัน `--apply` จริง — รอ user เคาะ (แนะนำ `--limit=20` ก่อนแล้วเปิดดูรูปในเว็บ)
 
 ## ✨ Posts — โหมด AI "ร่างตามคำแนะนำ" (เสร็จ local 2026-09-05 · **ยังไม่ push/deploy · user ยังไม่กดทดสอบ**)
 
