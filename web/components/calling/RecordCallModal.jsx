@@ -325,7 +325,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     <div
       className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center px-1.5 py-3 sm:p-6"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => {
+        if (e.target !== e.currentTarget) return
+        // ⛔ พื้นหลังนี้เป็นตัว scroll เอง (overflow-y-auto) → กดแถบ scroll ก็นับเป็นคลิกพื้นหลัง = ปิดเอง
+        //    clientWidth/Height ไม่นับแถบ scroll → offset ที่เกินออกไป = โดนแถบ ไม่ใช่พื้นหลัง
+        const { offsetX, offsetY } = e.nativeEvent
+        if (offsetX > e.currentTarget.clientWidth || offsetY > e.currentTarget.clientHeight) return
+        onClose()
+      }}
     >
       <div className="bg-white dark:bg-disc-hover rounded-xl w-full max-w-3xl shadow-xl flex flex-col max-h-[90vh]">
 

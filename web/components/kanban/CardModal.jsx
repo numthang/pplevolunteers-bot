@@ -374,7 +374,15 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     // ปิด 3 ทาง — ทางที่ 2: คลิกนอกกล่อง
     <div
       className="fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 overflow-y-auto"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return
+        // ⛔ ตัวพื้นหลังนี้เป็นตัว scroll เอง (overflow-y-auto) → กดบน "แถบ scroll" ก็ยิง mousedown
+        //    ที่ตัวมันเหมือนกดพื้นหลัง = โมดัลปิดตอนจับแถบเลื่อน (user เจอจริง 2026-09-06)
+        //    clientWidth/Height ไม่นับแถบ scroll → offset ที่เกินออกไป = โดนแถบ ไม่ใช่พื้นหลัง
+        const { offsetX, offsetY } = e.nativeEvent
+        if (offsetX > e.currentTarget.clientWidth || offsetY > e.currentTarget.clientHeight) return
+        requestClose()
+      }}
     >
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg w-full max-w-2xl my-auto">
         <div className="flex items-start justify-between gap-2 p-4 sm:p-6 border-b border-warm-200 dark:border-disc-border">

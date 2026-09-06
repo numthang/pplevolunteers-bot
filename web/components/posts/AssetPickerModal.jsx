@@ -23,7 +23,14 @@ export default function AssetPickerModal({ onClose, onPick }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => {
+        if (e.target !== e.currentTarget) return
+        // ⛔ พื้นหลังนี้เป็นตัว scroll เอง (overflow-y-auto) → กดแถบ scroll ก็นับเป็นคลิกพื้นหลัง = ปิดเอง
+        //    clientWidth/Height ไม่นับแถบ scroll → offset ที่เกินออกไป = โดนแถบ ไม่ใช่พื้นหลัง
+        const { offsetX, offsetY } = e.nativeEvent
+        if (offsetX > e.currentTarget.clientWidth || offsetY > e.currentTarget.clientHeight) return
+        onClose()
+      }}
     >
       <div className="w-full max-w-4xl my-8 rounded-xl bg-card-bg border border-warm-200 dark:border-disc-border p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
