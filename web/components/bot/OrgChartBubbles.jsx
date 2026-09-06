@@ -14,11 +14,20 @@ import { el, avatarMarkup, fmtInt, fmtVoice } from './orgchartSvg.js'
 // จอแคบ 100 ฟองจะโดนบีบจนชนพื้นขนาดต่ำสุดเท่ากันหมด = อ่านอันดับจากขนาดไม่ได้เลย
 const LIMIT_DESKTOP = 100
 const LIMIT_MOBILE = 40
-const FILL_AREA = 0.6          // สัดส่วนพื้นที่กรอบที่ฟองทุกใบรวมกันกินได้ — เกินนี้จะอัดกันจนไม่เหลือช่องว่าง
+const FILL_AREA = 0.5          // สัดส่วนพื้นที่กรอบที่ฟองทุกใบรวมกันกินได้ — เกินนี้จะอัดกันจนไม่เหลือช่องว่าง
 const R_MIN = 15
 const R_MAX = 92
 const IDLE_ALPHA = 0.015       // ลอยเอื่อยๆ ตลอด — 100 โหนดคิดไม่ถึง 1ms/tick แต่ต้องหยุดตอนแท็บไม่ได้ดู
 const DRAG_ALPHA = 0.18
+// ฟองต้องล่องลอยไปมาตลอด ไม่ใช่นิ่งเป็นภาพนิ่ง — ลองมาแล้ว 2 ท่าที่ไม่ผ่าน:
+//   1. alphaTarget อย่างเดียว → พอแรงเข้าสมดุลก็นิ่งค้าง (วัดได้ 0.5px ต่อ 3 วินาที)
+//   2. แรงสุ่มรายเฟรม → ทิศสุ่มหักล้างกันเอง + โดน velocityDecay กิน
+//   3. คลื่นไซน์ประจำตัว → ขยับจริง แต่ครบคาบก็วนกลับที่เดิม = "หายใจอยู่กับที่" ไม่ใช่ลอยไปไหน
+// ที่ใช้จริง: ทิศทางประจำตัวที่ค่อยๆ หมุนทีละนิด (correlated random walk) — ไม่วนกลับที่เดิม
+// จึงล่องลอยไปเรื่อยๆ ตราบที่แท็บยังเปิดอยู่ · ขอบกรอบกับ collide เป็นตัวกันไม่ให้หลุดหรือทับกัน
+const WANDER = 0.16            // แรงดันไปตามทิศประจำตัว (px/tick²) — เบามาก เอาแค่ให้ไหลไม่หยุด
+const TURN = 0.06              // ทิศหมุนได้มากสุดกี่เรเดียนต่อเฟรม — ยิ่งน้อยยิ่งลอยเป็นเส้นยาว
+const VELOCITY_DECAY = 0.45    // หน่วงมากกว่าค่าปกติ = ทุกอย่างเคลื่อนช้าๆ ทั้งตอนจัดเรียงและตอนลอย
 const HALO = 1.18              // รัศมีวงเรืองแสงรอบนอก เทียบกับตัวฟอง
 
 // 3 สีขอบ — **ยังสุ่มอยู่ (ชั่วคราว)** เพราะยังไม่มีตัวเลข +/- ให้ใช้จริง
@@ -40,6 +49,17 @@ function toneOf(id) {
   return TONES.flat
 }
 
+// ระยะห่างระหว่างฟอง — สุ่มต่อคนแต่มีเพดาน (5–14px) ให้ดูมีจังหวะแบบ cryptobubbles
+// ไม่ใช่อัดชนกันหมดเหมือนลูกโป่งในถุง · สุ่มจาก id เหมือนสี จะได้ไม่ขยับใหม่ตอนย่อจอ
+const PAD_MIN = 5
+const PAD_SPREAD = 10
+function padOf(id) {
+  const s = String(id)
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0
+  return PAD_MIN + (h % PAD_SPREAD)
+}
+
 const gradId = id => `ocb-g${String(id).slice(-10)}`
 
 export default function OrgChartBubbles({ cardClass = '', days = null, blurAvatars = false }) {
@@ -54,6 +74,7 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
   const nodesRef = useRef([])
   const sizeRef = useRef({ w: 0, h: 0 })
   const dragRef = useRef(null)
+  const startRef = useRef(Date.now())
   const calmRef = useRef(false)   // prefers-reduced-motion → นิ่งสนิทหลังจัดที่เสร็จ
 
   const load = useCallback(() => {
@@ -95,7 +116,9 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
     const nodes = members.map((m, i) => {
       const old = prev.get(m.discordId)
       return {
-        ...m, r: radii[i], name: m.name || t('unknownMember'),
+        ...m, r: radii[i], pad: padOf(m.discordId), name: m.name || t('unknownMember'),
+        // ทิศล่องลอยประจำตัว — สุ่มตอนสร้าง แล้วค่อยๆ หมุนเองทุกเฟรม
+        head: Math.random() * Math.PI * 2,
         // จัดที่ใหม่ = เริ่มจากตำแหน่งเดิมถ้าเคยมี ไม่งั้นกระจายเป็นวงจากกลาง (ใบใหญ่อยู่ใน)
         x: old?.x ?? w / 2 + Math.cos(i * 2.399) * (40 + i * 3),
         y: old?.y ?? h / 2 + Math.sin(i * 2.399) * (40 + i * 3),
@@ -134,13 +157,23 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
     simRef.current?.stop()
     // ดูดแนวตั้งแรงกว่าแนวนอน — แรงเท่ากันจะได้กองกลมกลางจอ เหลือขอบซ้ายขวาว่างทั้งแถบ
     const sim = forceSimulation(nodes)
-      .force('x', forceX(w / 2).strength(0.022))
-      .force('y', forceY(h / 2).strength(0.075))
-      .force('collide', forceCollide(d => d.r + 2).iterations(2))
+      .force('x', forceX(w / 2).strength(0.012))
+      .force('y', forceY(h / 2).strength(0.045))
+      .force('collide', forceCollide(d => d.r + d.pad).iterations(2))
       .alphaDecay(0.02)
+      .velocityDecay(VELOCITY_DECAY)
       .on('tick', () => {
         const { w: bw, h: bh } = sizeRef.current
+        // ⛔ ห้ามมีเงื่อนไขไหนทำให้ wander เป็น 0 หรือช้าลงอีก — เคยผูกไว้กับ prefers-reduced-motion
+        //    แล้ว user เจอ "โหลดมาขยับสวย พอเข้าที่แล้วตายนิ่ง" ทั้งที่เครื่องผมวัดว่ายังขยับ (ทัก 3 รอบ)
+        //    ความเร็วเท่ากันทุกเครื่อง · ถ้าจะให้หยุดได้ ต้องเป็นปุ่มในหน้าที่ user กดเอง ไม่ใช่เดาจากค่าระบบ
+        const wander = WANDER
         for (const n of nodes) {
+          if (wander && n.fx == null) {
+            n.head += (Math.random() - 0.5) * TURN
+            n.vx += Math.cos(n.head) * wander
+            n.vy += Math.sin(n.head) * wander
+          }
           // กันหลุดกรอบ — ไม่มี wall force ใน d3 ต้อง clamp เอง · เผื่อวงเรืองแสงด้วย ไม่งั้นแสงโดนขอบตัด
           const pad = n.r * HALO
           n.x = Math.max(pad, Math.min(bw - pad, n.x))
@@ -148,8 +181,10 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
           n._g?.setAttribute('transform', `translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})`)
         }
       })
-    if (!calmRef.current) sim.alphaTarget(IDLE_ALPHA)
-    sim.alpha(1).restart()
+    // alphaTarget > alphaMin = ตัวจับเวลาของ d3 ไม่มีวันหยุดเอง — ต้องตั้งเสมอ ไม่มีเงื่อนไข
+    sim.alphaTarget(IDLE_ALPHA)
+    // เริ่มที่พลังงานต่ำ — alpha 1 ทำให้ฟองพุ่งเข้าที่แบบสะบัด ดูรีบร้อน
+    sim.alpha(0.45).restart()
     simRef.current = sim
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members])
@@ -169,13 +204,24 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
     return () => { clearTimeout(timer); ro.disconnect() }
   }, [build])
 
+  // ยามเฝ้า — ไม่ว่าอะไรจะทำให้ simulation หยุด (เบราว์เซอร์หน่วง แท็บสลับ ค่าเพี้ยน) ปลุกกลับมาเสมอ
+  // ราคาถูกมาก: เช็คตัวเลขตัวเดียวทุก 4 วินาที · หน้านี้ต้องลอยตลอดเวลาเป็นข้อกำหนดของ user
+  useEffect(() => {
+    const id = setInterval(() => {
+      const sim = simRef.current
+      if (!sim || document.hidden) return
+      if (sim.alpha() < IDLE_ALPHA * 0.95) sim.alphaTarget(IDLE_ALPHA).restart()
+    }, 4000)
+    return () => clearInterval(id)
+  }, [])
+
   // แท็บไม่ได้ดูอยู่ = หยุดคำนวณ ไม่กินแบตฟรี
   useEffect(() => {
     const onVis = () => {
       const sim = simRef.current
       if (!sim) return
       if (document.hidden) sim.stop()
-      else if (!calmRef.current) sim.alphaTarget(IDLE_ALPHA).restart()
+      else sim.alphaTarget(IDLE_ALPHA).restart()
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
@@ -270,7 +316,7 @@ export default function OrgChartBubbles({ cardClass = '', days = null, blurAvata
       d.n._g?.classList.remove('is-dragging')
       dragRef.current = null
       svg.releasePointerCapture?.(e.pointerId)
-      simRef.current?.alphaTarget(calmRef.current ? 0 : IDLE_ALPHA)
+      simRef.current?.alphaTarget(IDLE_ALPHA)   // ปล่อยฟองแล้วต้องลอยต่อเสมอ ไม่ตกลงเป็น 0
     }
     svg.addEventListener('pointermove', onMove)
     svg.addEventListener('pointerup', onUp)

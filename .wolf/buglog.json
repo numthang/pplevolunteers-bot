@@ -8257,6 +8257,24 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-06T09:39:01.876Z"
+    },
+    {
+      "id": "bug-453",
+      "timestamp": "2026-09-06T11:11:40.223Z",
+      "error_message": "/team ฟองสบู่: โหลดมาจัดเรียงสวย แต่พอเข้าที่แล้วหยุดนิ่งสนิท (user ทัก 3 รอบ ทั้งที่เครื่อง dev วัดว่ายังขยับ)",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "ผูกการเคลื่อนไหวไว้กับ prefers-reduced-motion: เครื่องที่เปิดค่านั้น wander=0 และไม่ตั้ง alphaTarget → d3 simulation ตายหลัง settle · เครื่องทดสอบ headless คืน false ตลอด เลยวัดไม่เจอ (ต้อง emulate ด้วย CDP Emulation.setEmulatedMedia ถึงจะ reproduce ได้)",
+      "fix": "ตัดเงื่อนไขทิ้ง ความเร็วเท่ากันทุกเครื่อง + ตั้ง alphaTarget เสมอ + ยามเฝ้า setInterval 4 วิ ปลุก sim ถ้า alpha ตก · การหยุดต้องเป็นปุ่มที่ user กดเอง ไม่ใช่เดาจากค่าระบบ",
+      "tags": [
+        "d3-force",
+        "animation",
+        "prefers-reduced-motion",
+        "team",
+        "bubbles",
+        "headless-blind-spot"
+      ],
+      "occurrences": 3,
+      "last_seen": "2026-09-06T11:11:40.223Z"
     }
   ]
 }

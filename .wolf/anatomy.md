@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T09:39:01.816Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T11:03:24.168Z
 > Files: 1140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -863,7 +863,7 @@
 
 ## web/app/api/case/[ref]/status/
 
-- `route.js` — POST /api/case/[ref]/status — เปลี่ยนสถานะ { status, close_reason?, public_note? } (~694 tok)
+- `route.js` — POST /api/case/[ref]/status — เปลี่ยนสถานะ { status, close_reason?, public_note? } (~729 tok)
 
 ## web/app/api/case/[ref]/timeline/
 
@@ -1984,7 +1984,7 @@
 - `BotChannelSettings.jsx` — ช่องตั้ง news_channel_id + social_alert_channel_id · autosave + beforeunload (~700 tok)
 - `BotSettingsNav.jsx` — sidebar ของ /bot (ภาพรวม/ยศ/AI/Quote/Watermark) · pattern เดียวกับ OrgSettingsNav โดยตั้งใจ (~450 tok)
 - `OrgChartBubbles.jsx` — LIMIT_DESKTOP (~4465 tok)
-- `OrgChartClient.jsx` — GROUP_LUCIDE (~19484 tok)
+- `OrgChartClient.jsx` — GROUP_LUCIDE (~19530 tok)
 - `orgchartSvg.js` — เครื่องมือวาด SVG ที่ใช้ร่วมกันระหว่างผังทีม (OrgChartClient) กับกระดานอันดับ (OrgChartBubbles) (~640 tok)
 
 ## web/components/calling/

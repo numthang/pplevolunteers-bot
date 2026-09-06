@@ -42,7 +42,8 @@ export async function POST(req, { params }) {
   // แจ้งในเธรดของเคส
   if (caseRow.discord_thread_id) {
     const reasonTxt = needsReason ? ` (${close_reason})` : ''
-    await postToThread(caseRow.discord_thread_id, `🔄 สถานะเคส ${caseRefLink(caseRow.ref)} → **${statusLabel(status)}**${reasonTxt}`)
+    const who = session.user.discordId ? `<@${session.user.discordId}>` : (session.user.nickname || 'มีคน')
+    await postToThread(caseRow.discord_thread_id, `🔄 ${who} เปลี่ยนสถานะเคส ${caseRefLink(caseRow.ref)} → **${statusLabel(status)}**${reasonTxt}`)
   }
 
   logAction({ orgId, app: 'cases', action: 'case.status_changed', actorId: session.user.userId, targetId: caseRow.ref, meta: { from: caseRow.status, to: status, close_reason: close_reason || null } })

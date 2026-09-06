@@ -387,7 +387,7 @@ export default function OrgChartClient() {
   }
   const [isDark, setIsDark] = useState(false)
   const [isFull, setIsFull] = useState(false)
-  const [bubbleDays, setBubbleDays] = useState(null)   // null = ตลอดกาล (ค่าเริ่มต้นของกระดานฟองสบู่)
+  const [bubbleDays, setBubbleDays] = useState(180)    // ค่าเริ่มต้น 180 วัน (user เคาะ 2026-09-06) · null = ตลอดกาล
   const [blurAvatars, setBlurAvatars] = useState(false)
   const [chipsOpen, setChipsOpen] = useState(false)   // ชิปกลุ่มบนมือถือ พับไว้ก่อน
   const [railOpen, setRailOpen] = useState(true)    // เปิดไว้ตั้งแต่แรก — เป็นที่เดียวที่อ่านคะแนนรายคนได้ครบ
