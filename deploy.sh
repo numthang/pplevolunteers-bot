@@ -44,6 +44,11 @@ if $IS_PRODUCTION; then
 GUILD_ARG=$1
 BOT_ONLY=$2
 export PATH=/www/server/nodejs/v24.14.0/bin:$PATH
+# npmrc ของ aaPanel บังคับ cache = /www/server/nodejs/cache ให้ทุก user ใช้ร่วมกัน
+# วันไหนมีคนรัน npm ในนาม tee (uid 1002) แฟ้มใน _cacache/tmp จะกลายเป็นของ tee
+# แล้ว deploy ที่รันเป็น www (uid 1000) จะตายด้วย EACCES ทันที (เกิดจริง 4 ก.ย. 2026)
+# → บังคับใช้ cache ของ www เอง จะได้ไม่ชนกับ user อื่นอีก
+export npm_config_cache=/home/www/.npm
 cd /www/wwwroot/pple-volunteers
 
 # จับเวลาแต่ละขั้น — เครื่อง prod มี 2 core + RAM 4GB จะรู้ว่าขั้นไหนกินเวลาจริงต้องวัด
@@ -64,7 +69,12 @@ git reset --hard origin/master
 step "git pull"
 
 # Bot
-npm install --omit=dev --no-audit --no-fund
+# ⛔ install ล้ม = หยุด deploy · npm cleanup ลบ package ค้างกลางทางได้ (เหลือแต่ dist/ ไม่มี package.json)
+#    วิ่งต่อไป build จะพังแบบ "Module not found" แล้วเว็บขึ้นด้วย .next ที่พัง = crash loop
+if ! npm install --omit=dev --no-audit --no-fund; then
+  echo "❌ npm install (bot) ล้ม — หยุด deploy"
+  exit 1
+fi
 step "npm install (bot)"
 
 # DB schema ต้องขึ้นก่อนโค้ดที่ใช้มันเสมอ — วางไว้ก่อน restart ทุกตัว
@@ -92,9 +102,16 @@ if [ "$BOT_ONLY" = "false" ]; then
   # Web — หยุด web ก่อน build เพื่อคืน RAM (กัน OOM: web เก่า + next build กิน RAM พร้อมกัน)
   pm2 stop pple-web 2>/dev/null || true
   cd web
-  npm install --omit=dev --no-audit --no-fund
+  if ! npm install --omit=dev --no-audit --no-fund; then
+    echo "❌ npm install (web) ล้ม — หยุด deploy (pple-web ถูก stop ไว้ ต้องแก้แล้ว deploy ใหม่)"
+    exit 1
+  fi
   step "npm install (web)"
-  npm run build
+  if ! npm run build; then
+    echo "❌ next build ล้ม — ไม่ restart pple-web ต่อ (.next พังอยู่ ขึ้นไปก็ crash loop)"
+    echo "   แก้เหตุแล้วรัน deploy ใหม่ · เว็บจะดับจนกว่าจะ build ผ่าน"
+    exit 1
+  fi
   step "next build"
   pm2 restart pple-web --time || pm2 start npm --name pple-web --time -- start
   pm2 save
