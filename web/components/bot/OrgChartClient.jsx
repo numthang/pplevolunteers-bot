@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen,
-  ChevronDown, Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, User, UsersRound, MessageSquare, Mic, AtSign, Flame,
+  ChevronDown, Eye, EyeOff, Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, User, UsersRound, MessageSquare, Mic, AtSign, Flame,
 } from 'lucide-react'
 import { el, avatarMarkup, fmtInt, fmtVoice } from './orgchartSvg.js'
 import OrgChartBubbles from './OrgChartBubbles.jsx'
@@ -387,6 +387,8 @@ export default function OrgChartClient() {
   }
   const [isDark, setIsDark] = useState(false)
   const [isFull, setIsFull] = useState(false)
+  const [bubbleDays, setBubbleDays] = useState(null)   // null = ตลอดกาล (ค่าเริ่มต้นของกระดานฟองสบู่)
+  const [blurAvatars, setBlurAvatars] = useState(false)
   const [chipsOpen, setChipsOpen] = useState(false)   // ชิปกลุ่มบนมือถือ พับไว้ก่อน
   const [railOpen, setRailOpen] = useState(true)    // เปิดไว้ตั้งแต่แรก — เป็นที่เดียวที่อ่านคะแนนรายคนได้ครบ
 
@@ -1091,7 +1093,6 @@ export default function OrgChartClient() {
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text">{t('title')}</h1>
-          <p className="text-sm text-warm-500 dark:text-disc-muted">{t('subtitle')}</p>
         </div>
         <div className={`${CARD} flex gap-0.5 p-1`}>
           {['chart', 'table', 'bubble'].map(v => (
@@ -1107,7 +1108,24 @@ export default function OrgChartClient() {
       {/* ตัวกรองทั้งแถวใช้กับ bubble ไม่ได้สักตัว (คนละฐานคะแนน ตลอดกาล ไม่แบ่งกลุ่ม)
           ปล่อยไว้แล้วกดไม่มีอะไรขยับ = ดูเหมือนพัง — สลับเป็นป้ายบอกขอบเขตแทน */}
       {view === 'bubble' ? (
-        <p className="text-xs font-semibold text-warm-900 dark:text-disc-text">{t('bubbleScope')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* ช่วงเวลาชุดเดียวกับผังเครือข่าย + "ตลอดกาล" ซึ่งเป็นค่าเริ่มต้นของกระดานนี้ */}
+          <div className={`${CARD} flex gap-0.5 p-1 w-full sm:w-auto`}>
+            {[null, ...DAYS_OPTIONS].map(d => (
+              <button key={d ?? 'all'} type="button" onClick={() => setBubbleDays(d)}
+                className={`flex-1 sm:flex-none whitespace-nowrap px-2.5 py-1.5 text-xs font-semibold rounded-lg tabular-nums ${
+                  d === bubbleDays ? 'bg-orange text-white' : 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'}`}>
+                {d ?? t('allTime')}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={() => setBlurAvatars(b => !b)} aria-pressed={blurAvatars}
+            className={`${CARD} flex items-center justify-center gap-1.5 px-3 py-2 w-full sm:w-auto text-xs font-semibold ${
+              blurAvatars ? 'text-orange' : 'text-warm-500 dark:text-disc-muted'}`}>
+            {blurAvatars ? <EyeOff size={13} /> : <Eye size={13} />} {t('blurAvatars')}
+          </button>
+          <p className="text-xs text-warm-500 dark:text-disc-muted">{t('bubbleScope')}</p>
+        </div>
       ) : (
       <div className="flex flex-wrap items-center gap-2">
         {/* จอมือถือ: ทุกกลุ่มปุ่มยืดเต็มความกว้างทีละแถว — เดิมกอง 4 บรรทัดไม่เท่ากันจนดูรก
@@ -1172,7 +1190,7 @@ export default function OrgChartClient() {
       <div className={`grid gap-4 items-start ${
         railOpen && !isFull && view !== 'bubble' ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
         {view === 'bubble' ? (
-          <OrgChartBubbles cardClass={CARD} />
+          <OrgChartBubbles cardClass={CARD} days={bubbleDays} blurAvatars={blurAvatars} />
         ) : view === 'chart' ? (
           <div ref={cardRef} className={`${CARD} relative p-2 ${isFull ? 'rounded-none border-0' : ''}`}>
             {!visibleGroups.length && (

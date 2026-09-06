@@ -141,17 +141,21 @@ export async function getOrgChartData(guildId, days = 180) {
 //     ได้คะแนน ≥80% จากการอยู่ห้องเสียง กลายเป็นกระดานวัดว่าใครแช่ห้องเสียงนานสุด
 const SCORE_VOICE_PER_MIN = 1
 
+// $3 = จำนวนวันย้อนหลัง · NULL = ตลอดกาล (ไม่กรองเวลาเลย) — เขียนเป็นเงื่อนไขเดียวใน SQL
+// จะได้ไม่ต้องมี SQL 2 ชุดให้หลุดแก้ข้างเดียว
 const RANKING_SQL = `
 WITH msg AS (
   SELECT user_id, SUM(message_count) AS messages, SUM(voice_seconds) AS voice_seconds
     FROM dc_activity_daily
    WHERE guild_id = $1
+     AND ($3::int IS NULL OR date >= CURRENT_DATE - $3::int * INTERVAL '1 day')
    GROUP BY user_id
 ),
 men AS (
   SELECT user_id, COUNT(*) AS mentions
     FROM dc_activity_mentions
    WHERE guild_id = $1
+     AND ($3::int IS NULL OR timestamp >= NOW() - $3::int * INTERVAL '1 day')
    GROUP BY user_id
 ),
 scored AS (
@@ -176,11 +180,12 @@ SELECT s.discord_id, s.messages, s.voice_seconds, s.mentions, s.score,
 `
 
 /**
- * อันดับคะแนนรวมรายคนทั้ง guild ตลอดกาล (ไม่แบ่งบทบาท/กลุ่ม) — ใช้กับ view bubble ของ /team
+ * อันดับคะแนนรวมรายคนทั้ง guild (ไม่แบ่งบทบาท/กลุ่ม) — ใช้กับ view bubble ของ /team
+ * days = null คือตลอดกาล · ใส่ตัวเลขคือย้อนหลังกี่วัน (ชุดเดียวกับปุ่มของผังเครือข่าย)
  * คืน [{ rank, discordId, name, avatar, messages, voiceSeconds, voiceMinutes, mentions, score }]
  */
-export async function getMemberRanking(guildId, limit = 100) {
-  const { rows } = await pool.query(RANKING_SQL, [guildId, limit])
+export async function getMemberRanking(guildId, limit = 100, days = null) {
+  const { rows } = await pool.query(RANKING_SQL, [guildId, limit, days])
   return rows.map((row, i) => ({
     rank: i + 1,
     discordId: row.discord_id,

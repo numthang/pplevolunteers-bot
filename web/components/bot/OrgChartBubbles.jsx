@@ -42,7 +42,7 @@ function toneOf(id) {
 
 const gradId = id => `ocb-g${String(id).slice(-10)}`
 
-export default function OrgChartBubbles({ cardClass = '' }) {
+export default function OrgChartBubbles({ cardClass = '', days = null, blurAvatars = false }) {
   const t = useTranslations('bot.orgchart')
   const [members, setMembers] = useState(null)
   const [error, setError] = useState(null)
@@ -59,11 +59,11 @@ export default function OrgChartBubbles({ cardClass = '' }) {
   const load = useCallback(() => {
     setError(null); setMembers(null)
     const limit = window.innerWidth < 640 ? LIMIT_MOBILE : LIMIT_DESKTOP
-    fetch(`/api/bot/orgchart/ranking?limit=${limit}`)
+    fetch(`/api/bot/orgchart/ranking?limit=${limit}${days ? `&days=${days}` : ''}`)
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => { if (ok) setMembers(d.members || []); else setError(d.error || t('loadFailed')) })
       .catch(() => setError(t('loadFailed')))
-  }, [t])
+  }, [t, days])
 
   useEffect(() => {
     load()
@@ -334,6 +334,8 @@ export default function OrgChartBubbles({ cardClass = '' }) {
     <div className={`${cardClass} relative p-2`}>
       <style jsx global>{`
         .ocb-canvas { touch-action: none; display: block; }
+        /* เบลอเฉพาะรูปจริง — วงกลมสีที่เป็น placeholder ไม่มีอะไรให้ปิดบัง */
+        .ocb-canvas.is-blur image { filter: blur(3.5px); }
         .ocb-node { cursor: grab; }
         .ocb-node.is-dragging { cursor: grabbing; }
         .ocb-halo { pointer-events: none; }
@@ -344,7 +346,7 @@ export default function OrgChartBubbles({ cardClass = '' }) {
         .ocb-node:focus-visible { outline: 2px solid var(--brand-orange, #ff6a13); outline-offset: 2px; }
       `}</style>
       <div ref={boxRef} className="w-full h-[calc(100vh-285px)] min-h-[440px]">
-        <svg ref={svgRef} className="ocb-canvas w-full h-full text-warm-900 dark:text-disc-text"
+        <svg ref={svgRef} className={`ocb-canvas w-full h-full text-warm-900 dark:text-disc-text ${blurAvatars ? 'is-blur' : ''}`}
           role="img" aria-label={t('viewBubble')} />
       </div>
       <div ref={tipRef} className="oc-tip" role="tooltip" aria-hidden="true" />

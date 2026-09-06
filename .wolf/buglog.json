@@ -8143,6 +8143,120 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-06T08:06:43.670Z"
+    },
+    {
+      "id": "bug-0468",
+      "timestamp": "2026-09-06T00:00:00+07:00",
+      "error_message": "npm error code EACCES open /www/server/nodejs/cache/_cacache/tmp/... + Module not found: Can't resolve 'd3-force'",
+      "file": "deploy.sh",
+      "root_cause": "aaPanel npmrc บังคับ cache ร่วม /www/server/nodejs/cache; มีคนรัน npm ในนาม tee (uid 1002) ทำให้ _cacache/tmp เป็นของ tee แล้ว deploy ที่รันเป็น www (uid 1000) เขียนไม่ได้ = EACCES. deploy.sh ไม่เช็ค exit code ของ npm install จึงวิ่งต่อไป build ทั้งที่ npm cleanup ลบ web/node_modules/d3-force ค้าง (เหลือ dist/ src/ ไม่มี package.json) -> next build fail -> pm2 restart pple-web ด้วย .next ที่พัง = crash loop 419 รอบ",
+      "fix": "export npm_config_cache=/home/www/.npm ในบล็อก production ของ deploy.sh + ห่อ npm install (bot/web) และ npm run build ด้วย if ! ... exit 1; แก้เฉพาะหน้าบน prod: rm -rf web/node_modules/d3-force แล้ว npm install ใหม่ด้วย cache ใหม่ + rebuild + pm2 restart (commit 2840c56)",
+      "tags": [
+        "deploy",
+        "npm",
+        "permissions",
+        "prod",
+        "aapanel",
+        "pm2"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-06"
+    },
+    {
+      "id": "bug-469",
+      "timestamp": "2026-09-06T09:23:44.742Z",
+      "error_message": "Significant refactor of orgchart.js",
+      "file": "web/db/orgchart.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:23:44.742Z"
+    },
+    {
+      "id": "bug-470",
+      "timestamp": "2026-09-06T09:24:00.024Z",
+      "error_message": "Significant refactor of route.js",
+      "file": "web/app/api/bot/orgchart/ranking/route.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 15→20 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:24:00.024Z"
+    },
+    {
+      "id": "bug-471",
+      "timestamp": "2026-09-06T09:25:13.933Z",
+      "error_message": "Null/undefined access in OrgChartClient.jsx",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:25:13.933Z"
+    },
+    {
+      "id": "bug-472",
+      "timestamp": "2026-09-06T09:28:05.253Z",
+      "error_message": "Null/undefined access in mobileAudit.mjs",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:28:05.253Z"
+    },
+    {
+      "id": "bug-473",
+      "timestamp": "2026-09-06T09:38:02.931Z",
+      "error_message": "Wrong reference: 5px should be 2",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "Used \"5px\" instead of \"2\"",
+      "fix": "Changed 5px → 2",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:38:02.931Z"
+    },
+    {
+      "id": "bug-474",
+      "timestamp": "2026-09-06T09:39:01.876Z",
+      "error_message": "CSS fix: filter",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "filter: blur(2.5px) → blur(3.5px)",
+      "fix": "Changed filter: blur(2.5px) → blur(3.5px)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T09:39:01.876Z"
     }
   ]
 }

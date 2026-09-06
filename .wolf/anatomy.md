@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T08:02:48.895Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T09:39:01.816Z
 > Files: 1140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -458,7 +458,7 @@
 - `.tmp-cleanup-assignees.mjs` — CHROME: launchChrome (~1442 tok)
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
-- `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~6991 tok)
+- `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7090 tok)
 - `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~560 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
@@ -735,7 +735,7 @@
 
 ## web/app/api/bot/orgchart/ranking/
 
-- `route.js` — อันดับรายคนทั้งเซิร์ฟเวอร์ (view bubble ของ /team) — สิทธิ์เท่ากับ /api/bot/orgchart (~268 tok)
+- `route.js` — อันดับรายคนทั้งเซิร์ฟเวอร์ (view bubble ของ /team) — สิทธิ์เท่ากับ /api/bot/orgchart (~348 tok)
 
 ## web/app/api/bot/quote-config/
 
@@ -1983,8 +1983,8 @@
 - `AiMentionToggle.jsx` — สวิตช์ ai_mention ราย guild · ย้ายมาจากหน้า /bot/features ที่ถูกลบ · superadmin-only (~550 tok)
 - `BotChannelSettings.jsx` — ช่องตั้ง news_channel_id + social_alert_channel_id · autosave + beforeunload (~700 tok)
 - `BotSettingsNav.jsx` — sidebar ของ /bot (ภาพรวม/ยศ/AI/Quote/Watermark) · pattern เดียวกับ OrgSettingsNav โดยตั้งใจ (~450 tok)
-- `OrgChartBubbles.jsx` — LIMIT_DESKTOP (~4396 tok)
-- `OrgChartClient.jsx` — GROUP_LUCIDE (~19158 tok)
+- `OrgChartBubbles.jsx` — LIMIT_DESKTOP (~4465 tok)
+- `OrgChartClient.jsx` — GROUP_LUCIDE (~19484 tok)
 - `orgchartSvg.js` — เครื่องมือวาด SVG ที่ใช้ร่วมกันระหว่างผังทีม (OrgChartClient) กับกระดานอันดับ (OrgChartBubbles) (~640 tok)
 
 ## web/components/calling/
@@ -2131,7 +2131,7 @@
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
 - `orgAiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI (~1029 tok)
-- `orgchart.js` — ทุก role ที่ config ไว้ (dc_orgchart_config) ของ guild นี้ พร้อม top-10 คนแอคทีฟสุดต่อ role (~2397 tok)
+- `orgchart.js` — ทุก role ที่ config ไว้ (dc_orgchart_config) ของ guild นี้ พร้อม top-10 คนแอคทีฟสุดต่อ role (~2509 tok)
 - `orgConfig.js` — web/db/orgConfig.js — org-level KV config (org_config table) (~784 tok)
 - `orgInviteLinks.js` — Invite link เข้า org แบบ Notion — ลิงก์เดียวแชร์ได้ ใครเปิด+login ก็เข้าร่วม (~1234 tok)
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~2663 tok)

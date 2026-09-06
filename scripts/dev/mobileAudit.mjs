@@ -343,8 +343,12 @@ const PROBE = (target, mode = 'overflow') => `(() => {
 
       // K — ของเยอะเกินในแถวเดียว (ต้องมีปุ่ม/ตัวควบคุมอย่างน้อย 3 ถึงเรียกว่า "แถบเครื่องมือ")
       if (kidsM.length >= CROWD) {
-        const inter = [...el.children].filter((ch) => ch.matches(ISEL) || ch.querySelector(ISEL)).length
-        if (inter >= 3) tidy.push({ type: 'K', px: kidsM.length, note: \`\${kidsM.length} ชิ้นในแถวเดียว\`, ...describe(el) })
+        const kids = [...el.children].filter((ch) => meta.get(ch)?.vis)
+        const inter = kids.filter((ch) => ch.matches(ISEL) || ch.querySelector(ISEL)).length
+        // ชุดปุ่มตัวเลือกเดียวกันทั้งแถว (segmented control เช่น 30/60/90/180/365) ไม่ใช่ของรก
+        // — เป็นตัวเลือกชุดเดียวที่ผู้ใช้อ่านรวดเดียว ต่างจากแถบที่เอาของคนละชนิดมากอง
+        const uniform = kids.every((ch) => ch.matches(ISEL)) && new Set(kids.map((ch) => ch.tagName)).size === 1
+        if (inter >= 3 && !uniform) tidy.push({ type: 'K', px: kidsM.length, note: \`\${kidsM.length} ชิ้นในแถวเดียว\`, ...describe(el) })
       }
 
       // G2 — ช่องไฟระหว่างของในแถวไม่สม่ำเสมอ (ข้ามแถวที่ตั้งใจดันหัว-ท้าย)
