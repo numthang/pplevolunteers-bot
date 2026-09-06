@@ -23,6 +23,15 @@
  *      (user สั่งให้ตรวจด้วย 2026-09-01: "ทำให้ equal fluid 100% in mobile view")
  *      **ไม่นับเป็นข้อผิดพลาด (ไม่ทำให้ exit 1)** — เป็นคำแนะนำ บางแถวตั้งใจไม่เต็มก็มี ใช้ตาตัดสิน
  *
+ * โหมด tidy (`--mode tidy` หรือ `both` · user สั่ง 2026-09-06 "ให้มัน fluid เป็นระเบียบ ไม่มี tool รกรุงรัง")
+ * ทั้งชุด **เป็นคำแนะนำล้วน ไม่ทำให้ exit 1** — ความเป็นระเบียบตัดสินด้วยตาคน เครื่องแค่ชี้จุด:
+ *   T  ปุ่ม/ลิงก์เล็กกว่านิ้ว      เล็กกว่า 44px **ทั้งสองด้าน** (ไม่ใช่ด้านเดียวตามมาตรฐาน — สเกลปุ่ม
+ *      ของโปรเจกต์นี้สูง 32px ทั้งเว็บโดยตั้งใจ ใช้กฎเต็มจะยิงทุกปุ่มจนอ่านไม่ออกว่าอันไหนพังจริง)
+ *   F  แถวปุ่ม/ลิงก์ไม่เต็มความกว้าง   กฎ E ฉบับขยาย (ข้ามแถว justify-between ที่ตั้งใจดันหัว-ท้าย)
+ *   K  รกในแถวเดียว              ลูกตั้งแต่ 6 ชิ้น และมีปุ่ม/ตัวควบคุมอย่างน้อย 3 → ควรยุบเข้าเมนู
+ *   G  ไม่เป็นระเบียบ             ขอบซ้าย/ขวาต่างกันเกิน 8px · ช่องไฟในแถวเดียวต่างกันเกิน 6px
+ *      (ข้ามกล่องที่มี text node ปนกับ element — ระยะที่คร่อมตัวหนังสือไม่ใช่ช่องไฟ)
+ *
  * ⚠️ ข้อจำกัด: เห็นเฉพาะสิ่งที่ render อยู่จริงในสถานะที่สคริปต์พาไปถึง (ดู steps ใน
  *    mobileAudit.routes.mjs) — **ยังไม่แทนการกดจริงในเบราว์เซอร์** แค่ตัดงานค้นหาจุดล้นออกจาก user
  *
@@ -48,10 +57,14 @@ const OUT_DIR = '.wolf/mobile-audit'
 
 // ───────────────────────────── args ─────────────────────────────
 function parseArgs(argv) {
-  const a = { base: 'http://localhost:3000', width: 375, height: 812, shot: false, routes: null, all: false, debug: false }
+  const a = { base: 'http://localhost:3000', width: 375, height: 812, shot: false, routes: null, all: false, debug: false, mode: 'overflow' }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
     if (v === '--all') a.all = true
+    else if (v === '--mode') {
+      a.mode = argv[++i]
+      if (!['overflow', 'tidy', 'both'].includes(a.mode)) { console.error(`--mode ต้องเป็น overflow | tidy | both`); process.exit(2) }
+    }
     else if (v === '--shot') a.shot = true
     else if (v === '--debug') a.debug = true
     else if (v === '--routes') a.routes = argv[++i].split(',').map((s) => s.trim()).filter(Boolean)
@@ -70,6 +83,9 @@ const HELP = `mobileAudit — ตรวจ layout จอมือถือ
   --width 375      ความกว้างจอ (ค่าเริ่มต้น 375 ตาม .wolf/config.json · ลองที่ 320 ดูขอบล่างสุดได้)
   --height 812     ความสูงจอ
   --base URL       ค่าเริ่มต้น http://localhost:3000 (dev server ของ user)
+  --mode MODE      overflow (ค่าเริ่มต้น · A/B/C/D/E) | tidy (T/F/K/G) | both
+                   tidy = "ฟลูอิดและเป็นระเบียบ" — ปุ่มเล็กเกินนิ้ว · แถวไม่เต็มความกว้าง ·
+                   ของรกในแถวเดียว · ขอบ/ช่องไฟไม่เท่ากัน · **เป็นคำแนะนำล้วน ไม่ทำให้ exit 1**
   --debug          พิมพ์ค่าที่วัดได้ดิบๆ ทุก state (ไว้ไล่ดูตอนสงสัยว่า probe ไม่จับ)
   --shot           เก็บภาพลง ${OUT_DIR}/ ด้วย (ไม่ใช่ค่าเริ่มต้น — รูปกิน token เยอะ)`
 
@@ -184,9 +200,15 @@ async function login(cdp, base, token) {
 }
 
 // ───────────────────────── probe (รันในหน้าเว็บ) ─────────────────────────
-const PROBE = (target) => `(() => {
+const PROBE = (target, mode = 'overflow') => `(() => {
   const W = ${target}                       // ⭐ ความกว้างจอที่สั่ง ไม่ใช่ innerWidth (ดูหัวไฟล์)
+  const OVERFLOW = ${mode !== 'tidy'}
+  const TIDY = ${mode !== 'overflow'}
+  const TAP_MIN = 44                        // มาตรฐาน tap target ของ iOS/Android
+  const CROWD = 6                           // ของกี่ชิ้นในแถวเดียวถึงเรียกว่ารก
+  const ISEL = 'button, a[href], [role="button"], input[type="button"], input[type="submit"], summary'
   const seen = []
+  const tidy = []
   const describe = (el) => ({
     tag: el.tagName.toLowerCase(),
     box: (() => { const r = el.getBoundingClientRect(); return \`\${Math.round(r.left)}→\${Math.round(r.right)} (w\${Math.round(r.width)})\` })(),
@@ -206,20 +228,26 @@ const PROBE = (target) => `(() => {
   }
 
   // B — ล้นขอบจอ (เอาเฉพาะตัวนอกสุด ไม่งั้นได้ลูกหลานเป็นร้อย)
-  const over = new Set()
-  for (const el of all) {
-    const m = meta.get(el)
-    if (!m.vis) continue
-    if (m.r.right > W + 1 || m.r.left < -1) over.add(el)
-  }
-  for (const el of over) {
-    if (el.parentElement && over.has(el.parentElement)) continue
-    const m = meta.get(el)
-    seen.push({ type: 'B', px: Math.round(Math.max(m.r.right - W, -m.r.left)), ...describe(el) })
+  if (OVERFLOW) {
+    const over = new Set()
+    for (const el of all) {
+      const m = meta.get(el)
+      if (!m.vis) continue
+      // ของข้างใน <svg> ถูก viewBox ครอบไว้อยู่แล้ว (overflow:hidden โดยปริยาย) — โหนดที่พิกัดอยู่นอกจอ
+      // ไม่ได้ "ล้น" ให้ใครเห็น · /team มีโหนดผังเป็นร้อย เคยรายงานล้น 3,800px ทุกครั้งจนกลบของจริง
+      // ตัว <svg> เองยังตรวจตามปกติ ถ้ากรอบมันล้นจอจริงก็ยังจับได้
+      if (el.ownerSVGElement) continue
+      if (m.r.right > W + 1 || m.r.left < -1) over.add(el)
+    }
+    for (const el of over) {
+      if (el.parentElement && over.has(el.parentElement)) continue
+      const m = meta.get(el)
+      seen.push({ type: 'B', px: Math.round(Math.max(m.r.right - W, -m.r.left)), ...describe(el) })
+    }
   }
 
   // C — โดน overflow-x ตัดหายเงียบๆ (ยกเว้น truncate ที่ตั้งใจตัดและมี … ให้เห็น)
-  for (const el of all) {
+  for (const el of OVERFLOW ? all : []) {
     const m = meta.get(el)
     if (!m.vis) continue
     if (el.scrollWidth <= el.clientWidth + 1) continue
@@ -238,9 +266,8 @@ const PROBE = (target) => `(() => {
   //    ตรวจ 16 โซนแล้วไม่ยิงสักจุด ทั้งที่หน้าจริงมีที่ว่างโล่ง · ต้องวัด **ทีละบรรทัดของพ่อ** ว่า
   //    บรรทัดนั้นกินความกว้างที่พ่อมีให้หมดไหม (นับที่ว่างทั้งหัวบรรทัดและท้ายบรรทัด เพราะ ml-auto
   //    ทำให้ของไปกองขวาแล้วเหลือช่องโหว่ซ้าย ซึ่งก็คือ "ไม่เต็มความกว้าง" เหมือนกัน)
-  if (W <= 640) {
-    const controls = [...document.querySelectorAll('select, textarea, input:not([type=checkbox]):not([type=radio]):not([type=hidden])')]
-    const checked = new Set()
+  const checked = new Set()      // กล่องที่สแกนไปแล้ว — ใช้ร่วมกับกฎ F ของโหมด tidy ไม่ให้รายงานซ้ำกล่องเดียวกัน
+  const scanRows = (controls, type, out) => {
     for (const c of controls) {
       const mc = meta.get(c)
       if (!mc || !mc.vis) continue
@@ -252,6 +279,7 @@ const PROBE = (target) => `(() => {
         checked.add(box)
         const bcs = getComputedStyle(box)
         if (!/flex|grid|block/.test(bcs.display)) continue
+        if (type === 'F' && /space-(between|around|evenly)/.test(bcs.justifyContent)) continue
         const br = box.getBoundingClientRect()
         const left = br.left + (parseFloat(bcs.paddingLeft) || 0)
         const right = br.right - (parseFloat(bcs.paddingRight) || 0)
@@ -275,13 +303,93 @@ const PROBE = (target) => `(() => {
         }
         for (const ln of lines) {
           const slack = Math.round((ln.l - left) + (right - ln.r))
-          if (slack > 32) { seen.push({ type: 'E', px: slack, ...describe(box) }); break }
+          if (slack > 32) { out.push({ type, px: slack, ...describe(box) }); break }
         }
       }
     }
   }
+  if (OVERFLOW && W <= 640) {
+    scanRows([...document.querySelectorAll('select, textarea, input:not([type=checkbox]):not([type=radio]):not([type=hidden])')], 'E', seen)
+  }
+
+  // ── โหมด tidy — "ฟลูอิดและเป็นระเบียบ" ทั้งชุดเป็นคำแนะนำ ไม่ทำให้ exit 1 ──
+  if (TIDY) {
+    // T — ปุ่ม/ลิงก์เล็กกว่านิ้ว (44×44)
+    for (const el of document.querySelectorAll(ISEL)) {
+      const m = meta.get(el)
+      if (!m || !m.vis) continue
+      if (el.closest('svg')) continue                        // โหนดกราฟ วัดแบบปุ่มไม่ได้
+      if (el.parentElement && el.parentElement.closest(ISEL)) continue   // ปุ่มซ้อนปุ่ม เอาตัวนอกพอ
+      if (m.cs.display === 'inline') continue                // ลิงก์ในย่อหน้า สูงตามบรรทัด = ปกติ
+      // ⚠️ ต้อง **เล็กทั้งสองด้าน** ถึงจะนับ — มาตรฐานจริงคือ 44 ด้านใดด้านหนึ่งก็ผิดแล้ว แต่สเกลปุ่ม
+      //    ของโปรเจกต์นี้สูง 32px ทั้งเว็บโดยตั้งใจ (md/WEB.md §Type scale) ถ้าใช้กฎเต็มจะยิงทุกปุ่ม
+      //    = เสียงรบกวนล้วน · ที่กดพลาดจริงคือไอคอนจิ๋ว 13×13 ซึ่งเล็กทั้งกว้างและสูง
+      const min = Math.min(m.r.width, m.r.height)
+      const max = Math.max(m.r.width, m.r.height)
+      if (min <= 0 || max >= TAP_MIN) continue
+      tidy.push({ type: 'T', px: Math.round(TAP_MIN - min), note: \`\${Math.round(m.r.width)}×\${Math.round(m.r.height)}\`, ...describe(el) })
+    }
+
+    // F — แถวที่มีปุ่ม/ลิงก์ (ไม่ใช่ช่องกรอก) แล้วไม่ยืดเต็มความกว้าง — กฎ E ฉบับขยาย
+    if (W <= 640) scanRows([...document.querySelectorAll(ISEL)], 'F', tidy)
+
+    for (const el of all) {
+      const m = meta.get(el)
+      if (!m.vis) continue
+      const cs = m.cs
+      const isRow = /flex|grid/.test(cs.display) && !cs.flexDirection.startsWith('column')
+      if (!isRow) continue
+      const kidsM = [...el.children].map((ch) => meta.get(ch)).filter((x) => x && x.vis)
+
+      // K — ของเยอะเกินในแถวเดียว (ต้องมีปุ่ม/ตัวควบคุมอย่างน้อย 3 ถึงเรียกว่า "แถบเครื่องมือ")
+      if (kidsM.length >= CROWD) {
+        const inter = [...el.children].filter((ch) => ch.matches(ISEL) || ch.querySelector(ISEL)).length
+        if (inter >= 3) tidy.push({ type: 'K', px: kidsM.length, note: \`\${kidsM.length} ชิ้นในแถวเดียว\`, ...describe(el) })
+      }
+
+      // G2 — ช่องไฟระหว่างของในแถวไม่สม่ำเสมอ (ข้ามแถวที่ตั้งใจดันหัว-ท้าย)
+      // ⚠️ ต้องข้ามกล่องที่มีตัวหนังสือลอยๆ ปนกับ element (text node ไม่ใช่ลูกที่วัด rect ได้)
+      //    ไม่งั้นระยะที่ "ข้ามตัวหนังสือ" จะถูกอ่านเป็นช่องไฟ 83px ทั้งที่เป็นคำอ่านปกติ (ชิปกลุ่มใน /team)
+      const mixedText = [...el.childNodes].some((nd) => nd.nodeType === 3 && nd.textContent.trim())
+      if (!mixedText && kidsM.length >= 3 && !/space-(between|around|evenly)/.test(cs.justifyContent)) {
+        const row = [...kidsM].sort((a, b) => a.r.left - b.r.left)
+        const wrapped = row.some((k) => k.r.top > row[0].r.bottom - 1)
+        const pushed = [...el.children].some((ch) => getComputedStyle(ch).marginLeft === 'auto')
+        if (!wrapped && !pushed) {
+          const gaps = []
+          for (let i = 1; i < row.length; i++) gaps.push(Math.round(row[i].r.left - row[i - 1].r.right))
+          const mx = Math.max(...gaps), mn = Math.min(...gaps)
+          if (mx - mn > 6) tidy.push({ type: 'G', px: mx - mn, note: \`ช่องไฟ \${mn}–\${mx}px\`, ...describe(el) })
+        }
+      }
+    }
+
+    // G1 — ขอบซ้าย/ขวาของกล่องเนื้อหาไม่เท่ากัน (เอาเฉพาะตัวนอกสุด)
+    const asym = new Set()
+    for (const el of all) {
+      const m = meta.get(el)
+      if (!m.vis || m.r.width < W * 0.6) continue
+      if (/^(input|textarea|select|button|a|img|svg|table)$/.test(el.tagName.toLowerCase())) continue
+      const l = Math.round(m.r.left), rg = Math.round(W - m.r.right)
+      if (l < 0 || rg < 0 || Math.abs(l - rg) <= 8) continue
+      asym.add(el)
+    }
+    for (const el of asym) {
+      if (el.parentElement && asym.has(el.parentElement)) continue
+      const m = meta.get(el)
+      const l = Math.round(m.r.left), rg = Math.round(W - m.r.right)
+      tidy.push({ type: 'G', px: Math.abs(l - rg), note: \`ขอบซ้าย \${l}px / ขวา \${rg}px\`, ...describe(el) })
+    }
+  }
+
+  // แยกโควตาต่อชนิด — px ของแต่ละกฎคนละหน่วย (px กับ "จำนวนชิ้น") เรียงรวมแล้วกฎที่ตัวเลขเล็กจะถูกเบียดหายทั้งกฎ
+  const capped = []
+  for (const type of ['T', 'F', 'K', 'G']) {
+    capped.push(...tidy.filter((f) => f.type === type).sort((a, b) => b.px - a.px).slice(0, 6))
+  }
 
   return {
+    tidy: capped,
     path: location.pathname + location.search,
     title: document.title,
     scrollWidth: document.documentElement.scrollWidth,
@@ -317,7 +425,7 @@ async function auditRoute(cdp, args, route) {
   await settleDom(cdp, route.settle)
 
   const states = []
-  const first = await cdp.eval(PROBE(args.width))
+  const first = await cdp.eval(PROBE(args.width, args.mode))
   states.push({ state: 'โหลดหน้า', ...first })
 
   // ⚠️ ถ่ายรูป **ตรงนี้** ไม่ใช่ท้ายฟังก์ชัน — ถ่ายท้ายจะได้สภาพหลังเดิน steps ครบ
@@ -342,7 +450,7 @@ async function auditRoute(cdp, args, route) {
       if (!hit) { states.push({ state: `${step.label} — ⚠️ หา selector ไม่เจอ (${step.click})`, findings: [], missing: true }); continue }
       await sleep(step.settle ?? 400)
       await settleDom(cdp, 200)
-      states.push({ state: step.label, ...(await cdp.eval(PROBE(args.width))) })
+      states.push({ state: step.label, ...(await cdp.eval(PROBE(args.width, args.mode))) })
     }
   }
 
@@ -393,9 +501,11 @@ async function main() {
         const expanded = s.innerWidth > s.target + 1
         const fresh = s.findings.filter((f) => !shown.has(keyOf(f)))
         fresh.forEach((f) => shown.add(keyOf(f)))
-        if (!tooWide && !expanded && !fresh.length) continue
+        const tips = (s.tidy || []).filter((f) => !shown.has(keyOf(f)))
+        tips.forEach((f) => shown.add(keyOf(f)))
+        if (!tooWide && !expanded && !fresh.length && !tips.length) continue
         if (tooWide || expanded || fresh.some((f) => f.type !== 'E')) hardHit = true
-        advisory += fresh.filter((f) => f.type === 'E').length
+        advisory += fresh.filter((f) => f.type === 'E').length + tips.length
         lines.push(`  [${s.state}]`)
         if (tooWide) lines.push(`    A · หน้ากว้าง ${s.scrollWidth}px เกินจอ ${s.target}px`)
         if (expanded) lines.push(`    D · จอถูกถ่างเป็น ${s.innerWidth}px (Chrome ย่อหน้าลงให้พอดี = สิ่งที่คนเห็นว่า "แหก")`)
@@ -405,13 +515,24 @@ async function main() {
             : `    ${f.type} · เกิน ${f.px}px · <${f.tag}> ${f.box} "${f.txt}"`)
           lines.push(`        ${f.cls}`)
         }
+        // โหมด tidy — คำแนะนำล้วน ไม่แตะ hardHit
+        for (const f of tips) {
+          const head = {
+            T: `T · ปุ่ม/ลิงก์เล็กกว่านิ้ว ${f.note} (ขั้นต่ำ 44×44)`,
+            F: `F · แถวปุ่มไม่เต็มความกว้าง เหลือที่ว่าง ${f.px}px`,
+            K: `K · รกในแถวเดียว — ${f.note} พิจารณายุบเข้าเมนู/ซ่อนบางตัว`,
+            G: `G · ไม่เป็นระเบียบ — ${f.note}`,
+          }[f.type]
+          lines.push(`    ${head} · <${f.tag}> ${f.box} "${f.txt}"`)
+          lines.push(`        ${f.cls}`)
+        }
       }
       if (lines.length) { if (hardHit) bad++; console.log(`${route.path}\n${lines.join('\n')}\n`) }
       else console.log(`${route.path}\n  ✓ ไม่พบปัญหา\n`)
     }
 
     console.log(bad ? `เจอปัญหา ${bad} หน้า` : 'ผ่านทุกหน้า')
-    if (advisory) console.log(`+ ข้อแนะนำอีก ${advisory} จุด (E · ไม่เต็มความกว้าง — ไม่นับเป็นข้อผิดพลาด)`)
+    if (advisory) console.log(`+ ข้อแนะนำอีก ${advisory} จุด (E/T/F/K/G — ไม่นับเป็นข้อผิดพลาด)`)
   } finally {
     cdp?.close()
     chrome?.kill()

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-05T10:29:46.734Z
-> Files: 1132 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T08:02:48.895Z
+> Files: 1140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -255,7 +255,7 @@
 - `gogoHandler.js` — handlers/gogoHandler.js (~4915 tok)
 - `handraiseHandler.js` — handlers/handraiseHandler.js (~2336 tok)
 - `interestSelect.js` — สร้างปุ่มจาก DB rows [{ roleId, label, emoji }] (~1177 tok)
-- `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~2324 tok)
+- `kanbanImportHandler.js` — วันนี้ตามเวลาไทย → "YYYY-MM-DD" ให้ parseDue() กินได้ตรงๆ (en-CA จัดรูปแบบนี้ให้เลย ไม่ต้องต่อสตริงเ (~2412 tok)
 - `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~662 tok)
 - `openInterest.js` — handlers/openInterest.js (~511 tok)
 - `openProvince.js` — handlers/openProvince.js (~216 tok)
@@ -458,7 +458,8 @@
 - `.tmp-cleanup-assignees.mjs` — CHROME: launchChrome (~1442 tok)
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
-- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~404 tok)
+- `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~6991 tok)
+- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~560 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
 ## scripts/docs/
@@ -673,7 +674,7 @@
 
 - `globals.css` — Styles: 5 rules, 7 vars (~237 tok)
 - `layout.js` — Next.js layout (~912 tok)
-- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7519 tok)
+- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7928 tok)
 
 ## web/app/admin/logs/
 
@@ -731,6 +732,10 @@
 ## web/app/api/bot/orgchart/
 
 - `route.js` — GET ผังทีมของ guild ที่ active · เปิดให้สมาชิกทุกคน (ไม่ gate admin) · days อยู่ใน allowlist 30/60/90/180/365 (~180 tok)
+
+## web/app/api/bot/orgchart/ranking/
+
+- `route.js` — อันดับรายคนทั้งเซิร์ฟเวอร์ (view bubble ของ /team) — สิทธิ์เท่ากับ /api/bot/orgchart (~268 tok)
 
 ## web/app/api/bot/quote-config/
 
@@ -1175,6 +1180,10 @@
 ## web/app/api/kanban/cards/[id]/
 
 - `route.js` — ข้อความบอกว่าทำไมย้ายไม่ได้ — การ์ดที่ผูกของจริงต้องบอกด้วยว่าไปเปลี่ยนที่ไหนแทน (~2641 tok)
+
+## web/app/api/kanban/cards/[id]/attachments/
+
+- `route.js` — /api/kanban/cards/[id]/attachments — ไฟล์แนบของการ์ด (รายการ + อัปโหลด) (~649 tok)
 
 ## web/app/api/kanban/cards/[id]/checklist/
 
@@ -1937,7 +1946,7 @@
 ## web/app/team/
 
 - `layout.js` — โซน /team — "ทีม" · ย้ายผังทีมออกจาก /bot/orgchart (2026-08-17) (~674 tok)
-- `page.js` — Next.js page component (~141 tok)
+- `page.js` — Next.js page component (~216 tok)
 
 ## web/app/tee/portfolio/
 
@@ -1974,7 +1983,9 @@
 - `AiMentionToggle.jsx` — สวิตช์ ai_mention ราย guild · ย้ายมาจากหน้า /bot/features ที่ถูกลบ · superadmin-only (~550 tok)
 - `BotChannelSettings.jsx` — ช่องตั้ง news_channel_id + social_alert_channel_id · autosave + beforeunload (~700 tok)
 - `BotSettingsNav.jsx` — sidebar ของ /bot (ภาพรวม/ยศ/AI/Quote/Watermark) · pattern เดียวกับ OrgSettingsNav โดยตั้งใจ (~450 tok)
-- `OrgChartClient.jsx` — GROUP_LUCIDE (~17054 tok)
+- `OrgChartBubbles.jsx` — LIMIT_DESKTOP (~4396 tok)
+- `OrgChartClient.jsx` — GROUP_LUCIDE (~19158 tok)
+- `orgchartSvg.js` — เครื่องมือวาด SVG ที่ใช้ร่วมกันระหว่างผังทีม (OrgChartClient) กับกระดานอันดับ (OrgChartBubbles) (~640 tok)
 
 ## web/components/calling/
 
@@ -2040,6 +2051,7 @@
 ## web/components/kanban/
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
+- `CardAttachmentsBox.jsx` — CardAttachmentsBox — รูป/ไฟล์แนบของการ์ด 1 ใบ (สูงสุด 30 — เคาะ 2026-09-06) (~1863 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~8174 tok)
 - `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~9252 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6915 tok)
@@ -2119,7 +2131,7 @@
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
 - `orgAiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI (~1029 tok)
-- `orgchart.js` — ผังทีมฝั่งเว็บ: CTE เดียวคืน group→role→top5 คนแอคทีฟ (dc_orgchart_config × org_members.roles × dc_activity_*) · join activity ผ่าน users.discord_id เพราะ activity ยังเป็น snowflake (~1200 tok)
+- `orgchart.js` — ทุก role ที่ config ไว้ (dc_orgchart_config) ของ guild นี้ พร้อม top-10 คนแอคทีฟสุดต่อ role (~2397 tok)
 - `orgConfig.js` — web/db/orgConfig.js — org-level KV config (org_config table) (~784 tok)
 - `orgInviteLinks.js` — Invite link เข้า org แบบ Notion — ลิงก์เดียวแชร์ได้ ใครเปิด+login ก็เข้าร่วม (~1234 tok)
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~2663 tok)
@@ -2227,6 +2239,7 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
+- `forumImportCommit.js` — รูปจากกระทู้ (ทั้งเธรด ไม่ใช่แค่ข้อความเปิด) → uploads/kanban — ต้องโหลด bytes เอง URL ดิสฯ หมดอายุ (~1656 tok)
 - `generateComplaintLetter.js` — โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — แทรกเข้าไปตอน render ผ่าน image module (~1486 tok)
 - `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
@@ -2245,6 +2258,7 @@
 - `kanbanSort.js` — "เรียงตาม" ที่ผู้ใช้เลือกเอง — เมนู sort บน /kanban (แยกจาก sortCards ใน kanbanGrouping.js (~1085 tok)
 - `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
 - `kanbanTextFilter.js` — ค้นการ์ดด้วยข้อความ — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanTextFilter.test.js) (~642 tok)
+- `kanbanUploads.js` — ไฟล์แนบของการ์ด KANBAN — เก็บ "นอก /public" เสิร์ฟผ่าน API ที่เช็คสิทธิ์เท่านั้น (~1054 tok)
 - `kanbanUrlState.js` — แปลง "หน้าตาที่เห็นบนกระดาน" ↔ query string — ตรรกะล้วน ไม่แตะ DOM/React (~1520 tok)
 - `letterLogo.js` — โลโก้หัวจดหมายร้องเรียน — เรขาคณิตกลางที่ generateComplaintLetter.js ใช้เป็นขนาดแสดงผล (~447 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
@@ -2355,8 +2369,8 @@
 
 ## web/locales/
 
-- `en.json` (~27807 tok)
-- `th.json` (~26632 tok)
+- `en.json` (~28548 tok)
+- `th.json` (~27339 tok)
 
 ## web/public/media-temp/
 

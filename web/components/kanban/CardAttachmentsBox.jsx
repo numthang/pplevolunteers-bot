@@ -1,28 +1,37 @@
 'use client'
 
 /**
- * CardAttachmentsBox — รูป/ไฟล์แนบของการ์ด 1 ใบ (สูงสุด 4 ตามที่ตกลงตอนออกแบบ import กระทู้)
+ * CardAttachmentsBox — รูป/ไฟล์แนบของการ์ด 1 ใบ (สูงสุด 30 — เคาะ 2026-09-06)
  *
  * ⚠️ ไฟล์เก็บนอก /public — src ของรูปคือ API `/api/kanban/cards/<id>/attachments/<attId>`
  *    ที่เช็คสิทธิ์ทุกครั้ง (ห้ามเปลี่ยนไปชี้ static path เพื่อความเร็ว)
  * ⚠️ ไม่แตะ card.updated_at → ไม่ต้องส่ง lockToken และไม่ทำให้ autosave ช่องพิมพ์โดน 409
  * ⭐ ใช้ ImageLightbox ตัวกลาง — ห้ามเขียน lightbox ซ้ำในไฟล์นี้
+ * ⭐ MAX_FILES คนละตัวกับ MAX_FORUM_IMPORT_IMAGES (kanbanUploads.js) — อย่ารวมกัน
+ *    ตัวนั้นคือเพดานรูปตอนนำเข้ากระทู้แบบ backfill (ยังคงที่ 4) ไม่ใช่ตัวนี้
+ * ⭐ 30 ใบแรกก็ล้นจอ — เลยโชว์แค่ INITIAL_VISIBLE ก้อนแรก ที่เหลือกดปุ่ม "+N" ค่อยกางออก
+ *    (ทรงเดียวกับปุ่ม "+N การ์ด" ใน KanbanHome.jsx — กด one-way ขยาย ไม่ใช่ modal ใหม่)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import ImageLightbox from '../ImageLightbox.jsx'
 
-const MAX_FILES = 4
+const MAX_FILES = 30
+const INITIAL_VISIBLE = 8
 
 export default function CardAttachmentsBox({ cardId, readOnly, onError, t }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [previewIdx, setPreviewIdx] = useState(null)
+  const [showAll, setShowAll] = useState(false)
   const inputRef = useRef(null)
 
   const base = `/api/kanban/cards/${cardId}/attachments`
+
+  // การ์ดเปลี่ยน (เปิดใบใหม่) ต้องกลับไปเริ่มที่ย่อไว้ก่อนเสมอ
+  useEffect(() => { setShowAll(false) }, [cardId])
 
   const load = useCallback(async () => {
     try {
@@ -75,6 +84,10 @@ export default function CardAttachmentsBox({ cardId, readOnly, onError, t }) {
   if (loading || (!items.length && readOnly)) return null
 
   const full = items.length >= MAX_FILES
+  // slice(0, N) เป็น prefix เสมอ → index i ในลูปยังตรงกับ index จริงใน items เต็มก้อน
+  // (ImageLightbox ด้านล่างรับ items เต็มก้อนเสมอ ไม่ใช่แค่ visibleItems — เลื่อนซ้าย/ขวาไปถึงรูปที่ยังไม่กางได้)
+  const visibleItems = showAll ? items : items.slice(0, INITIAL_VISIBLE)
+  const hiddenCount = items.length - visibleItems.length
 
   return (
     <div className="border-t border-warm-200 dark:border-disc-border pt-3 flex flex-col gap-2">
@@ -85,7 +98,7 @@ export default function CardAttachmentsBox({ cardId, readOnly, onError, t }) {
       </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-        {items.map((att, i) => (
+        {visibleItems.map((att, i) => (
           <div
             key={att.id}
             className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-square bg-warm-100 dark:bg-disc-hover"
@@ -109,6 +122,17 @@ export default function CardAttachmentsBox({ cardId, readOnly, onError, t }) {
             )}
           </div>
         ))}
+
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            aria-label={t('attachments.showMore', { n: hiddenCount })}
+            className="rounded-lg border border-warm-200 dark:border-disc-border aspect-square flex items-center justify-center text-base font-medium text-warm-500 dark:text-disc-muted bg-warm-100 dark:bg-disc-hover hover:border-teal hover:text-teal transition"
+          >
+            +{hiddenCount}
+          </button>
+        )}
 
         {!readOnly && !full && (
           <button

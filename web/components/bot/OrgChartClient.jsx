@@ -1,10 +1,13 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen,
-  Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, User, UsersRound, MessageSquare, Mic, AtSign, Flame,
+  ChevronDown, Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, User, UsersRound, MessageSquare, Mic, AtSign, Flame,
 } from 'lucide-react'
+import { el, avatarMarkup, fmtInt, fmtVoice } from './orgchartSvg.js'
+import OrgChartBubbles from './OrgChartBubbles.jsx'
 
 // ไอคอนเดียวกับที่วาดบนกราฟ แต่เป็น component สำหรับชิป/แผงขวา
 const GROUP_LUCIDE = {
@@ -23,6 +26,7 @@ const GROUP_LUCIDE = {
 // layout เขียนเอง: recharts ที่โปรเจกต์มีไม่มี graph/force layout
 // วาด SVG ผ่าน ref ไม่ผ่าน React state ต่อโหนด — ตอนลาก/แพนต้องได้ 60fps
 
+const VIEWS = ['bubble', 'chart', 'table']
 const GROUP_ORDER = ['main', 'skill', 'region', 'province', 'district', 'other']
 // ไอคอนกลุ่ม — path จาก lucide-react (ชุดเดียวกับทั้งเว็บ เช่น /finance/categories)
 // ต้องฝัง path เองเพราะกราฟวาด SVG ด้วย DOM API ไม่ได้ผ่าน React จึงใช้ component ตรงๆ ไม่ได้
@@ -54,25 +58,13 @@ const DAYS_OPTIONS = [30, 60, 90, 180, 365]
 // คนต่อบทบาท — ไม่มี "ทั้งหมด" เพราะบทบาทใหญ่สุดมี 54 คน กางแล้วเป็นแท่งยาวดันวงบานทั้งวง
 // (วัด 2026-08-18: รวม ~271 คน เฉลี่ย 6.3/บทบาท แต่ตัวมากสุดพังผัง) · อยากดูครบใช้แผงขวา
 const PEOPLE_OPTIONS = [5, 10]
-const AVATAR_BG = ['#5865F2', '#57A55A', '#EAA83A', '#D8548A', '#DA4B48', '#7C6FE0', '#1F9AA0', '#E8804A']
-
 const HUB_R = [52, 88]        // โหนดองค์กร — โตตามจำนวนโหนดลูก แต่ใหญ่กว่ากลุ่มเสมอ (GROUP_R สูงสุด 44)
 const HUB_SCALE_AT = 120      // จำนวนลูกที่ถือว่าเต็มสเกล
 const ROLE_R = [14, 30]
 const PERSON_R = [11, 22]
 const GROUP_R = [26, 44]
 const TOOLBAR_H = 34           // ความสูงแถบเครื่องมือที่ลอยทับผังด้านล่าง
-const NS = 'http://www.w3.org/2000/svg'
 
-function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h }
-function el(tag, attrs) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e }
-function fmtInt(n) { return Number(n || 0).toLocaleString('th-TH') }
-function fmtVoice(sec) {
-  if (!sec) return '—'
-  if (sec < 60) return `${sec}s`
-  if (sec < 3600) return `${Math.floor(sec / 60)}m`
-  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`
-}
 function scaleR(v, all, range) {
   const nums = all.length ? all : [0]
   const min = Math.min(...nums), max = Math.max(...nums)
@@ -101,31 +93,6 @@ function hubRadius(childCount) {
 
 function pillWidth(title, sub) {
   return Math.max(46, Math.max((title || '').length * 7.1, sub ? sub.length * 5.9 : 0) + 22)
-}
-
-// รูปโปรไฟล์: ใช้ avatar จริงจาก Discord ถ้ามี (cdn.discordapp.com อนุญาตแล้วใน next.config)
-// แต่ org_members.avatar ยังว่างเกือบทั้งหมด (3/5550 ตอนเขียน — รอ backfillAvatars.js)
-// → วาดวงกลมสีจากชื่อไว้ข้างใต้เสมอ เป็นทั้ง placeholder และ fallback ตอนรูปโหลดไม่ขึ้น
-function escAttr(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-function avatarMarkup(name, r, url) {
-  const seed = hash(name || '?')
-  const bg = AVATAR_BG[seed % AVATAR_BG.length]
-  const clipId = `oc-c${seed}-${Math.round(r * 10)}`
-  const photo = url
-    ? `<image href="${escAttr(url)}" x="${-r}" y="${-r}" width="${r * 2}" height="${r * 2}"
-             clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice" />`
-    : ''
-  return `
-    <clipPath id="${clipId}"><circle r="${r}"/></clipPath>
-    <g clip-path="url(#${clipId})">
-      <circle r="${r}" fill="${bg}"/>
-      <circle cy="${-r * 0.14}" r="${r * 0.33}" fill="#fff" opacity="0.94"/>
-      <ellipse cy="${r * 0.68}" rx="${r * 0.56}" ry="${r * 0.5}" fill="#fff" opacity="0.94"/>
-    </g>
-    ${photo}
-    <circle class="oc-avatar-border" r="${r}"/>`
 }
 
 function pillNode(topY, { title, sub, bg, titleColor, subColor, fs = 10, cls = '' }) {
@@ -398,7 +365,7 @@ export default function OrgChartClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [days, setDays] = useState(180)
-  const [perRole, setPerRole] = useState(10)        // Top N คนต่อบทบาท (เท่า /panel orgchart)
+  const [perRole, setPerRole] = useState(5)        // Top N คนต่อบทบาท — default 5 (เคาะ 2026-09-06)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())   // ยุบทั้งกลุ่ม (ต่างจากชิปที่ซ่อนหัวกลุ่มด้วย)
   const [expandedRoles, setExpandedRoles] = useState(() => new Set())
@@ -407,9 +374,20 @@ export default function OrgChartClient() {
   const [autoExpand, setAutoExpand] = useState(true)
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
-  const [view, setView] = useState('chart')
+  // มุมมองอยู่ใน URL (?view=bubble|chart|table) — ส่งลิงก์ให้กันแล้วเปิดมาเจอมุมมองเดียวกัน + ปุ่มย้อนกลับใช้ได้
+  // ค่าเริ่มต้นคือ bubble (user เคาะ 2026-09-06) · ค่าเพี้ยนใน URL ตกกลับมาที่ bubble ไม่ใช่จอว่าง
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const view = VIEWS.includes(searchParams.get('view')) ? searchParams.get('view') : 'bubble'
+  const setView = v => {
+    const p = new URLSearchParams(searchParams)
+    v === 'bubble' ? p.delete('view') : p.set('view', v)
+    const qs = p.toString()
+    router.replace(qs ? `/team?${qs}` : '/team', { scroll: false })
+  }
   const [isDark, setIsDark] = useState(false)
   const [isFull, setIsFull] = useState(false)
+  const [chipsOpen, setChipsOpen] = useState(false)   // ชิปกลุ่มบนมือถือ พับไว้ก่อน
   const [railOpen, setRailOpen] = useState(true)    // เปิดไว้ตั้งแต่แรก — เป็นที่เดียวที่อ่านคะแนนรายคนได้ครบ
 
   const cardRef = useRef(null)
@@ -459,10 +437,19 @@ export default function OrgChartClient() {
   const activeGroups = useMemo(() => {
     const list = data?.groups || []
     return list
-      .map(g => ({ ...g, roles: g.roles.filter(r => r.top.length > 0).sort((a, b) => b.totalScore - a.totalScore) }))
+      .map(g => ({
+        ...g,
+        roles: g.roles
+          .filter(r => r.top.length > 0)
+          // เติมชื่อสำรองจุดเดียวตรงนี้ — ปลายทางมี 4 ที่ (ป้ายบนผัง · ตาราง · การ์ดมือถือ · แผงขวา)
+          .map(r => (r.top.some(m => !m.name)
+            ? { ...r, top: r.top.map(m => (m.name ? m : { ...m, name: t('unknownMember') })) }
+            : r))
+          .sort((a, b) => b.totalScore - a.totalScore),
+      }))
       .filter(g => g.roles.length > 0)
       .sort((a, b) => GROUP_ORDER.indexOf(a.groupName) - GROUP_ORDER.indexOf(b.groupName))
-  }, [data])
+  }, [data, t])
 
   const totalActiveRoles = useMemo(() => activeGroups.reduce((s, g) => s + g.roles.length, 0), [activeGroups])
 
@@ -539,8 +526,9 @@ export default function OrgChartClient() {
     // กด กาง ยุบ ลาก = ภาพต้องนิ่งสนิท ไม่เลื่อนไม่ย่อเอง
     if (camKeyRef.current !== filterKey) { camKeyRef.current = filterKey; viewRef.current = null }
     draw()
+    // view อยู่ใน deps เพราะ <svg> ถูก unmount ตอนสลับไปตาราง — กลับมาได้ element ใหม่ที่ว่าง ต้องวาดซ้ำ
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey, filterKey, storageKey, isDark, selected, guildIcon])
+  }, [layoutKey, filterKey, storageKey, isDark, selected, guildIcon, view])
 
   // กรอบจากขอบจริงของผัง ไม่ใช่สมมาตรรอบ hub — โหนดหลุดไปมุมเดียวไม่ควรทำให้กรอบโต 2 เท่าทั้งวง
   function bounds() {
@@ -1044,7 +1032,9 @@ export default function OrgChartClient() {
     )
   }
   if (error) return <div className={`${CARD} p-8 text-center text-sm text-warm-500 dark:text-disc-muted`}>{error}</div>
-  if (!activeGroups.length) {
+  // กระดานฟองสบู่ไม่ได้ใช้ dc_orgchart_config เลย — guild ที่ยังไม่ตั้งผังต้องยังเข้าหน้านี้ได้
+  // (ยิ่งสำคัญตอน bubble เป็นค่าเริ่มต้น ไม่งั้นเปิดมาเจอ "ยังไม่ได้ตั้งค่าผังทีม" ทั้งที่มีของให้ดู)
+  if (!activeGroups.length && view !== 'bubble') {
     return (
       <div className={`${CARD} p-8 text-center`}>
         <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('empty')}</p>
@@ -1104,41 +1094,54 @@ export default function OrgChartClient() {
           <p className="text-sm text-warm-500 dark:text-disc-muted">{t('subtitle')}</p>
         </div>
         <div className={`${CARD} flex gap-0.5 p-1`}>
-          {['chart', 'table'].map(v => (
-            <button key={v} type="button" onClick={() => setView(v)}
+          {['chart', 'table', 'bubble'].map(v => (
+            <button key={v} type="button" onClick={() => setView(v)} data-view={v}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${
                 v === view ? 'bg-warm-900 dark:bg-disc-text text-white dark:text-disc-bg2' : 'text-warm-500 dark:text-disc-muted'}`}>
-              {v === 'chart' ? t('viewNetwork') : t('viewTable')}
+              {v === 'chart' ? t('viewNetwork') : v === 'table' ? t('viewTable') : t('viewBubble')}
             </button>
           ))}
         </div>
       </div>
 
+      {/* ตัวกรองทั้งแถวใช้กับ bubble ไม่ได้สักตัว (คนละฐานคะแนน ตลอดกาล ไม่แบ่งกลุ่ม)
+          ปล่อยไว้แล้วกดไม่มีอะไรขยับ = ดูเหมือนพัง — สลับเป็นป้ายบอกขอบเขตแทน */}
+      {view === 'bubble' ? (
+        <p className="text-xs font-semibold text-warm-900 dark:text-disc-text">{t('bubbleScope')}</p>
+      ) : (
       <div className="flex flex-wrap items-center gap-2">
-        <div className={`${CARD} flex items-center gap-2 px-3 py-2 w-[9.5rem] sm:w-[11rem] shrink-0`}>
+        {/* จอมือถือ: ทุกกลุ่มปุ่มยืดเต็มความกว้างทีละแถว — เดิมกอง 4 บรรทัดไม่เท่ากันจนดูรก
+            (user ทัก 2026-09-06 · กฎ K/F ของ mobileAudit --mode tidy จับจุดนี้ได้เหมือนกัน) */}
+        <div className={`${CARD} flex items-center gap-2 px-3 py-2 w-full sm:w-[11rem] sm:shrink-0`}>
           <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('searchPlaceholder')}
             className="w-full bg-transparent text-sm text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none" />
         </div>
-        <div className={`${CARD} flex gap-0.5 p-1`}>
+        <div className={`${CARD} flex gap-0.5 p-1 w-full sm:w-auto`}>
           {DAYS_OPTIONS.map(d => (
             <button key={d} type="button" onClick={() => setDays(d)}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg tabular-nums ${
+              className={`flex-1 sm:flex-none px-2.5 py-1.5 text-xs font-semibold rounded-lg tabular-nums ${
                 d === days ? 'bg-orange text-white' : 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'}`}>
               {d}
             </button>
           ))}
         </div>
-        <div className={`${CARD} flex gap-0.5 p-1`}>
+        <div className={`${CARD} flex gap-0.5 p-1 w-full sm:w-auto`}>
           {PEOPLE_OPTIONS.map(n => (
             <button key={n} type="button" onClick={() => setPerRole(n)}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg ${
+              className={`flex-1 sm:flex-none px-2.5 py-1.5 text-xs font-semibold rounded-lg ${
                 n === perRole ? 'bg-orange text-white' : 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'}`}>
               {t('peoplePerRole', { n })}
             </button>
           ))}
         </div>
-        {/* ชิปกรองกลุ่ม — กดเปิด/ปิดกลุ่มบนกราฟ · อยู่แถวเดียวกับตัวกรองเพื่อไม่กินความสูงของผัง */}
+        {/* ชิปกลุ่มมี 6 ตัว กินไป 2 บรรทัดเต็มบนมือถือ — พับเก็บไว้หลังปุ่มเดียว กดค่อยกาง */}
+        <button type="button" onClick={() => setChipsOpen(o => !o)} aria-expanded={chipsOpen}
+          className={`${CARD} sm:hidden w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-warm-900 dark:text-disc-text`}>
+          <span className="flex items-center gap-1.5"><FolderOpen size={13} /> {t('groupChips', { n: activeGroups.length - hiddenGroups.size })}</span>
+          <ChevronDown size={14} className={`text-warm-400 dark:text-disc-muted transition ${chipsOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <div className={`${chipsOpen ? 'flex' : 'hidden'} sm:flex w-full sm:w-auto flex-wrap items-center gap-2`}>
         {activeGroups.map(g => {
           const on = !hiddenGroups.has(g.groupName)
           const c = colorOf(g.groupName)
@@ -1160,13 +1163,17 @@ export default function OrgChartClient() {
             </button>
           )
         })}
+        </div>
       </div>
+      )}
 
       <div ref={tipRef} className="oc-tip" role="tooltip" aria-hidden="true" />
 
       <div className={`grid gap-4 items-start ${
-        railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
-        {view === 'chart' ? (
+        railOpen && !isFull && view !== 'bubble' ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
+        {view === 'bubble' ? (
+          <OrgChartBubbles cardClass={CARD} />
+        ) : view === 'chart' ? (
           <div ref={cardRef} className={`${CARD} relative p-2 ${isFull ? 'rounded-none border-0' : ''}`}>
             {!visibleGroups.length && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
@@ -1188,13 +1195,13 @@ export default function OrgChartClient() {
                 </span>
                 <button type="button" onClick={toggleAllPeople} aria-pressed={allExpanded}
                   title={allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}
-                  className={`flex items-center gap-1 text-xs font-semibold ${
+                  className={`flex items-center justify-center gap-1 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-xs font-semibold ${
                     allExpanded ? 'text-orange' : 'text-warm-500 dark:text-disc-muted hover:text-orange'}`}>
                   {allExpanded ? <UsersRound size={13} /> : <User size={13} />}
                   <span className="hidden sm:inline">{allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}</span>
                 </button>
                 <button type="button" onClick={fitView} title={t('fitView')}
-                  className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
+                  className="flex items-center justify-center gap-1 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
                   <Maximize2 size={13} /> <span className="hidden sm:inline">{t('fitView')}</span>
                 </button>
                 {!isFull && (
@@ -1205,20 +1212,43 @@ export default function OrgChartClient() {
                   </button>
                 )}
                 <button type="button" onClick={toggleFullscreen} title={isFull ? t('exitFullscreen') : t('fullscreen')}
-                  className="flex items-center gap-1 text-xs font-semibold text-orange hover:opacity-80">
+                  className="flex items-center justify-center gap-1 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-xs font-semibold text-orange hover:opacity-80">
                   {isFull ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                   <span className="hidden sm:inline">{isFull ? t('exitFullscreen') : t('fullscreen')}</span>
                 </button>
                 <button type="button" onClick={resetLayout} title={t('resetLayout')}
-                  className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
+                  className="flex items-center justify-center gap-1 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
                   <RotateCcw size={13} /> <span className="hidden sm:inline">{t('resetLayout')}</span>
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <div className={`${CARD} p-1 overflow-x-auto`}>
-            <table className="w-full text-sm">
+          <div className={`${CARD} p-1`}>
+            {/* จอมือถือ: ตาราง 4 คอลัมน์กว้าง 504px ล้นจอ 375 แล้วชื่อบทบาทหักคำเป็น "ทีมคอน เทนต์"
+                → สลับเป็นการ์ดเรียงแนวตั้ง เต็มความกว้าง ไม่ต้องเลื่อนซ้าย-ขวา (user ทัก 2026-09-06) */}
+            <ul className="sm:hidden flex flex-col">
+              {tableRows.map(({ group, role }) => (
+                <li key={role.roleId}>
+                  <button type="button" onClick={() => setSelected(role)}
+                    className={`w-full text-left px-3 py-2.5 border-b border-warm-100 dark:border-disc-border/50 ${
+                      selected?.roleId === role.roleId ? 'bg-orange/10' : ''}`}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 flex items-baseline gap-2 text-sm font-semibold text-warm-900 dark:text-disc-text">
+                        <span className="w-2 h-2 rounded-full shrink-0 translate-y-[-1px]" style={{ background: colorOf(group) }} />
+                        <span className="truncate">{role.roleName}</span>
+                      </span>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-warm-900 dark:text-disc-text">{fmtInt(role.totalScore)}</span>
+                    </div>
+                    <p className="mt-0.5 pl-4 text-xs text-warm-500 dark:text-disc-muted truncate tabular-nums">
+                      {t('memberCount', { count: role.memberCount })}
+                      {role.top[0] ? ` · ${t('colTop')} ${role.top[0].name}` : ''}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <table className="hidden sm:table w-full text-sm">
               <thead>
                 <tr className="border-b border-warm-200 dark:border-disc-border">
                   {[t('colRole'), t('colMembers'), t('colScore'), t('colTop')].map((h, i) => (
@@ -1245,7 +1275,7 @@ export default function OrgChartClient() {
           </div>
         )}
 
-        {railOpen && !isFull && (
+        {railOpen && !isFull && view !== 'bubble' && (
         <div className={`${CARD} p-4 min-h-[400px] flex flex-col`}>
           {!selected ? (
             <div className="m-auto text-center px-4">

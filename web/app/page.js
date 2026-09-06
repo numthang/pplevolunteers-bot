@@ -20,6 +20,7 @@ import { canViewAccount } from '@/lib/financeAccess.js'
 import { canManageCases, getUserScope } from '@/lib/caseAccess.js'
 import { kanbanViewer } from '@/lib/kanbanGuard.js'
 import { normalizeAccess } from '@/lib/roleAccess.js'
+import { can } from '@/lib/permissions.js'
 import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
@@ -41,6 +42,8 @@ const ICON = {
   case:    'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z',
   pen:     'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125',
   wallet:  'M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3',
+  users:   'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z',
+  terminal: 'M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z',
   arrow:   'M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3',
 }
 
@@ -263,6 +266,7 @@ export default async function HomePage() {
   // ⚠️ 'admin' เป็น **permission** ไม่ใช่ capability — can() จะ throw ถ้าส่งเข้าไป (เจอตอนกดจริง)
   //    เช็คแบบเดียวกับ canPurge() ใน lib/kanbanAccess.js
   const isOrgAdmin = (normalizeAccess(access).permissions || new Set()).has('admin')
+  const canViewLogs = can('viewServerLogs', caseAccess.permissions || new Set())
 
   const [
     docsPending, cardStats, callPending, contactPending,
@@ -363,24 +367,6 @@ export default async function HomePage() {
           </ModuleCard>
         )}
 
-        {/* เรื่องร้องเรียน (user เคาะ 2026-08-30)
-              รอทำ     = เคสที่ยังไม่มีใครรับ
-              กำลังทำ  = {ฉันรับผิดชอบ}/{มีคนรับแล้วทั้งหมด}
-              เสร็จสิ้น = ปิดแล้วใน 30 วัน
-            ⭐ ตัวกรอง ?status= และ ?assigned= ที่ /cases สร้างขึ้นมาเพื่อ 4 เลขนี้โดยเฉพาะ
-               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /cases */}
-        {casesOn && (
-          <ModuleCard href="/cases" icon={ICON.case} title={t('card.cases')}>
-            <StatRow href="/cases?status=active&assigned=none" label={t('status.todo')} count={caseStats.unassigned} />
-            <StatSplitRow
-              label={t('status.doing')}
-              left={{ href: '/cases?status=active&assigned=me', count: caseStats.mine, title: t('split.mine') }}
-              right={{ href: '/cases?status=active&assigned=any', count: caseStats.assigned, title: t('split.assigned') }}
-            />
-            <StatRow href="/cases?status=done" label={t('status.done')} count={caseStats.done} />
-          </ModuleCard>
-        )}
-
         {/* งานสื่อ — ป้ายเป็นคำของโมดูลนี้เอง ไม่ใช่คำกลาง (user เคาะ 2026-08-30: เลิกบังคับให้ทุกใบ
             พูดคำเดียวกัน เพราะแต่ละโมดูลมีสถานะไม่เหมือนกันจริงๆ · แก้ทีละใบตามความจริงของมัน)
               รอทำ   = {ร่างส่วนตัวของฉัน}/{ร่างขององค์กร} — สองเลขกดแยกกัน ไม่ใช่เศษส่วน
@@ -399,14 +385,21 @@ export default async function HomePage() {
           </ModuleCard>
         )}
 
-        {/* โทรฯ: ยุบ "สายที่มอบหมาย + ผู้ติดต่อ" เป็นบรรทัดเดียว — สองกองนี้ลิงก์ไป /calling/assignee
-            หน้าเดียวกันอยู่แล้ว และหน้านั้นมีแท็บ member/contact พร้อมตัวเลขของมันเอง จึงไม่เสียข้อมูล
-            ⚠️ ไม่มี "กำลังทำ" จริง — calling_logs มีแค่ answered/no_answer/not_called/met และ 1 log = จบ
-               อย่าเดานิยามใหม่มาเติมช่องให้เต็ม */}
-        {on('calling') && (
-          <ModuleCard href="/calling" icon={ICON.phone} title={t('card.calling')}>
-            <StatRow href="/calling/assignee" label={t('status.todo')} count={callPending + contactPending} />
-            <StatRow label={t('status.doing')} />
+        {/* เรื่องร้องเรียน (user เคาะ 2026-08-30)
+              รอทำ     = เคสที่ยังไม่มีใครรับ
+              กำลังทำ  = {ฉันรับผิดชอบ}/{มีคนรับแล้วทั้งหมด}
+              เสร็จสิ้น = ปิดแล้วใน 30 วัน
+            ⭐ ตัวกรอง ?status= และ ?assigned= ที่ /cases สร้างขึ้นมาเพื่อ 4 เลขนี้โดยเฉพาะ
+               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /cases */}
+        {casesOn && (
+          <ModuleCard href="/cases" icon={ICON.case} title={t('card.cases')}>
+            <StatRow href="/cases?status=active&assigned=none" label={t('status.todo')} count={caseStats.unassigned} />
+            <StatSplitRow
+              label={t('status.doing')}
+              left={{ href: '/cases?status=active&assigned=me', count: caseStats.mine, title: t('split.mine') }}
+              right={{ href: '/cases?status=active&assigned=any', count: caseStats.assigned, title: t('split.assigned') }}
+            />
+            <StatRow href="/cases?status=done" label={t('status.done')} count={caseStats.done} />
           </ModuleCard>
         )}
 
@@ -414,6 +407,17 @@ export default async function HomePage() {
         {on('docs') && (
           <ModuleCard href="/docs" icon={ICON.sign} title={t('card.docs')}>
             <StatRow href="/docs/pending" label={t('status.todo')} count={signCount} />
+            <StatRow label={t('status.doing')} />
+          </ModuleCard>
+        )}
+
+        {/* โทรฯ: ยุบ "สายที่มอบหมาย + ผู้ติดต่อ" เป็นบรรทัดเดียว — สองกองนี้ลิงก์ไป /calling/assignee
+            หน้าเดียวกันอยู่แล้ว และหน้านั้นมีแท็บ member/contact พร้อมตัวเลขของมันเอง จึงไม่เสียข้อมูล
+            ⚠️ ไม่มี "กำลังทำ" จริง — calling_logs มีแค่ answered/no_answer/not_called/met และ 1 log = จบ
+               อย่าเดานิยามใหม่มาเติมช่องให้เต็ม */}
+        {on('calling') && (
+          <ModuleCard href="/calling" icon={ICON.phone} title={t('card.calling')}>
+            <StatRow href="/calling/assignee" label={t('status.todo')} count={callPending + contactPending} />
             <StatRow label={t('status.doing')} />
           </ModuleCard>
         )}
@@ -431,6 +435,18 @@ export default async function HomePage() {
                 value={fmtBaht(a.balance)}
               />
             ))}
+          </ModuleCard>
+        )}
+
+        {/* ทีม / ผังองค์กร — เปิดให้สมาชิกทุกคนอ่านอย่างเดียว ไม่ผูกกับ orgFeatures (ดู team/layout.js) */}
+        <ModuleCard href="/team" icon={ICON.users} title={t('card.team')}>
+          <p className="text-base text-warm-400 dark:text-disc-muted py-1">{t('team.hint')}</p>
+        </ModuleCard>
+
+        {/* Admin — เฉพาะคนที่มี capability viewServerLogs (เท่ากับ gate ฝั่ง /admin/logs เอง) */}
+        {canViewLogs && (
+          <ModuleCard href="/admin/logs" icon={ICON.terminal} title={t('card.admin')}>
+            <p className="text-base text-warm-400 dark:text-disc-muted py-1">{t('admin.hint')}</p>
           </ModuleCard>
         )}
 

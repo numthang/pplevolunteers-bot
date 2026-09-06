@@ -117,7 +117,9 @@ export async function getOrgChartData(guildId, days = 180) {
       roleMap.get(row.role_id).top.push({
         userId: row.user_id,
         discordId: row.discord_id,
-        name: row.display_name || row.discord_id || row.user_id,
+        // ชื่อว่าง = ปล่อย null ให้ฝั่งหน้าเว็บเติมคำว่า "ไม่ทราบชื่อ" — เดิมตกมาเป็น snowflake ดิบ
+        // แล้วขึ้นเป็นชื่อคนในตาราง/ผัง (เห็นจริงที่แถว "ทีมนโยบาย" 2026-09-06)
+        name: row.display_name || null,
         avatar: row.avatar || null,
         messages: Number(row.messages),
         voiceSeconds: Number(row.voice_seconds),
@@ -128,4 +130,67 @@ export async function getOrgChartData(guildId, days = 180) {
   }
 
   return groupOrder.map(groupName => ({ groupName, roles: groupRoles.get(groupName) }))
+}
+
+// ── อันดับรายคนทั้งเซิร์ฟเวอร์ (view "bubble" ของ /team) ───────────────────────────
+// ต่างจาก SQL ข้างบน 3 อย่าง โดยตั้งใจ — ป้ายบนหน้าเว็บบอกไว้ว่าคนละฐาน:
+//  1. ไม่ผูก dc_orgchart_config เลย → นับทุกช่อง ทุกคน ไม่ใช่เฉพาะที่ map ไว้กับบทบาท
+//     (วัด 2026-09-06: วินาทีเสียง 99.3% อยู่นอกช่องที่ map ไว้ ผังเดิมจึงแทบเป็นคะแนนข้อความล้วน)
+//  2. รวมเป็นคะแนนเดียวต่อคน ไม่แตกตามบทบาท → คนมีหลายบทบาทไม่ถูกนับซ้ำ
+//  3. เสียงคิดเป็น "นาที" ไม่ใช่วินาที (user เคาะ 2026-09-06) — วินาที×1 ทำให้ 57 ใน 100 คนแรก
+//     ได้คะแนน ≥80% จากการอยู่ห้องเสียง กลายเป็นกระดานวัดว่าใครแช่ห้องเสียงนานสุด
+const SCORE_VOICE_PER_MIN = 1
+
+const RANKING_SQL = `
+WITH msg AS (
+  SELECT user_id, SUM(message_count) AS messages, SUM(voice_seconds) AS voice_seconds
+    FROM dc_activity_daily
+   WHERE guild_id = $1
+   GROUP BY user_id
+),
+men AS (
+  SELECT user_id, COUNT(*) AS mentions
+    FROM dc_activity_mentions
+   WHERE guild_id = $1
+   GROUP BY user_id
+),
+scored AS (
+  SELECT COALESCE(msg.user_id, men.user_id) AS discord_id,
+         COALESCE(msg.messages, 0)      AS messages,
+         COALESCE(msg.voice_seconds, 0) AS voice_seconds,
+         COALESCE(men.mentions, 0)      AS mentions,
+         COALESCE(msg.messages, 0) * ${SCORE_MSG}
+           + FLOOR(COALESCE(msg.voice_seconds, 0) / 60) * ${SCORE_VOICE_PER_MIN}
+           + COALESCE(men.mentions, 0) * ${SCORE_MENTION} AS score
+    FROM msg
+    FULL JOIN men ON men.user_id = msg.user_id
+)
+SELECT s.discord_id, s.messages, s.voice_seconds, s.mentions, s.score,
+       om.display_name, COALESCE(u.avatar, om.avatar) AS avatar
+  FROM scored s
+  LEFT JOIN users u        ON u.discord_id = s.discord_id
+  LEFT JOIN org_members om ON om.user_id = u.id AND om.guild_id = $1
+ WHERE s.score > 0
+ ORDER BY s.score DESC, s.messages DESC
+ LIMIT $2
+`
+
+/**
+ * อันดับคะแนนรวมรายคนทั้ง guild ตลอดกาล (ไม่แบ่งบทบาท/กลุ่ม) — ใช้กับ view bubble ของ /team
+ * คืน [{ rank, discordId, name, avatar, messages, voiceSeconds, voiceMinutes, mentions, score }]
+ */
+export async function getMemberRanking(guildId, limit = 100) {
+  const { rows } = await pool.query(RANKING_SQL, [guildId, limit])
+  return rows.map((row, i) => ({
+    rank: i + 1,
+    discordId: row.discord_id,
+    // ชื่อว่าง (2 ใน 100 คนแรก) — เดิมตกลงมาเป็น snowflake ดิบบนฟอง อ่านแล้วเหมือนหน้าพัง
+    name: row.display_name || null,
+    avatar: row.avatar || null,
+    messages: Number(row.messages),
+    voiceSeconds: Number(row.voice_seconds),
+    voiceMinutes: Math.floor(Number(row.voice_seconds) / 60),
+    mentions: Number(row.mentions),
+    score: Number(row.score),
+  }))
 }

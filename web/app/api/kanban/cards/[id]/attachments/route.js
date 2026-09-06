@@ -7,7 +7,7 @@
 // ⚠️ ไฟล์เก็บนอก /public เสมอ (uploads/kanban) — ดาวน์โหลดได้ทางเดียวคือ route [attId] ที่เช็คสิทธิ์
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import { canEditCard } from '@/lib/kanbanAccess.js'
-import { saveKanbanFile, isAllowedMime, MAX_FILE_SIZE, MAX_FILES_PER_CARD } from '@/lib/kanbanUploads.js'
+import { saveKanbanFile, isAllowedMime, MAX_FILE_SIZE, MAX_CARD_ATTACHMENTS } from '@/lib/kanbanUploads.js'
 import * as attDB from '@/db/kanban/attachments.js'
 
 export async function GET(_req, { params }) {
@@ -29,8 +29,8 @@ export async function POST(req, { params }) {
 
   // เพดานนับจากของที่มีอยู่แล้ว ไม่ใช่นับเฉพาะรอบนี้ — ไม่งั้นอัปทีละ 4 ซ้ำๆ ทะลุเพดานได้
   const already = await attDB.countCardAttachments(ctx.orgId, ctx.card.id)
-  if (already + files.length > MAX_FILES_PER_CARD) {
-    return err(400, `แนบได้สูงสุด ${MAX_FILES_PER_CARD} ไฟล์ต่อใบ (ตอนนี้มี ${already} ไฟล์)`)
+  if (already + files.length > MAX_CARD_ATTACHMENTS) {
+    return err(400, `แนบได้สูงสุด ${MAX_CARD_ATTACHMENTS} ไฟล์ต่อใบ (ตอนนี้มี ${already} ไฟล์)`)
   }
 
   for (const f of files) {

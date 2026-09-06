@@ -37,7 +37,18 @@ export const ROUTES = [
     ],
   },
   { path: '/docs' },
-  { path: '/team' },
+  {
+    path: '/team',
+    // ⚠️ ปุ่มสลับมุมมองยังไม่ถูก render จนกว่า /api/bot/orgchart จะตอบ — settleDom นับ element นิ่ง
+    //    แต่ fetch ตอบช้ากว่านั้น ถ้าไม่รอ 2 วิ จะได้ "หา selector ไม่เจอ" ทั้งชุด (เจอเอง 2026-09-06)
+    steps: [
+      { wait: 2000 },
+      { click: 'button[data-view="chart"]', label: 'สลับไปผังเครือข่าย' },
+      { click: 'button[data-view="table"]', label: 'สลับไปตาราง' },
+      { click: 'button[data-view="bubble"]', label: 'กลับมากระดานฟองสบู่' },
+      { wait: 1200 },
+    ],
+  },
   { path: '/org' },
   { path: '/bot' },
   { path: '/complaint' },

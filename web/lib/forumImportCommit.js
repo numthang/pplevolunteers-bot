@@ -15,7 +15,7 @@ import * as importDB from '@/db/kanban/forumImport.js'
 import * as cardDB from '@/db/kanban/cards.js'
 import * as fieldDB from '@/db/kanban/fields.js'
 import * as attDB from '@/db/kanban/attachments.js'
-import { saveKanbanBuffer, isAllowedMime, MAX_FILE_SIZE, MAX_FILES_PER_CARD } from '@/lib/kanbanUploads.js'
+import { saveKanbanBuffer, isAllowedMime, MAX_FILE_SIZE, MAX_FORUM_IMPORT_IMAGES } from '@/lib/kanbanUploads.js'
 import pool from '@/db/index.js'
 import { CLOSED_STATUS } from '@/lib/kanbanAccess.js'
 
@@ -23,7 +23,7 @@ import { fetchThreadImages } from '@/lib/forumThreadImages.js'
 
 /** รูปจากกระทู้ (ทั้งเธรด ไม่ใช่แค่ข้อความเปิด) → uploads/kanban — ต้องโหลด bytes เอง URL ดิสฯ หมดอายุ */
 async function importImages(orgId, cardId, threadId, userId) {
-  const images = (await fetchThreadImages(threadId, MAX_FILES_PER_CARD))
+  const images = (await fetchThreadImages(threadId, MAX_FORUM_IMPORT_IMAGES))
     .filter((a) => isAllowedMime((a.content_type || '').split(';')[0].trim()) && a.size <= MAX_FILE_SIZE)
 
   let n = 0

@@ -1734,6 +1734,12 @@
       "daysLabel": "Last {days} days",
       "viewNetwork": "Network",
       "viewTable": "Table",
+      "groupChips": "Groups shown {n}",
+      "viewBubble": "Bubble",
+      "bubbleScope": "Server-wide score · all time",
+      "bubbleHint": "Top {n} · drag a bubble anywhere · hover for the full score",
+      "unknownMember": "Unknown",
+      "bubbleEmpty": "Nobody has scored on this server yet",
       "backToGroups": "All groups",
       "resetLayout": "Reset layout",
       "loading": "Loading…",
@@ -2227,6 +2233,7 @@
       "add": "Add image",
       "remove": "Remove image",
       "imageAlt": "Attachment {n}",
+      "showMore": "Show {n} more",
       "uploadFailed": "Upload failed",
       "deleteFailed": "Delete failed"
     }
@@ -2263,13 +2270,21 @@
       "hint": "Accounts you use often",
       "empty": "No accounts you've used yet"
     },
+    "team": {
+      "hint": "Org structure and roles"
+    },
+    "admin": {
+      "hint": "System logs"
+    },
     "card": {
       "kanban": "Tasks",
       "docs": "Documents",
       "calling": "Calling",
       "cases": "Complaints",
       "posts": "Content",
-      "finance": "Finance"
+      "finance": "Finance",
+      "team": "Org chart",
+      "admin": "Admin"
     },
     "status": {
       "todo": "To do",

@@ -14,8 +14,13 @@ import { isAllowedMime, MAX_FILE_SIZE } from './caseUploads.js'
 
 export { isAllowedMime, MAX_FILE_SIZE }
 
-/** เพดานต่อการ์ด — ตรงกับ "รูปสัก 4 รูป" ที่ตกลงไว้ตอนออกแบบ import กระทู้ */
-export const MAX_FILES_PER_CARD = 4
+/** เพดานไฟล์แนบที่คนอัปเข้าการ์ดเอง (เคาะ 2026-09-06) */
+export const MAX_CARD_ATTACHMENTS = 30
+
+/** เพดานรูปที่ดึงจากกระทู้ดิสฯ ตอนนำเข้าแบบ backfill — แยกจาก MAX_CARD_ATTACHMENTS ตั้งใจ
+ *  (คู่กับ MAX_INDEX ใน api/kanban/import/forum/[id]/image/[idx]/route.js และ .slice(0,4)
+ *  ใน ForumImportHome.jsx — 3 จุดนี้ต้องเลขตรงกันเสมอ ถ้าจะขยับต้องแก้พร้อมกันทั้ง 3) */
+export const MAX_FORUM_IMPORT_IMAGES = 4
 
 const EXT_BY_MIME = {
   'image/jpeg': 'jpg',

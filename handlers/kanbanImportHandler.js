@@ -14,6 +14,11 @@ const { createCardFromDiscord, cardWebUrl } = require('../db/kanbanCards');
 const TITLE_MAX = 200;   // ตรงกับ kanban_cards.title VARCHAR(200)
 const DETAIL_MAX = 4000; // เพดานจริงของ Discord modal Paragraph input (detail column เป็น TEXT ไม่จำกัดอยู่แล้ว)
 
+/** วันนี้ตามเวลาไทย → "YYYY-MM-DD" ให้ parseDue() กินได้ตรงๆ (en-CA จัดรูปแบบนี้ให้เลย ไม่ต้องต่อสตริงเอง) */
+function todayThai() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+}
+
 /** ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) */
 function toTitle(raw) {
   const line = String(raw || '')
@@ -58,7 +63,8 @@ async function handleKanbanImportStart(interaction) {
   const dueInput = new TextInputBuilder()
     .setCustomId('due').setLabel(t('kanban.import.dueLabel'))
     .setPlaceholder(t('kanban.import.duePlaceholder'))
-    .setStyle(TextInputStyle.Short).setMaxLength(16).setRequired(false);
+    .setStyle(TextInputStyle.Short).setMaxLength(16).setRequired(false)
+    .setValue(todayThai()); // ตั้งต้นเป็นวันนี้ — ลบ/แก้เป็นวันอื่นได้ก่อนกดส่ง
 
   const ownerInput = new TextInputBuilder()
     .setCustomId('mine').setLabel(t('kanban.import.mineLabel'))

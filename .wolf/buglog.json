@@ -7674,6 +7674,475 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-05T14:59:33.000Z"
+    },
+    {
+      "id": "bug-439",
+      "timestamp": "2026-09-06T06:28:35.684Z",
+      "error_message": "Wrong reference: MAX_FILES_PER_CARD should be MAX_CARD_ATTACHMENTS",
+      "file": "web/app/api/kanban/cards/[id]/attachments/route.js",
+      "root_cause": "Used \"MAX_FILES_PER_CARD\" instead of \"MAX_CARD_ATTACHMENTS\"",
+      "fix": "Changed MAX_FILES_PER_CARD → MAX_CARD_ATTACHMENTS",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T06:28:44.026Z"
+    },
+    {
+      "id": "bug-440",
+      "timestamp": "2026-09-06T06:28:55.771Z",
+      "error_message": "Wrong reference: MAX_FILES_PER_CARD should be MAX_FORUM_IMPORT_IMAGES",
+      "file": "web/lib/forumImportCommit.js",
+      "root_cause": "Used \"MAX_FILES_PER_CARD\" instead of \"MAX_FORUM_IMPORT_IMAGES\"",
+      "fix": "Changed MAX_FILES_PER_CARD → MAX_FORUM_IMPORT_IMAGES",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T06:29:04.327Z"
+    },
+    {
+      "id": "bug-441",
+      "timestamp": "2026-09-06T06:29:25.960Z",
+      "error_message": "Significant refactor of CardAttachmentsBox.jsx",
+      "file": "web/components/kanban/CardAttachmentsBox.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 14→19 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T06:29:25.960Z"
+    },
+    {
+      "id": "bug-442",
+      "timestamp": "2026-09-06T07:02:46.884Z",
+      "error_message": "Missing await",
+      "file": "web/db/orgchart.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:02:46.884Z"
+    },
+    {
+      "id": "bug-443",
+      "timestamp": "2026-09-06T07:03:15.000Z",
+      "error_message": "CardModal ปิดตัวเองเมื่อกด/ลากแถบ scroll ของ modal",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "overlay (fixed inset-0) เป็นตัว scroll เอง (overflow-y-auto) แถบ scroll จึงเป็นของ element เดียวกับที่ดัก onMouseDown → กดบนแถบ scroll ทำให้ e.target === e.currentTarget เหมือนคลิกพื้นหลัง",
+      "fix": "ใน onMouseDown เช็ค e.nativeEvent.offsetX/offsetY เทียบ currentTarget.clientWidth/clientHeight (ไม่นับแถบ scroll) เกิน = โดนแถบ ให้ return ไม่ปิด",
+      "tags": [
+        "kanban",
+        "modal",
+        "ui",
+        "click-outside",
+        "scrollbar"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:03:15.000Z"
+    },
+    {
+      "id": "bug-444",
+      "timestamp": "2026-09-06T07:03:46.665Z",
+      "error_message": "Wrong reference: AVATAR_BG should be HUB_R",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Used \"AVATAR_BG\" instead of \"HUB_R\"",
+      "fix": "Changed AVATAR_BG → HUB_R",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:03:46.665Z"
+    },
+    {
+      "id": "bug-445",
+      "timestamp": "2026-09-06T07:03:59.423Z",
+      "error_message": "Significant refactor of OrgChartClient.jsx",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 13→3 lines (10 removed) | Also: railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6f; {view === 'chart' ? (",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:08:00.508Z"
+    },
+    {
+      "id": "bug-446",
+      "timestamp": "2026-09-06T07:08:14.827Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Had `${CARD} p-4 min-h-[400px] flex flex-col`",
+      "fix": "Changed to 'bubble'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:08:14.827Z"
+    },
+    {
+      "id": "bug-447",
+      "timestamp": "2026-09-06T07:14:16.737Z",
+      "error_message": "Significant refactor of OrgChartBubbles.jsx",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:14:16.737Z"
+    },
+    {
+      "id": "bug-448",
+      "timestamp": "2026-09-06T07:14:40.331Z",
+      "error_message": "CSS fix: r",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "r: radii[i], → radii[i], name: m.name || t('unknownMember'),",
+      "fix": "Changed r: radii[i], → radii[i], name: m.name || t('unknownMember'),",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:14:40.331Z"
+    },
+    {
+      "id": "bug-449",
+      "timestamp": "2026-09-06T07:15:27.452Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "dark: text-disc-text\">{t('bubbleScope', { n: 100 → text-disc-text\">{t('bubbleScope')",
+      "fix": "Changed dark: text-disc-text\">{t('bubbleScope', { n: 100 → text-disc-text\">{t('bubbleScope')",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:15:27.452Z"
+    },
+    {
+      "id": "bug-450",
+      "timestamp": "2026-09-06T07:17:48.990Z",
+      "error_message": "/team: สลับไปตารางแล้วกลับมาเครือข่าย ผังหายเป็นหน้าว่าง",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "effect ที่เรียก draw() ลง svgRef ไม่มี view ใน deps — สลับ view แล้ว <svg> ถูก unmount/remount เป็น element ใหม่ที่ว่าง แต่ React ไม่รัน effect ซ้ำเพราะ deps ไม่เปลี่ยน (ref เปลี่ยนค่าไม่ trigger effect)",
+      "fix": "ใส่ view เข้า deps ของ effect ที่เรียก draw() — กลับมา chart เมื่อไหร่วาดใส่ element ใหม่เสมอ",
+      "tags": [
+        "react",
+        "useEffect",
+        "ref",
+        "svg",
+        "orgchart",
+        "team"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:17:48.991Z"
+    },
+    {
+      "id": "bug-451",
+      "timestamp": "2026-09-06T07:27:15.573Z",
+      "error_message": "Null/undefined access in OrgChartBubbles.jsx",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:27:15.573Z"
+    },
+    {
+      "id": "bug-452",
+      "timestamp": "2026-09-06T07:27:37.867Z",
+      "error_message": "CSS fix: style",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "style: `stroke: rgba(255,106,19,${(0.45 + 0.45 * t01).toFixed(2) → `--ring: rgba(255,106,19,${(0.45 + 0.45 * t01).toFixed(2)",
+      "fix": "Changed style: `stroke: rgba(255,106,19,${(0.45 + 0.45 * t01).toFixed(2) → `--ring: rgba(255,106,19,${(0.45 + 0.45 * t01).toFixed(2)",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:29:57.531Z"
+    },
+    {
+      "id": "bug-453",
+      "timestamp": "2026-09-06T07:28:14.604Z",
+      "error_message": "Significant refactor of OrgChartBubbles.jsx",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→5 lines (3 removed) | Also: `<stop offset=\"0%\" stop-color=\"${c}\" stop-opacity=; + `<stop offset=\"55%\" stop-color=\"${c}\" stop-opaci",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:31:14.372Z"
+    },
+    {
+      "id": "bug-454",
+      "timestamp": "2026-09-06T07:34:14.547Z",
+      "error_message": "Missing guard clause",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "No early return/throw for edge case: slack > 32",
+      "fix": "Added guard clause: if (slack > 32)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:34:14.547Z"
+    },
+    {
+      "id": "bug-455",
+      "timestamp": "2026-09-06T07:34:49.636Z",
+      "error_message": "Wrong condition in logic",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "Condition was: if (!tooWide && !expanded && !fresh.length)",
+      "fix": "Changed to: if (!tooWide && !expanded && !fresh.length && !tips.le)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:36:57.641Z"
+    },
+    {
+      "id": "bug-456",
+      "timestamp": "2026-09-06T07:35:16.624Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "Had `+ ข้อแนะนำอีก ${advisory} จุด (E · ไม่เต็มความกว้",
+      "fix": "Changed to `+ ข้อแนะนำอีก ${advisory} จุด (E/T/F/K/G — ไม่นับ",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:35:16.624Z"
+    },
+    {
+      "id": "bug-457",
+      "timestamp": "2026-09-06T07:36:40.402Z",
+      "error_message": "Missing guard clause",
+      "file": "web/components/bot/OrgChartBubbles.jsx",
+      "root_cause": "No early return/throw for edge case: bucket < 70",
+      "fix": "Added guard clause: if (bucket < 70)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:36:40.402Z"
+    },
+    {
+      "id": "bug-458",
+      "timestamp": "2026-09-06T07:37:08.684Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Had 'chart'",
+      "fix": "Changed to 'bubble'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:37:08.684Z"
+    },
+    {
+      "id": "bug-459",
+      "timestamp": "2026-09-06T07:37:29.836Z",
+      "error_message": "Wrong condition in logic",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Condition was: if (!activeGroups.length)",
+      "fix": "Changed to: if (!activeGroups.length && view !== 'bubble')",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:37:29.836Z"
+    },
+    {
+      "id": "bug-460",
+      "timestamp": "2026-09-06T07:38:00.252Z",
+      "error_message": "Significant refactor of mobileAudit.routes.mjs",
+      "file": "scripts/dev/mobileAudit.routes.mjs",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→10 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:38:00.252Z"
+    },
+    {
+      "id": "bug-461",
+      "timestamp": "2026-09-06T07:52:09.659Z",
+      "error_message": "Null/undefined access in OrgChartClient.jsx",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:52:09.660Z"
+    },
+    {
+      "id": "bug-462",
+      "timestamp": "2026-09-06T07:52:36.452Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "Had 'next-intl'",
+      "fix": "Changed to 'next/navigation'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:53:02.365Z"
+    },
+    {
+      "id": "bug-463",
+      "timestamp": "2026-09-06T07:53:26.185Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/team/page.js",
+      "root_cause": "Had 'next-intl/server'",
+      "fix": "Changed to 'react'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:53:26.185Z"
+    },
+    {
+      "id": "bug-464",
+      "timestamp": "2026-09-06T07:53:38.098Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/team/page.js",
+      "root_cause": "Was returning: <OrgChartClient />",
+      "fix": "Now returns: (",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T07:53:38.098Z"
+    },
+    {
+      "id": "bug-465",
+      "timestamp": "2026-09-06T07:57:20.955Z",
+      "error_message": "CSS fix: roles",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "roles: g.roles.filter(r => r.top.length > 0).sort((a, b) => b.totalScore - a.totalScore) → g.roles",
+      "fix": "Changed roles: g.roles.filter(r => r.top.length > 0).sort((a, b) => b.totalScore - a.totalScore) → g.roles",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-06T07:58:50.803Z"
+    },
+    {
+      "id": "bug-451",
+      "timestamp": "2026-09-06T08:06:43.670Z",
+      "error_message": "/team มุมมองตาราง: บนมือถือตาราง 4 คอลัมน์กว้าง 504px ล้นจอ 375 ชื่อบทบาทหักคำเป็น \"ทีมคอน เทนต์\"",
+      "file": "web/components/bot/OrgChartClient.jsx",
+      "root_cause": "ใช้ <table> 4 คอลัมน์ทุกขนาดจอ ห่อด้วย overflow-x-auto เลยไม่ error แต่ต้องเลื่อนซ้าย-ขวาและคำหักกลางบรรทัด · mobileAudit จับได้ (B 148px) แต่ถูกรายงานว่า pre-existing แล้วปล่อยผ่าน",
+      "fix": "sm:hidden = การ์ดเรียงแนวตั้ง (ชื่อ+คะแนนบรรทัดบน, จำนวนคน+แอคทีฟสุดบรรทัดล่าง) · hidden sm:table = ตารางเดิมบนจอใหญ่",
+      "tags": [
+        "mobile",
+        "table",
+        "responsive",
+        "team",
+        "orgchart"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T08:06:43.670Z"
+    },
+    {
+      "id": "bug-452",
+      "timestamp": "2026-09-06T08:06:43.670Z",
+      "error_message": "/team: คนที่ไม่มี display_name ขึ้นเลข Discord ดิบเป็นชื่อ (เช่น 1103706985200889866) ทั้งในตาราง ผัง และฟองสบู่",
+      "file": "web/db/orgchart.js",
+      "root_cause": "ทั้ง getOrgChartData และ getMemberRanking fallback เป็น row.discord_id เมื่อ display_name ว่าง",
+      "fix": "DB คืน name: null แล้วให้ฝั่งเว็บเติม t(\"unknownMember\") จุดเดียวใน activeGroups/build() — ปลายทางมี 4 ที่",
+      "tags": [
+        "i18n",
+        "fallback",
+        "orgchart",
+        "display-name"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T08:06:43.670Z"
     }
   ]
 }
