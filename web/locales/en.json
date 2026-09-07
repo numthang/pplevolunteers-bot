@@ -1985,6 +1985,20 @@
       "cancel": "Cancel",
       "render": "Create clip",
       "rendering": "Creating…"
+    },
+    "publishConfirm": {
+      "title": "Confirm before publishing",
+      "closeTitle": "Close",
+      "targets": "Publishing to {count} destination(s)",
+      "watermarkOn": "Watermark “{name}” · {pos} · on {count} image(s)",
+      "watermarkOff": "No watermark — images sent as-is",
+      "removeWatermark": "Remove watermark",
+      "videoPost": "🎬 This post has a video and will be sent as a video post",
+      "videoDropsImages": "🎬 This post has a video and will be sent as a video post — {count} image(s) will not be sent",
+      "now": "Publishes immediately after you confirm",
+      "scheduled": "Scheduled for {time}",
+      "confirm": "Publish now",
+      "cancel": "Cancel"
     }
   },
   "kanban": {

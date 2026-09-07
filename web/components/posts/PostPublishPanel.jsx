@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Send, RotateCcw, XCircle, ExternalLink, Copy, Check } from 'lucide-react'
+import PublishConfirmModal from './PublishConfirmModal.jsx'
 
 // ค่าเดียวกับ VALID_PLATFORMS ใน app/api/posts/[id]/publish/route.js
 const PLATFORMS = [
@@ -78,6 +79,8 @@ export default function PostPublishPanel({ postId }) {
   const [scheduledAt, setScheduledAt] = useState('')
   const [minTime, setMinTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // กดปุ่มเผยแพร่ = เปิดกล่องสรุปก่อน ไม่ยิงทันที — กันลืมปิดลายน้ำในโพสต์ที่รูปติดลายน้ำมาแล้ว
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
@@ -199,6 +202,24 @@ export default function PostPublishPanel({ postId }) {
     setSelected(prev => (prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]))
   }
 
+  // ค่าลายน้ำที่ **ส่งจริง** — คลิปกินทั้งโพสต์ (prepareImages ไม่ถูกเรียก) จึงบังคับเป็น 'none'
+  // กล่องยืนยันต้องอ่านจากตัวนี้ตัวเดียวกับที่ส่ง ไม่ใช่ wmType ดิบ ไม่งั้นโชว์ว่าติดลายน้ำทั้งที่ไม่ติด
+  const effectiveWmType = hasMedia && !hasVideo ? wmType : 'none'
+  const effectiveWmPos = hasMedia && !hasVideo ? wmPos : 'random'
+  const confirmWatermark = effectiveWmType === 'none' ? null : {
+    label: watermarks.find(w => w.value === effectiveWmType)?.label || effectiveWmType,
+    posLabel: WM_POS_OPTIONS.find(o => o.value === effectiveWmPos)?.label || effectiveWmPos,
+    imageCount,
+  }
+  // เรียงตาม PLATFORMS เพื่อให้ลำดับในกล่องยืนยันตรงกับลำดับที่ติ๊กไว้ข้างบน (ไม่ใช่ลำดับที่กด)
+  const confirmTargets = PLATFORMS.filter(p => selected.includes(p.key)).map(p => {
+    const account = current?.accounts?.[p.key]
+    const suffix = p.key === 'news'
+      ? (current?.newsChannelName ? `: #${current.newsChannelName}` : '')
+      : (account ? `: ${account}` : '')
+    return { key: p.key, label: `${p.label}${suffix}` }
+  })
+
   async function handlePublish() {
     setSubmitting(true)
     setError('')
@@ -209,13 +230,15 @@ export default function PostPublishPanel({ postId }) {
         body: JSON.stringify({
           platforms: selected,
           group: group || null,
-          wmType: hasMedia && !hasVideo ? wmType : 'none',
-          wmPos: hasMedia && !hasVideo ? wmPos : 'random',
+          wmType: effectiveWmType,
+          wmPos: effectiveWmPos,
           scheduledAt: scheduledAt || null,
         }),
       })
       const data = await res.json().catch(() => ({}))
+      // ⛔ ล้มเหลว = เปิดกล่องค้างไว้พร้อมข้อความ — ปิดไปแล้ว error ไปโผล่หลังกล่องคนไม่เห็น
       if (!res.ok) { setError(data.error || 'สั่งเผยแพร่ไม่สำเร็จ'); return }
+      setConfirmOpen(false)
       setSelected([])
       setScheduledAt('')
       setJobs(prev => [...(data.data?.jobs || []), ...prev])
@@ -247,6 +270,22 @@ export default function PostPublishPanel({ postId }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {confirmOpen && (
+        <PublishConfirmModal
+          targets={confirmTargets}
+          groupName={group || null}
+          watermark={confirmWatermark}
+          hasVideo={hasVideo}
+          imageCount={imageCount}
+          scheduledLabel={scheduledAt ? fmtTime(scheduledAt) : null}
+          submitting={submitting}
+          error={error}
+          onClose={() => setConfirmOpen(false)}
+          onRemoveWatermark={() => setWmType('none')}
+          onConfirm={handlePublish}
+        />
+      )}
+
       <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
         เผยแพร่
       </h2>
@@ -359,7 +398,7 @@ export default function PostPublishPanel({ postId }) {
       </div>
 
       <button
-        onClick={handlePublish}
+        onClick={() => { setError(''); setConfirmOpen(true) }}
         disabled={!canPublish || submitting || !selected.length || (selected.some(p => p !== 'news') && !group)}
         title={!canPublish ? publishBlockReason : undefined}
         className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
