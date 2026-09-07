@@ -1,6 +1,11 @@
 # STATUS — 2026-09-07
 
-## ✅ เพิ่งจบ: KANBAN ชั้น teamspace (ก้อน A-D ครบ · ยังไม่ deploy · **user ยังไม่กดทดสอบ**)
+## ✅ เพิ่งจบ: KANBAN ชั้น teamspace — **ขึ้น prod แล้ว 2026-09-08** (prod = `5563a5c`)
+
+deploy แล้วครบ: `git pull` → `npm run migrate up` → `web && npm run build` → `pm2 restart pple-web pple-dcbot`
+· ตรวจหลัง migrate บน prod: teamspace "ทีมราชบุรี" (scope_node 32 · guild ราชบุรี · default_board 1) ·
+บอร์ดที่ยังไม่มีทีม = **0** · การ์ด 1,410 ใบเท่าเดิม · `/api/kanban/teamspaces` ตอบ 401 ตอนไม่ล็อกอิน (route มีจริง)
+· รอบนี้พ่วง `7b1a04e` (กล่องยืนยันก่อนเผยแพร่ของ posts) ขึ้นไปด้วย เพราะ prod ค้างอยู่ที่ `c6f3718`
 
 `org > teamspace > boards > cards` · แผนเต็ม `/home/tee/.claude/plans/kanban-multi-board-dreamy-quilt.md`
 
@@ -17,12 +22,11 @@ smoke ผ่าน session จริงบน dev server: GET/POST teamspaces ·
 `?teamspace=` กรองการ์ด · ย้ายการ์ดแล้ว **ref KB-xxx ไม่เปลี่ยน** · ตั้ง default board ข้ามทีมถูกปฏิเสธ 400 · ย้ายบอร์ดข้ามทีม 200 ·
 teamspace/บอร์ดสุดท้ายเก็บเข้ากรุไม่ได้ · ของทดสอบลบหมดแล้ว (local เหลือ teamspace 1 "ทีมราชบุรี" · board 1 · card 1,264)
 
-### ➜ ขั้นถัดไป (ตามลำดับ)
-1. **ให้ user กดจริงในเบราว์เซอร์** — ปุ่มเลือกทีม/บอร์ด · สร้าง teamspace 2 ทาง · เฟืองตั้งค่า · ย้ายการ์ด · โหมด "View as role"
-2. **deploy — เว็บกับบอทต้องขึ้นพร้อมกัน** (`kanban_boards.teamspace_id` · บทเรียนเดิม `board_id NOT NULL` ก้อน 3)
-   `git pull` → `npm run migrate up` → `cd web && npm run build` → `pm2 restart pple-web pple-dcbot` (ห่อ `bash -c` เสมอ)
-3. **หลัง deploy + ตรวจ** `SELECT count(*) FROM kanban_boards WHERE teamspace_id IS NULL` = 0 แล้วค่อยรัน
-   `ALTER TABLE kanban_boards ALTER COLUMN teamspace_id SET NOT NULL;` เป็น migration ใบใหม่ (SQL อยู่ท้ายไฟล์ migration เดิมในคอมเมนต์)
+### ➜ ขั้นถัดไป
+1. **ให้ user กดจริงบน prod** — ปุ่มเลือกทีม/บอร์ด · สร้าง teamspace 2 ทาง · เฟืองตั้งค่า · ย้ายการ์ด ·
+   คลิกขวาในดิสฯ → สร้าง KANBAN แล้วดู select "ย้ายไปกระดาน…" · โหมด "View as role"
+2. **ยังไม่ได้ทำ:** `ALTER TABLE kanban_boards ALTER COLUMN teamspace_id SET NOT NULL;`
+   (ตรวจแล้วว่า NULL = 0 ทั้ง local และ prod · เหลือแค่เขียนเป็น migration ใบใหม่แล้ว deploy รอบถัดไป)
 
 ### ⛔ ข้อตกลงที่ห้ามเปลี่ยนเอง
 - ใช้คำว่า **teamspace** ทับศัพท์ · ห้ามแปลเป็น "แผนก"/"ทีม"/"space"
@@ -45,6 +49,9 @@ teamspace/บอร์ดสุดท้ายเก็บเข้ากรุ�
 - **คัดกระทู้ดิสฯ เข้า KANBAN** (`/kanban/import/forum`) — ใช้จริงบน prod · prod = `bda2f210` · นำเข้า 12 · ไม่เอา 14 · เหลือ 229
 
 ## ⚠️ รู้ไว้
+- **prod ใช้ปุ่มเดิมไม่ได้แล้ว: ไม่มีปุ่ม "เพิ่มกระดาน" ใหญ่ๆ มุมขวาบน** (user สั่งเอาออก 2026-09-08)
+  สร้างการบ้าน = ปุ่ม + บนหัวกอง · สร้างกระดาน/teamspace = ในลิสต์เลือกที่ทำงาน
+- **custom field ผูกกับ "กระดาน" ไม่ใช่ teamspace — user ยืนยันแล้ว ห้ามเสนอย้ายอีก**
 - **dev server ของ user รันอยู่ที่พอร์ต 3000** — จะ build ต้องใช้ `NEXT_DIST_DIR=.next-test` ไม่งั้นชน `.next` เดียวกันแล้ว dev server 500 ทั้งเว็บ
 - เครื่อง dev มี `ANTHROPIC_API_KEY` เก่าค้างใน `~/.bashrc` → สคริปต์ต้องโหลด env ผ่าน `scripts/smoke/_envload.mjs`
 - git ในเครื่องนี้เคยเพี้ยน hash หายจาก reflog 2 รอบ — ก่อน deploy เช็ค `git log -1` ทั้ง 2 ฝั่งจริง
