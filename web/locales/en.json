@@ -1999,6 +1999,27 @@
       "scheduled": "Scheduled for {time}",
       "confirm": "Publish now",
       "cancel": "Cancel"
+    },
+    "script": {
+      "metaTitle": "Speaking script",
+      "loading": "Loading...",
+      "loadFailed": "Could not load the script",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "saveFailed": "Could not save",
+      "conflict": "Someone else edited this post — reload before continuing, or your current text will not be saved",
+      "reload": "Reload",
+      "backToPost": "Back to post",
+      "untitled": "(untitled)",
+      "emptyHint": "This post has no speaking script yet — go back to the post and pick \"Make a speaking script\" from the AI menu",
+      "play": "Start scrolling",
+      "pause": "Pause",
+      "toTop": "Back to start",
+      "speed": "Speed",
+      "fontSize": "Text size",
+      "readMode": "Read mode",
+      "editMode": "Edit script",
+      "keysHint": "Space = start/pause · Up/Down arrows = speed · Esc = stop"
     }
   },
   "kanban": {

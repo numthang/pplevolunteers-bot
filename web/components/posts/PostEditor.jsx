@@ -2,7 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check, Sparkles, X, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Check, Sparkles, X, Trash2, Copy, ChevronDown, ChevronUp, Mic } from 'lucide-react'
 import PostRevisions from './PostRevisions.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 
@@ -24,6 +25,7 @@ const AI_MODES = [
   ['ไม่แตะเนื้อหา', [
     ['caption', 'ให้คำแนะนำ', 'เสนอโควต/หัวข้อ/ไอเดียภาพ/hashtag ไว้อ่านเอง'],
     ['review', 'ตรวจก่อนเผยแพร่', 'ชี้จุดเสี่ยงทางกฎหมาย/ภาพลักษณ์ ไม่แก้ให้'],
+    ['script', 'ทำบทพูด', 'แปลงโพสต์นี้เป็นบทสำหรับอ่านหน้ากล้อง — เก็บแยก ไม่ทับโพสต์เดิม'],
   ]],
 ]
 
@@ -277,6 +279,9 @@ export default function PostEditor({ id }) {
   const [confirmAsk, setConfirmAsk] = useState(null)  // { title, message, confirmLabel, danger, onConfirm }
   const [suggesting, setSuggesting] = useState(false)
   const [reviewing, setReviewing] = useState(false)
+  const [scripting, setScripting] = useState(false)
+  // ทำบทพูดเสร็จแล้ว → โชว์ลิงก์ไปหน้าอ่าน (ไม่เด้งไปเอง — body ที่พิมพ์ค้างอาจยังไม่ autosave)
+  const [scriptReady, setScriptReady] = useState(false)
   // ข้อเสนอ AI ที่เก็บไว้ทั้งหมด (ใหม่สุดบน) — แต่ละชุด = { id, payload:{captions[],imageIdeas[]}, created_at, author_name }
   const [suggestions, setSuggestions] = useState([])
   const [suggestCollapsed, setSuggestCollapsed] = useState(true)
@@ -670,6 +675,47 @@ export default function PostEditor({ id }) {
     }
   }
 
+  // ทำบทพูด — แปลงโพสต์เป็นบทสำหรับอ่านหน้ากล้อง (หน้าอ่านอยู่ /posts/[id]/script)
+  //
+  // ⛔ ห้ามแตะ body — บทพูดไปอยู่ bodies.script (คอลัมน์ jsonb ที่มีอยู่แล้ว ไม่มี migration)
+  // ⚠️ route /ai/script ไม่เขียน DB เอง (bug-071: ทุก PATCH bump updated_at → lockToken ที่นี่หมดอายุ)
+  //    → เซฟที่นี่ด้วย token ของ editor แล้วรับ token ใหม่กลับมา เหมือน save() ปกติ
+  // ⚠️ merge ของเดิมใน bodies เสมอ — เขียนทับทั้งก้อน = คีย์อื่นหายเงียบๆ
+  async function handleScript() {
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหาให้แปลงเป็นบทพูด'); return }
+    setScripting(true)
+    setAiError('')
+    setScriptReady(false)
+    try {
+      const res = await fetch('/api/posts/ai/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id, body }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setAiError(data.error || 'ทำบทพูดไม่สำเร็จ'); return }
+
+      if (!lockTokenRef.current) { setAiError('ยังโหลดโพสต์ไม่เสร็จ ลองใหม่อีกครั้ง'); return }
+      const saveRes = await fetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lockToken: lockTokenRef.current,
+          bodies: { ...(post?.bodies || {}), script: data.data.script },
+        }),
+      })
+      const saved = await saveRes.json().catch(() => ({}))
+      if (!saveRes.ok) { setAiError(saved.error || 'เก็บบทพูดไม่สำเร็จ'); return }
+      lockTokenRef.current = saved.data.post.lock_token   // ไม่อัปเดต = autosave รอบหน้าเด้ง 409
+      setPost(saved.data.post)
+      setScriptReady(true)
+    } catch {
+      setAiError('ทำบทพูดไม่สำเร็จ')
+    } finally {
+      setScripting(false)
+    }
+  }
+
   async function handleSuggest() {
     if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยขอโควต/หัวข้อ'); return }
     setSuggesting(true)
@@ -811,6 +857,7 @@ export default function PostEditor({ id }) {
     if (aiMode === 'guided') return handleGuided()
     if (aiMode === 'caption') return handleSuggest()
     if (aiMode === 'review') return handleReview()
+    if (aiMode === 'script') return handleScript()
     return handlePolish(aiMode)   // polish | shorter | friendly
   }
 
@@ -842,7 +889,7 @@ export default function PostEditor({ id }) {
 
   const readOnly = !can.edit
   const status = post.status
-  const aiBusy = aiLoading || polishing || guiding || suggesting || reviewing
+  const aiBusy = aiLoading || polishing || guiding || suggesting || reviewing || scripting
 
   return (
     <div className="flex flex-col gap-3">
@@ -961,6 +1008,24 @@ export default function PostEditor({ id }) {
           <span>AI แก้ให้แล้ว: {aiNote} — ฉบับก่อนแก้อยู่ใน &ldquo;ประวัติการแก้ไข&rdquo; ด้านล่าง</span>
         </p>
       )}
+      {/* ทางเข้าหน้าอ่านบทพูด — โผล่ทั้งตอนเพิ่งทำเสร็จ และตอนเปิดโพสต์ที่มีบทอยู่แล้ว
+          (ถ้าโชว์เฉพาะตอนเพิ่งทำ พอรีเฟรชแล้วจะไม่มีทางกลับไปหน้านั้นเลย) */}
+      {(scriptReady || post?.bodies?.script) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/posts/${id}/script`}
+            className="flex items-center gap-1.5 px-4 py-2 text-base font-medium rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+          >
+            <Mic size={16} /> เปิดบทพูด
+          </Link>
+          {scriptReady && (
+            <span className="text-base text-warm-600 dark:text-disc-muted">
+              ทำบทพูดแล้ว — โพสต์เดิมไม่ถูกแตะ
+            </span>
+          )}
+        </div>
+      )}
+
       {statusError && <p className="text-sm text-red-500">{statusError}</p>}
 
       {/* ข้อเสนอจาก AI — เก็บถาวรใน post_ai_suggestions แล้ว (2026-07-31) เปิดหน้ามาก็ยังอยู่
