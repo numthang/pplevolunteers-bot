@@ -7,9 +7,11 @@
 //      (เร็วกว่า + ไม่เผาโควตา AI กับงานที่คนพิมพ์เองได้ใน 3 วินาที)
 const {
   ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags,
+  StringSelectMenuBuilder,
 } = require('discord.js');
 const { getT } = require('../services/i18n');
-const { createCardFromDiscord, cardWebUrl } = require('../db/kanbanCards');
+const { createCardFromDiscord, cardWebUrl, listBoardsForOrg, moveCardToBoard } = require('../db/kanbanCards');
+const { orgIdOfGuild } = require('../db/org');
 
 const TITLE_MAX = 200;   // ตรงกับ kanban_cards.title VARCHAR(200)
 const DETAIL_MAX = 4000; // เพดานจริงของ Discord modal Paragraph input (detail column เป็น TEXT ไม่จำกัดอยู่แล้ว)
@@ -135,10 +137,37 @@ async function handleKanbanImportModal(interaction) {
     //    (ยังไม่ตั้ง web_base_url → ตกไปเป็นตัวหนา ข้อความไม่พังและยังอ่านรู้เรื่อง)
     const refLabel = url ? `[${ref}](${url})` : `**${ref}**`;
 
+    /**
+     * ⭐ ตัวเลือก "ย้ายไปกระดาน…" (2026-09-07) — โผล่เฉพาะตอน org มีมากกว่า 1 กระดาน
+     *    การ์ดลงกระดานตั้งต้นของทีมที่ผูกเซิร์ฟนี้ไปแล้ว (resolveBoardId) ตัวนี้คือทางแก้ให้ทันที
+     *    โดยไม่ต้องเปิดเว็บ · ephemeral → เห็นคนเดียว ไม่รบกวนห้อง
+     * ⚠️ customId ต้องมี timestamp — Discord cache component ตาม customId (กฎเดียวกับ modal ของโปรเจกต์นี้)
+     */
+    const components = [];
+    try {
+      const orgId = await orgIdOfGuild(interaction.guildId);
+      const boards = orgId ? await listBoardsForOrg(orgId) : [];
+      if (boards.length > 1) {
+        components.push(new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`kanban_move_board:${card.id}:${Date.now()}`)
+            .setPlaceholder(t('kanban.import.moveBoardPlaceholder'))
+            .addOptions(boards.slice(0, 25).map((b) => ({
+              label: String(b.teamspace_name ? `${b.teamspace_name} · ${b.name}` : b.name).slice(0, 100),
+              value: String(b.id),
+            })))
+        ));
+      }
+    } catch (e) {
+      // ตัวเลือกย้ายกระดานเป็นของเสริม — พังตรงนี้ห้ามทำให้ "สร้างการบ้านสำเร็จ" กลายเป็นล้มเหลว
+      console.error('kanbanImport: ทำตัวเลือกย้ายกระดานไม่สำเร็จ:', e.message);
+    }
+
     await interaction.editReply({
       content: t(assignToSelf ? 'kanban.import.createdMine' : 'kanban.import.createdPool', {
         ref: refLabel, title: card.title,
       }),
+      components,
       flags: MessageFlags.SuppressEmbeds,
     });
 
@@ -177,4 +206,32 @@ async function handleKanbanImportModal(interaction) {
   }
 }
 
-module.exports = { handleKanbanImportStart, handleKanbanImportModal };
+/**
+ * เลือกกระดานปลายทางจาก select ที่แปะมากับข้อความ ephemeral หลังสร้างการ์ด
+ * customId: kanban_move_board:<cardId>:<timestamp>
+ * ⛔ ไม่มีด่านสิทธิ์เพิ่มรอบนี้ (ทุกคนใน org ย้ายได้เหมือนบนเว็บ) — ที่กันคือ org ต้องตรงกับเซิร์ฟ
+ */
+async function handleKanbanMoveBoardSelect(interaction) {
+  const t = await getT(interaction.guildId);
+  const [, cardId] = interaction.customId.split(':');
+  const boardId = interaction.values?.[0];
+
+  try {
+    const orgId = await orgIdOfGuild(interaction.guildId);
+    const ok = orgId && (await moveCardToBoard(orgId, cardId, boardId));
+    const boards = orgId ? await listBoardsForOrg(orgId) : [];
+    const board = boards.find((b) => String(b.id) === String(boardId));
+    await interaction.update({
+      content: ok
+        ? t('kanban.import.movedBoard', { board: board?.name || '' })
+        : t('kanban.import.moveBoardFailed'),
+      components: [],
+      flags: MessageFlags.SuppressEmbeds,
+    });
+  } catch (e) {
+    console.error('kanbanMoveBoard:', e.message);
+    await interaction.update({ content: t('kanban.import.moveBoardFailed'), components: [] }).catch(() => {});
+  }
+}
+
+module.exports = { handleKanbanImportStart, handleKanbanImportModal, handleKanbanMoveBoardSelect };

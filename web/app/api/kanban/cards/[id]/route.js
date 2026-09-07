@@ -1,9 +1,10 @@
 // /api/kanban/cards/[id] — อ่าน / แก้ (autosave) / เก็บเข้ากรุ / ลบถาวร
 //
-// PATCH รับ 3 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
+// PATCH รับ 4 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
 //   { lockToken, title?, detail?, dueAt?, priority? }                           ← autosave (ต้องมี token)
 //   { statusType }                                                              ← ปุ่มเปลี่ยนสถานะ
 //   { claim: true }                                                             ← อาสารับงานเอง
+//   { boardId }                                                                 ← ย้ายไปกระดานอื่น (2026-09-07)
 //
 // ⭐ 2026-09-03 (เฟส B): `{ ownerUserId }` ถูกถอดออก — ไม่มี "เจ้าภาพ" ให้ตั้งอีกแล้ว
 //    มอบหมาย/ถอดคนอื่นย้ายไปที่ POST/DELETE `/api/kanban/cards/[id]/assignees` ทางเดียว
@@ -13,6 +14,7 @@ import {
   checkStatusTransition, formatRef, canPurge, isLinkedCard, LINK_KIND_LABEL,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
+import * as boardDB from '@/db/kanban/boards.js'
 import * as attDB from '@/db/kanban/attachments.js'
 import { deleteKanbanFiles } from '@/lib/kanbanUploads.js'
 import { assignCase, unassignCase, caseOfCard } from '@/lib/caseAssign.js'
@@ -40,6 +42,9 @@ export async function GET(_req, { params }) {
   return Response.json({
     card: ctx.card,
     ref: formatRef(ctx.card.ref_no),
+    // จำนวนค่าช่องข้อมูลที่ผูกกับกระดานปัจจุบัน — UI ใช้ตัดสินว่าต้องเตือนก่อนย้ายกระดานไหม
+    // (ย้ายแล้วค่าพวกนี้หายจากจอ แต่ไม่ถูกลบ · ย้ายกลับแล้วกลับมาครบ)
+    fieldValueCount: await cardDB.countCardFieldValues(ctx.orgId, ctx.card.id),
     can: {
       edit:    canEditCard(ctx.card, ctx.access, ctx.userId),
       // เก็บเข้ากรุ/เอาออกจากกรุ ใช้ด่านเดียวกัน — คนละปุ่มแต่เป็นการกระทำคู่กัน
@@ -73,6 +78,23 @@ export async function PATCH(req, { params }) {
     const gate = checkStatusTransition(card, body.statusType)
     if (!gate.ok) return err(400, transitionError(card, gate.reason))
     return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, body.statusType) })
+  }
+
+  // ── ย้ายไปกระดานอื่น (2026-09-07) ──
+  // ⚠️ ค่าช่องข้อมูลของกระดานเดิม **หายจากจอแต่ไม่ถูกลบ** (field ผูกกระดาน 1:1)
+  //    UI ต้องขึ้น ConfirmDialog ก่อนถ้ามีค่าค้าง — ตัวเลขนั้นมาจาก GET ?fieldValues=1 ข้างล่าง
+  if (body.boardId !== undefined) {
+    if (!canEditCard(card, access, userId)) return err(403, 'ไม่มีสิทธิ์ย้ายKANBANใบนี้')
+    const boardId = Number(body.boardId) || null
+    if (!boardId) return err(400, 'ต้องเลือกกระดานปลายทาง')
+
+    const board = await boardDB.getBoard(orgId, boardId)
+    if (!board) return err(400, 'ไม่พบกระดานปลายทาง')
+    if (board.archived_at) return err(400, 'กระดานปลายทางอยู่ในกรุ')
+
+    const moved = await cardDB.moveCardBoard(orgId, card.id, boardId)
+    if (!moved) return err(400, 'ย้ายไม่สำเร็จ')
+    return Response.json({ card: moved })
   }
 
   // ── เอาออกจากกรุ ──

@@ -93,6 +93,36 @@ export function canPurge(access = {}) {
   return (normalizeAccess(access).permissions || new Set()).has('admin')
 }
 
+/* ══════════════ ชั้น teamspace (2026-09-07) ══════════════
+ * org > teamspace > boards > cards — teamspace คร่อมบอร์ดอีกที
+ * ⚠️ **teamspace ≠ หน้า /team** (นั่นคือรายชื่อสมาชิกในเซิร์ฟดิสคอร์ด คนละเรื่อง)
+ * ⛔ รอบนี้ user สั่งว่า "คนในองค์กรเดียวกันเห็นได้ทุก teamspace ทุกบอร์ด ทุกการ์ด
+ *    ค่อยจำกัดสิทธิ์ทีหลัง" → canViewTeamspace คืน true เสมอ **โดยตั้งใจ**
+ */
+
+/**
+ * เห็น teamspace อันนี้ไหม — **วันนี้ true เสมอ**
+ *
+ * ⭐ นี่คือ **จุดเดียว** ที่จะเปลี่ยนตอนจำกัดสิทธิ์ teamspace จริง (คู่กับ teamspaceScopeSql
+ *    ใน web/db/kanban/scopeSql.js ที่คุมฝั่ง SQL) — ห้ามไปโรยเงื่อนไขตาม route
+ * ⛔ ถ้าจะกันจริง ต้องกันพร้อมกันทั้ง 3 จุดที่ scopeSql.js ระบุไว้ ไม่งั้นได้ความเป็นส่วนตัวปลอม
+ */
+export function canViewTeamspace(teamspace, access = {}, userId = null) { // eslint-disable-line no-unused-vars
+  return Boolean(teamspace)
+}
+
+/** สร้าง teamspace ใหม่ — ทุกคนใน org ทำได้ เหตุผลเดียวกับ canCreateBoard */
+export function canCreateTeamspace(access = {}, userId = null) {
+  return Boolean(userId)
+}
+
+/** แก้ชื่อ/ตั้งค่า teamspace หรือเก็บเข้ากรุ — คนสร้าง หรือ admin (ทรงเดียวกับ canManageBoard) */
+export function canManageTeamspace(teamspace, access = {}, userId = null) {
+  if (!teamspace) return false
+  if (isKanbanAdmin(access)) return true
+  return Boolean(userId) && teamspace.created_by === userId
+}
+
 /* ══════════════ ชั้นกระดาน (ก้อน 3 · 2026-08-24) ══════════════
  * เพิ่ม **คร่อมข้างบน** ฟังก์ชันการ์ดตามที่หัวไฟล์นี้สั่งไว้ตั้งแต่ก้อน 1 — ไม่แก้ข้างในตัวเดิม
  * ⚠️ guild_id บนกระดานเป็น **ป้ายบอกที่มา ไม่ใช่ด่านสิทธิ์** — คนในเซิร์ฟ ก. เห็นกระดานของเซิร์ฟ ข.

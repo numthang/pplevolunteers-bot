@@ -34,7 +34,7 @@ const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const { handleCaseImportModal, handleThreadCreate: handleCaseThreadCreate } = require('./handlers/caseImportHandler');
 const { handlePostImportModal } = require('./handlers/postImportHandler');
-const { handleKanbanImportModal } = require('./handlers/kanbanImportHandler');
+const { handleKanbanImportModal, handleKanbanMoveBoardSelect } = require('./handlers/kanbanImportHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -223,6 +223,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('invite_pick:'))       return handleInviteSelect(interaction);
     await handleInterestSelect(interaction);   // interest/skill
     if (interaction.customId.startsWith('report_category:'))   return handleReportCategory(interaction);
+    if (interaction.customId.startsWith('kanban_move_board:'))  return handleKanbanMoveBoardSelect(interaction);
     return;
   }
 

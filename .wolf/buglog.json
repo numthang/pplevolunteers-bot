@@ -8307,6 +8307,89 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-06T16:53:17.225Z"
+    },
+    {
+      "id": "bug-478",
+      "timestamp": "2026-09-07T07:09:07.443Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/api/posts/ai/polish/route.js",
+      "root_cause": "Had 'แก้เฉพาะตัวสะกดผิด คำผิด และเครื่องหมายวรรคตอนที่",
+      "fix": "Changed to 'แก้เฉพาะตัวสะกดผิด คำผิด เครื่องหมายวรรคตอนที่ผิด",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T07:09:07.443Z"
+    },
+    {
+      "id": "bug-479",
+      "timestamp": "2026-09-07T13:51:03.831Z",
+      "error_message": "Wrong return value",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "Was returning: el.style.height = 'auto'",
+      "fix": "Now returns: const scrollY = window.scrollY",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T13:51:03.831Z"
+    },
+    {
+      "id": "bug-480",
+      "timestamp": "2026-09-07T13:51:14.455Z",
+      "error_message": "Wrong reference: useEffect should be useAutoGrowEffect",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "Used \"useEffect\" instead of \"useAutoGrowEffect\"",
+      "fix": "Changed useEffect → useAutoGrowEffect",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T13:51:14.455Z"
+    },
+    {
+      "id": "bug-481",
+      "timestamp": "2026-09-07T13:51:36.472Z",
+      "error_message": "Unexpected token. Did you mean `{'}'}` or &rbrace;? — KanbanHome.jsx:1554",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "แทน JSX ทั้งก้อนด้วยสคริปต์แล้วช่วงที่ตัด (slice) รวมบรรทัดปิด </div> + )} ไว้ด้วย แต่ข้อความใหม่ก็มีบรรทัดปิดเหมือนกัน → เหลือคู่ปิดเกินมา 1 ชุด",
+      "fix": "ลบ </div> + )} ที่เกิน 1 คู่ · เวลาสลับบล็อก JSX ด้วยสคริปต์ ให้ระบุ end marker เป็นบรรทัดถัดจากบล็อกจริง แล้วอย่าพิมพ์บรรทัดปิดซ้ำในข้อความใหม่",
+      "tags": [
+        "kanban",
+        "jsx",
+        "tooling"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T13:51:36.472Z"
+    },
+    {
+      "id": "bug-0482",
+      "timestamp": "2026-09-07T13:52:38.562Z",
+      "error_message": "CardModal: พิมพ์ในช่องรายละเอียด (detail textarea) แล้วหน้าต่างเด้ง บรรทัดที่พิมพ์กระโดดขึ้นบนสุดของกล่อง (user รายงานที่ https://pplevolunteers.org/kanban?card=KB-1287)",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "autoGrow(textarea) เรียกซ้ำ 2 จุดต่อ 1 ตัวอักษร: ตรงๆ ใน onChange และอีกทีใน useEffect ธรรมดา (หลัง paint) ที่ฟัง [loading, detail] — แต่ละครั้งเซ็ต height:auto แล้วอ่าน scrollHeight ทันที = forced reflow ซึ่งบังคับ browser คำนวณ layout ใหม่กลางอากาศ ตอน overlay โมดัล (fixed inset-0 overflow-y-auto) หด scrollHeight ชั่วขณะจาก height:auto ถ้า scrollTop เดิมเกิน scrollHeight ใหม่ browser จะ clamp scrollTop ลงทันที (ไม่ auto คืนกลับตอนโตกลับ) = กล่องเลื่อนขึ้นเอง เป็นบั๊กเดียวกับที่เคยเจอและแก้แล้วใน PostEditor.jsx (2026-08-27) แต่ไม่เคยพกมาที่ CardModal",
+      "fix": "ย้าย autoGrow effect เป็น useLayoutEffect (ผ่าน useAutoGrowEffect alias, fallback useEffect ตอน SSR) ให้ resize เกิดก่อน paint ไม่กระพริบ + ลบการเรียก autoGrow(e.target) ตรงๆ ใน onChange ทิ้ง (effect จัดการครั้งเดียวต่อ render พอแล้ว) + เพิ่ม window.scrollY save/restore ใน autoGrow() กันกรณี scroll เพี้ยนหลุดออกนอก modal ด้วย — ลอกแพทเทิร์นจาก PostEditor.jsx ทั้งชุด",
+      "tags": [
+        "kanban",
+        "CardModal",
+        "autoGrow",
+        "scroll-jump",
+        "textarea",
+        "useLayoutEffect"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T13:52:38.562Z"
     }
   ]
 }

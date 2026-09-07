@@ -36,6 +36,7 @@ import { sortCardsBy, collectSortableFields, BUILTIN_SORT_FIELDS } from '@/lib/k
 import { parseViewFromParams, mergeViewIntoSearch, unknownSelections } from '@/lib/kanbanUrlState.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
+import BoardSettingsModal from './BoardSettingsModal.jsx'
 import LabelChips from './LabelChips.jsx'
 import { ChecklistBar } from './ChecklistFieldBox.jsx'
 
@@ -57,21 +58,20 @@ const LINK_ICON = { case: Ticket, post: ImageIcon }
 const MAX_PER_COLUMN = 40
 
 /**
- * ⛔ UI ของ "กระดานหลายใบ" — ปิดไว้ (user เคาะ 2026-08-24 หลังทำเสร็จแล้วเปลี่ยนใจ)
+ * ✅ UI ของ "หลายกระดาน" — **เปิดแล้ว 2026-09-07** พร้อมชั้น teamspace (org > teamspace > boards > cards)
  *
- * schema + API + ฝั่งบอทยังอยู่ครบ และการ์ดทุกใบยังมี board_id ชี้ "กระดานหลัก" เหมือนเดิม
- * ที่ปิดคือ **ทางเลือกบนจอ** เท่านั้น
+ * ปิดไว้ตั้งแต่ 2026-08-24 เพราะการ์ด 51/67 ใบ (76%) คร่อมหลายสายงาน → แยกกระดานตามสายงานไม่ได้
+ * **เงื่อนไขนั้นไม่ได้เปลี่ยน และไม่ได้ถูกหักล้าง** — สิ่งที่เปลี่ยนคือกระดานเลิกเป็น "สายงาน" แล้ว
+ * กลายเป็น **ที่ทำงานของทีม** (teamspace) ซึ่งงานใบหนึ่งอยู่ทีมเดียวจริงๆ (มีทีมที่ 2 ขอใช้จริง)
+ * ⭐ การแบ่งงานตามสายงานยังเป็นหน้าที่ของ **ตัวกรอง** เหมือนเดิม (lib/kanbanTagFilter.js) ห้ามเอากระดานไปทำแทน
  *
- * เหตุผล (ข้อมูลจริงจากฐาน 2026-08-24 — อย่ารื้อกลับโดยไม่อ่าน):
- *   การ์ด **51 จาก 67 ใบ (76%) คร่อมมากกว่า 1 สายงาน** สูงสุด 7 สายงาน
- *   เช่น K-1 "Primary Vote" = สมาชิกสัมพันธ์ + กองทุนพัฒนาการเมือง + กรรมการจังหวัด
- *   แต่การ์ด 1 ใบอยู่ได้กระดานเดียว (multi-home ถูกตัดจาก MVP) → แยกกระดานตามสายงาน
- *   = 76% ของงานจริงถูกยัดเข้ากระดานเดียวทั้งที่เป็นงานของหลายทีมพร้อมกัน
- *   ของที่ต้องการจริงคือ **ตัวกรอง** ซึ่งมีอยู่แล้วครบ (lib/kanbanTagFilter.js — OR ในกลุ่ม AND ข้ามกลุ่ม)
- *
- * เปิดกลับเมื่อไหร่: วันที่มีทีมที่ 2 ลงงานจริงและต้องการคลังตัวเลือกแยกจากกัน → ตั้งเป็น true
+ * ⛔ ค่านี้ไม่ได้กันสิทธิ์อะไรทั้งนั้น — รอบนี้ทุกคนใน org เห็นทุก teamspace/board/card โดยตั้งใจ
+ *    (ตะเข็บวันที่จะกันจริงอยู่ที่ web/db/kanban/scopeSql.js ที่เดียว)
  */
-const BOARDS_UI = false
+const BOARDS_UI = true
+
+/** จำที่ทำงานล่าสุดไว้ในเครื่อง — เปิดหน้ามาครั้งหน้าจะได้อยู่ที่เดิม (ลิงก์ที่มี ?board/?teamspace ชนะเสมอ) */
+const LAST_PICK_KEY = 'kanban.lastPick'
 
 // ไอคอนต่อชนิด field ในเมนู "เรียงลำดับ" — status ใช้ไอคอนเดียวกับ text (ไม่มีไอคอนเฉพาะ)
 const SORT_TYPE_ICON = {
@@ -539,9 +539,25 @@ export default function KanbanHome() {
   const [activeBoardId, setActiveBoardId] = useState(null)
   const [boardMenuOpen, setBoardMenuOpen] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')   // '' = ยังไม่ได้กดสร้าง · ต้องกดบันทึกถึงจะ POST
-  const [addingBoard, setAddingBoard] = useState(false)
+  const [addingBoard, setAddingBoard] = useState(false)  // teamspace id ที่กด [+] อยู่ · false = ไม่ได้เปิดฟอร์ม
   const [creatingBoard, setCreatingBoard] = useState(false)
   const boardBoxRef = useRef(null)
+
+  // teamspace (2026-09-07) — ชั้นเหนือกระดาน · activeTeamspaceId = ดูทุกกระดานในทีมนั้นรวมกัน
+  // ⚠️ teamspace ≠ หน้า /team (รายชื่อสมาชิกในเซิร์ฟดิสคอร์ด) — คนละเรื่องกันคนละตาราง
+  const [teamspaces, setTeamspaces] = useState([])
+  const [scopeNodes, setScopeNodes] = useState([])
+  const [orgGuilds, setOrgGuilds] = useState([])
+  const [activeTeamspaceId, setActiveTeamspaceId] = useState(null)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const [addingTeamspace, setAddingTeamspace] = useState(false)
+  const [newTsMode, setNewTsMode] = useState('node')     // 'node' = เลือกจากหน่วยงานที่มีอยู่ (ทางหลัก) · 'name' = พิมพ์เอง
+  const [newTsNodeId, setNewTsNodeId] = useState('')
+  const [newTsName, setNewTsName] = useState('')
+  const [creatingTs, setCreatingTs] = useState(false)
+  const [settingsTarget, setSettingsTarget] = useState(null)   // { kind: 'board'|'teamspace', item }
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
   /**
    * hydrate จาก URL เสร็จหรือยัง — **ต้องเป็น state ไม่ใช่ ref**
    *
@@ -575,6 +591,7 @@ export default function KanbanHome() {
       // ตัวกรองทั้งชุดก็อ่านจาก URL ที่เดียวกัน (2026-08-30) — คนละชั้นกับการ์ด แต่กติกาเดียวกัน
       const v = parseViewFromParams(search)
       setActiveBoardId(v.board)
+      setActiveTeamspaceId(v.teamspace)
       setScope(v.scope)
       setGroupBy(v.group)
       setStatusFilter(v.status)
@@ -606,7 +623,7 @@ export default function KanbanHome() {
   useEffect(() => {
     if (!urlHydrated) return
     const next = mergeViewIntoSearch(window.location.search, {
-      board: activeBoardId, scope, group: groupBy,
+      board: activeBoardId, teamspace: activeTeamspaceId, scope, group: groupBy,
       status: statusFilter, kind: kindFilter, assignee: assigneeFilter,
       label: labelFilter, q: textQuery, sort,
     })
@@ -614,7 +631,7 @@ export default function KanbanHome() {
     if (window.location.pathname + window.location.search !== target) {
       window.history.replaceState(null, '', target)
     }
-  }, [urlHydrated, activeBoardId, scope, groupBy, statusFilter, kindFilter, assigneeFilter, labelFilter, textQuery, sort])
+  }, [urlHydrated, activeBoardId, activeTeamspaceId, scope, groupBy, statusFilter, kindFilter, assigneeFilter, labelFilter, textQuery, sort])
 
   function openCard(id) {
     const url = new URL(window.location.href)
@@ -641,8 +658,11 @@ export default function KanbanHome() {
   const load = useCallback(async () => {
     setLoadError('')
     try {
-      const boardQ = activeBoardId ? `&board=${activeBoardId}` : ''
-      const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}${boardQ}`)
+      // เจาะกระดานชนะเจาะทีม (เจาะจงกว่า) — ฝั่ง API ตัดสินแบบเดียวกัน ห้ามให้ 2 ฝั่งต่างกัน
+      const scopeQ = activeBoardId
+        ? `&board=${activeBoardId}`
+        : activeTeamspaceId ? `&teamspace=${activeTeamspaceId}` : ''
+      const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}${scopeQ}`)
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); setTruncated(false); return }
       setCards(json.cards || [])
@@ -657,7 +677,7 @@ export default function KanbanHome() {
     } finally {
       setLoading(false)
     }
-  }, [t, inArchive, activeBoardId])
+  }, [t, inArchive, activeBoardId, activeTeamspaceId])
 
   // สลับเข้า/ออกกรุ หรือสลับกระดาน = คนละชุดข้อมูล ต้องโหลดใหม่
   // (สลับ ของฉัน↔ทั้งหมด ไม่ต้อง — กรองในเครื่องจากชุดเดิม)
@@ -666,12 +686,46 @@ export default function KanbanHome() {
   // รายชื่อกระดาน — โหลดครั้งเดียว แล้วอัปเดตเองตอนสร้างใหม่ (ไม่ต้องยิงซ้ำทุกครั้งที่สลับกอง)
   const loadBoards = useCallback(async () => {
     try {
-      const res = await fetch('/api/kanban/boards')
-      const json = await res.json().catch(() => ({}))
-      if (res.ok) setBoards(json.boards || [])
-    } catch { /* โหลดรายชื่อไม่ได้ = ยังใช้หน้าได้ (ตกไปที่ "ทุกกระดาน") ไม่ต้องขึ้น error ทั้งหน้า */ }
+      const [bRes, tRes] = await Promise.all([
+        fetch('/api/kanban/boards'),
+        fetch('/api/kanban/teamspaces'),
+      ])
+      const bJson = await bRes.json().catch(() => ({}))
+      if (bRes.ok) setBoards(bJson.boards || [])
+      const tJson = await tRes.json().catch(() => ({}))
+      if (tRes.ok) {
+        setTeamspaces(tJson.teamspaces || [])
+        setScopeNodes(tJson.scopeNodes || [])
+        setOrgGuilds(tJson.guilds || [])
+      }
+    } catch { /* โหลดรายชื่อไม่ได้ = ยังใช้หน้าได้ (ตกไปที่ "ทั้งหมด") ไม่ต้องขึ้น error ทั้งหน้า */ }
   }, [])
   useEffect(() => { loadBoards() }, [loadBoards])
+
+  /**
+   * จำที่ทำงานล่าสุด — เปิดหน้าเปล่าครั้งหน้าให้กลับมาที่เดิม
+   * ⛔ ต้องรอ urlHydrated ก่อน ไม่งั้น render แรกจะเขียนทับลิงก์ที่คนเพิ่งเปิดมา (บทเรียนเดียวกับ urlHydrated)
+   * ⚠️ ลิงก์ที่มี ?board=/?teamspace= ชนะค่าที่จำไว้เสมอ — คนส่งลิงก์ต้องได้หน้าเดียวกับที่เห็น
+   */
+  useEffect(() => {
+    if (!urlHydrated) return
+    const search = new URLSearchParams(window.location.search)
+    if (search.get('board') || search.get('teamspace')) return
+    try {
+      const raw = JSON.parse(localStorage.getItem(LAST_PICK_KEY) || 'null')
+      if (raw?.board) setActiveBoardId(Number(raw.board))
+      else if (raw?.teamspace) setActiveTeamspaceId(Number(raw.teamspace))
+    } catch { /* localStorage ปิดอยู่/ค่าเสีย = เริ่มที่ "ทั้งหมด" ตามเดิม ไม่ใช่เรื่องต้องแจ้ง */ }
+    // ตั้งใจรันครั้งเดียวตอน hydrate เสร็จ — ไม่ใช่ทุกครั้งที่คนสลับกระดาน
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlHydrated])
+
+  useEffect(() => {
+    if (!urlHydrated) return
+    try {
+      localStorage.setItem(LAST_PICK_KEY, JSON.stringify({ board: activeBoardId, teamspace: activeTeamspaceId }))
+    } catch { /* เขียนไม่ได้ = แค่ไม่จำ ไม่กระทบการใช้งาน */ }
+  }, [urlHydrated, activeBoardId, activeTeamspaceId])
 
   // beforeunload เตือนถ้ามีชื่อกระดานค้างในช่องที่ยังไม่กดสร้าง
   // (กฎ CLAUDE.md §Create — ห้าม autosave และห้ามปล่อยให้พิมพ์ค้างแล้วปิดแท็บหาย)
@@ -747,25 +801,66 @@ export default function KanbanHome() {
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
-  // จัดกลุ่มกระดานตามเซิร์ฟที่ผูกไว้ — กระดานที่ไม่ผูกเซิร์ฟขึ้นก่อนเสมอ (ไม่มีหัวข้อคั่น)
-  // ⚠️ นี่คือ "การจัดกลุ่มบนจอ" ล้วนๆ — guild ไม่ใช่ขอบเขตสิทธิ์ (ดู lib/kanbanAccess.js §ชั้นกระดาน)
-  const boardGroups = useMemo(() => {
-    const map = new Map()
+  /**
+   * ลิสต์ 2 ชั้นในปุ่มเลือกที่ทำงาน — **teamspace เป็นหัวข้อ · กระดานเป็นรายการใต้หัวข้อ**
+   * (เดิมจัดกลุ่มตามเซิร์ฟดิสคอร์ด — ย้ายมาเป็น teamspace 2026-09-07 · การผูกเซิร์ฟย้ายไปอยู่ที่ teamspace)
+   * ⚠️ นี่คือ "การจัดกลุ่มบนจอ" ล้วนๆ — รอบนี้ทุกคนเห็นทุกทีมทุกกระดาน ไม่มีด่านสิทธิ์
+   * กระดานที่ยังไม่มีทีม (ข้อมูลเก่าก่อน backfill) ตกมากองท้ายสุด ไม่ใช่หายไปเงียบๆ
+   */
+  const teamspaceGroups = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase()
+    const hit = (txt) => !q || String(txt || '').toLowerCase().includes(q)
+
+    const byTs = new Map()
     for (const b of boards) {
-      const k = b.guild_id || null
-      if (!map.has(k)) map.set(k, [])
-      map.get(k).push(b)
+      const k = b.teamspace_id ? String(b.teamspace_id) : 'none'
+      if (!byTs.has(k)) byTs.set(k, [])
+      byTs.get(k).push(b)
     }
-    // null (ไม่ผูกเซิร์ฟ) มาก่อน ที่เหลือเรียงตามชื่อเซิร์ฟ
-    return [...map.entries()]
-      .sort((a, b) => (a[0] === null ? -1 : b[0] === null ? 1 : String(a[0]).localeCompare(String(b[0]))))
-      .map(([guildId, items]) => ({ guildId, items }))
-  }, [boards])
-  const guildNames = useMemo(() => {
-    const out = {}
-    for (const b of boards) if (b.guild_id && b.guild_name) out[b.guild_id] = b.guild_name
-    return out
-  }, [boards])
+
+    const groups = teamspaces.map((ts) => {
+      const items = byTs.get(String(ts.id)) || []
+      // ค้นเจอชื่อทีม = โชว์กระดานทั้งทีม · ไม่งั้นโชว์เฉพาะกระดานที่ชื่อตรง
+      return { ts, items: hit(ts.name) ? items : items.filter((b) => hit(b.name)) }
+    }).filter((g) => !q || hit(g.ts.name) || g.items.length)
+
+    const orphans = (byTs.get('none') || []).filter((b) => hit(b.name))
+    if (orphans.length) groups.push({ ts: null, items: orphans })
+    return groups
+  }, [boards, teamspaces, pickerQuery])
+
+  // ทีมปลายทางของปุ่ม "เพิ่มกระดาน" บนหัว — ทีมที่ดูอยู่ ไม่งั้นทีมของกระดานที่เปิดอยู่ ไม่งั้นทีมแรก
+  const newBoardTeamspaceId = useMemo(() => {
+    if (activeTeamspaceId) return activeTeamspaceId
+    const b = boards.find((x) => String(x.id) === String(activeBoardId))
+    return b?.teamspace_id || teamspaces[0]?.id || null
+  }, [activeTeamspaceId, activeBoardId, boards, teamspaces])
+
+  /**
+   * กระดานต้นแบบที่จะก็อปช่องข้อมูลไปให้กระดานใหม่ — กระดานที่ดูอยู่ ไม่งั้นกระดานแรกของทีมที่กด [+]
+   * (ไม่มีคลัง field ของกลาง — กระดานใหม่ที่ไม่ก็อปจะไม่มีช่องสักช่อง ดู db/kanban/fields.js §copyFieldDefs)
+   */
+  const copyFieldsFrom = useMemo(() => {
+    if (activeBoardId) return boards.find((b) => String(b.id) === String(activeBoardId)) || null
+    const tsId = addingBoard === true ? activeTeamspaceId : addingBoard
+    if (tsId) return boards.find((b) => String(b.teamspace_id) === String(tsId)) || null
+    return boards[0] || null
+  }, [activeBoardId, activeTeamspaceId, addingBoard, boards])
+
+  // ป้ายบนปุ่ม — บอกให้ครบว่ากำลังดูอะไรอยู่ ("ทีมราชบุรี · กระดานหลัก")
+  const pickerLabel = useMemo(() => {
+    if (activeBoardId) {
+      const b = boards.find((x) => String(x.id) === String(activeBoardId))
+      if (!b) return t('board.allBoards')
+      const ts = teamspaces.find((x) => String(x.id) === String(b.teamspace_id))
+      return ts ? `${ts.name} · ${b.name}` : b.name
+    }
+    if (activeTeamspaceId) {
+      const ts = teamspaces.find((x) => String(x.id) === String(activeTeamspaceId))
+      if (ts) return ts.name
+    }
+    return t('board.allBoards')
+  }, [activeBoardId, activeTeamspaceId, boards, teamspaces, t])
 
   // ตัวกรองชนิดงาน — ตายตัว 3 แบบเสมอ (นับจากลิงก์ ไม่ใช่จาก field ที่คนติด)
   const kindOptions = useMemo(() => {
@@ -1076,12 +1171,18 @@ export default function KanbanHome() {
     setBoardMenuOpen(false)
     setAddingBoard(false)
     setNewBoardName('')
+    setAddingTeamspace(false)
+    setNewTsName('')
+    setNewTsNodeId('')
+    setPickerQuery('')
   }
 
   /**
    * สร้างกระดาน — user เคาะ 2026-08-24: กรอกชื่ออย่างเดียว แล้วสลับไปกระดานใหม่ทันที
    * ⛔ ห้ามยิง POST ตอนกดปุ่ม "เพิ่มกระดาน" (แค่เปิดช่องพิมพ์) — POST เกิดตอนกดสร้างที่นี่เท่านั้น
    *    (CLAUDE.md 2026-07-30 · เคสจริง /posts เคยได้ร่างเปล่าค้าง DB 5 แถวเพราะทำแบบนั้น)
+   * ⭐ 2026-09-07: ลงทีมที่กด [+] มา + **ก็อปช่องข้อมูลจากกระดานที่ดูอยู่**
+   *    ไม่มีคลัง field ของกลาง ถ้าไม่ก็อปให้ กระดานใหม่จะไม่มีช่องสักช่องแล้วดูเหมือนพัง
    */
   async function handleCreateBoard(e) {
     e.preventDefault()
@@ -1090,20 +1191,115 @@ export default function KanbanHome() {
     setCreatingBoard(true)
     setActionError('')
     try {
+      const teamspaceId = addingBoard === true ? (activeTeamspaceId || undefined) : addingBoard
       const res = await fetch('/api/kanban/boards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          teamspaceId: teamspaceId || undefined,
+          copyFieldsFromBoardId: copyFieldsFrom?.id || undefined,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
       setBoards((prev) => [...prev, json.board])
+      setActiveTeamspaceId(null)
       setActiveBoardId(json.board.id)     // เข้าไปในกระดานที่เพิ่งสร้างเลย ไม่ต้องกดซ้ำ
       closeBoardMenu()
+      loadBoards()                        // ตัวเลขการ์ดต่อทีมเปลี่ยน + กระดานใหม่ต้องมีในลิสต์
     } catch {
       setActionError(t('saveFailed'))
     } finally {
       setCreatingBoard(false)
+    }
+  }
+
+  /**
+   * สร้าง teamspace — 2 ทาง: เลือกจากหน่วยงานที่มีอยู่ (ทางหลัก) หรือพิมพ์ชื่อเอง
+   * ⭐ ทางหลักคือ "เลือกจากของที่มี" เพราะระบบรู้อยู่แล้วว่าใครอยู่หน่วยงานไหน (org_scope_nodes)
+   *    ถ้ามีแต่ช่องพิมพ์ จะได้ "ราชบุรี" 2 อันที่คนอ่านว่าเหมือนกันแต่เครื่องไม่รู้ว่าเกี่ยวกัน
+   * ⛔ POST ตอนกดสร้างเท่านั้น (กฎเดียวกับกระดาน)
+   */
+  async function handleCreateTeamspace(e) {
+    e.preventDefault()
+    const usingNode = newTsMode === 'node'
+    if (usingNode ? !newTsNodeId : !newTsName.trim()) return
+    setCreatingTs(true)
+    setActionError('')
+    try {
+      const res = await fetch('/api/kanban/teamspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(usingNode ? { scopeNodeId: Number(newTsNodeId) } : { name: newTsName.trim() }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+      setTeamspaces((prev) => [...prev, json.teamspace])
+      setActiveBoardId(null)
+      setActiveTeamspaceId(json.teamspace.id)
+      closeBoardMenu()
+    } catch {
+      setActionError(t('saveFailed'))
+    } finally {
+      setCreatingTs(false)
+    }
+  }
+
+  /** บันทึกกล่องตั้งค่า (กระดาน หรือ teamspace) — ปุ่มบันทึก ไม่ใช่ autosave (ดูหัวไฟล์ modal) */
+  async function handleSaveSettings(patch, { makeDefaultBoard } = {}) {
+    if (!settingsTarget) return
+    const { kind, item } = settingsTarget
+    setSavingSettings(true)
+    setSettingsError('')
+    try {
+      const url = kind === 'board' ? `/api/kanban/boards/${item.id}` : `/api/kanban/teamspaces/${item.id}`
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setSettingsError(json.error || t('saveFailed')); return }
+
+      // ตั้งเป็นกระดานตั้งต้นของทีม = เขียนที่ teamspace ไม่ใช่ที่กระดาน (เก็บ guild ไว้ที่เดียว)
+      if (makeDefaultBoard) {
+        const tsId = patch.teamspaceId || item.teamspace_id
+        await fetch(`/api/kanban/teamspaces/${tsId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ defaultBoardId: Number(item.id) }),
+        })
+      }
+      setSettingsTarget(null)
+      await loadBoards()
+    } catch {
+      setSettingsError(t('saveFailed'))
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  /** เก็บกระดาน/teamspace เข้ากรุ — ใบสุดท้ายเก็บไม่ได้ (API ตอบเหตุผลมา ไม่เงียบ) */
+  async function handleArchiveTarget() {
+    if (!settingsTarget) return
+    const { kind, item } = settingsTarget
+    setSavingSettings(true)
+    setSettingsError('')
+    try {
+      const url = kind === 'board' ? `/api/kanban/boards/${item.id}` : `/api/kanban/teamspaces/${item.id}`
+      const res = await fetch(url, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setSettingsError(json.error || t('saveFailed')); return }
+      if (kind === 'board' && String(activeBoardId) === String(item.id)) setActiveBoardId(null)
+      if (kind === 'teamspace' && String(activeTeamspaceId) === String(item.id)) setActiveTeamspaceId(null)
+      setSettingsTarget(null)
+      await loadBoards()
+      await load()
+    } catch {
+      setSettingsError(t('saveFailed'))
+    } finally {
+      setSavingSettings(false)
     }
   }
 
@@ -1140,7 +1336,10 @@ export default function KanbanHome() {
             ในกรุไม่มีปุ่ม — สร้างของใหม่เข้ากรุไม่มีความหมาย (เหตุผลเดิมของปุ่มก่อนหน้า) */}
         {BOARDS_UI && !inArchive && (
           <button
-            onClick={() => { setBoardMenuOpen(true); setAddingBoard(true) }}
+            /* ⚠️ ต้องระบุทีมปลายทางมาด้วย — ฟอร์มสร้างกระดานอยู่ใต้หัวข้อทีมในลิสต์ ไม่ใช่ท้ายลิสต์แล้ว
+               ส่ง true เฉยๆ = เปิดเมนูมาแล้วไม่มีฟอร์มโผล่ที่ไหนเลย */
+            onClick={() => { setBoardMenuOpen(true); setAddingBoard(newBoardTeamspaceId) }}
+            disabled={!newBoardTeamspaceId}
             className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
           >
             <Plus size={16} />
@@ -1156,29 +1355,41 @@ export default function KanbanHome() {
             แต่ guild เป็นแค่ป้าย ไม่ใช่ชั้นข้อมูล (ดู db/kanban/boards.js หัวไฟล์) */}
         {BOARDS_UI && (
         <div ref={boardBoxRef} className="relative flex items-center gap-2">
-          <span className="text-sm text-warm-500 dark:text-disc-muted">{t('board.boardLabel')}</span>
+          <span className="text-sm text-warm-500 dark:text-disc-muted">{t('board.pickerLabel')}</span>
           <button
             onClick={() => (boardMenuOpen ? closeBoardMenu() : setBoardMenuOpen(true))}
-            className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[240px] ${
-              activeBoardId
+            className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[260px] ${
+              activeBoardId || activeTeamspaceId
                 ? 'border-teal bg-teal/10 text-teal'
                 : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
             }`}
           >
-            <span className="truncate">
-              {activeBoardId
-                ? (boards.find((b) => String(b.id) === String(activeBoardId))?.name || t('board.allBoards'))
-                : t('board.allBoards')}
-            </span>
+            <span className="truncate">{pickerLabel}</span>
             <ChevronDown size={14} className="shrink-0" />
           </button>
 
+          {/* ลิสต์ 2 ชั้น — teamspace เป็นหัวข้อ (กดได้ = ดูทั้งทีม) · กระดานเป็นรายการใต้หัวข้อ
+              ⛔ ห้ามทำเป็น dropdown 2 อันซ้อน — แถวควบคุมแตกบนมือถือ (กติกา "รูปแบบเดียวจบ" 2026-08-18) */}
           {boardMenuOpen && (
-            <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-72 max-h-80 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1.5">
+            <div className="absolute max-w-[calc(100vw_-_1.5rem)] left-0 top-full z-20 mt-1 w-80 max-h-96 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1.5">
+              {/* ช่องค้นหาโผล่เฉพาะตอนมีของให้ค้นจริง — ทีมเดียวกระดานเดียวไม่ต้องมีช่องว่างเปล่า */}
+              {(teamspaces.length > 1 || boards.length > 3) && (
+                <div className="relative px-1 pb-1.5">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted" />
+                  <input
+                    autoFocus
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder={t('board.searchPlaceholder')}
+                    className="w-full h-9 pl-8 pr-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                  />
+                </div>
+              )}
+
               <button
-                onClick={() => { setActiveBoardId(null); closeBoardMenu() }}
+                onClick={() => { setActiveBoardId(null); setActiveTeamspaceId(null); closeBoardMenu() }}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md text-left ${
-                  !activeBoardId ? 'bg-teal/10 text-teal font-medium' : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                  !activeBoardId && !activeTeamspaceId ? 'bg-teal/10 text-teal font-medium' : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                 }`}
               >
                 <span className="truncate">{t('board.allBoards')}</span>
@@ -1187,58 +1398,161 @@ export default function KanbanHome() {
                 </span>
               </button>
 
-              {boardGroups.map(({ guildId, items }) => (
-                <div key={guildId ?? 'none'}>
-                  {/* หัวข้อกลุ่มโผล่เฉพาะตอนมีกระดานผูกเซิร์ฟจริง — org ที่ไม่ใช้ Discord ต้องไม่เห็นหัวข้อเปล่า */}
-                  {guildId && (
-                    <p className="px-3 pt-2 pb-1 text-sm text-warm-400 dark:text-disc-muted truncate">
-                      {guildNames[guildId] || t('board.otherServer')}
-                    </p>
-                  )}
-                  {items.map((b) => (
+              {teamspaceGroups.map(({ ts, items }) => (
+                <div key={ts?.id ?? 'none'} className="mt-1">
+                  {/* หัวข้อทีม — กดที่ชื่อ = ดูการ์ดทุกกระดานในทีมนั้นรวมกัน */}
+                  <div className="flex items-center gap-0.5">
                     <button
-                      key={b.id}
-                      onClick={() => { setActiveBoardId(b.id); closeBoardMenu() }}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md text-left ${
-                        String(activeBoardId) === String(b.id)
-                          ? 'bg-teal/10 text-teal font-medium'
-                          : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      onClick={() => { if (!ts) return; setActiveBoardId(null); setActiveTeamspaceId(ts.id); closeBoardMenu() }}
+                      disabled={!ts}
+                      className={`flex-1 min-w-0 flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md text-left font-medium ${
+                        ts && String(activeTeamspaceId) === String(ts.id)
+                          ? 'bg-teal/10 text-teal'
+                          : 'text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:hover:bg-transparent'
                       }`}
                     >
-                      <span className="truncate">{b.name}</span>
-                      <span className="shrink-0 text-warm-400 dark:text-disc-muted">{b.card_count}</span>
+                      <span className="truncate">{ts ? ts.name : t('board.otherServer')}</span>
+                      {ts && <span className="shrink-0 text-warm-400 dark:text-disc-muted font-normal">{ts.card_count}</span>}
                     </button>
+                    {ts && (
+                      <>
+                        <button
+                          onClick={() => { setSettingsTarget({ kind: 'teamspace', item: ts }); setBoardMenuOpen(false) }}
+                          aria-label={t('board.teamspaceSettings')}
+                          title={t('board.teamspaceSettings')}
+                          className="p-1.5 rounded-md text-warm-400 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+                        >
+                          <Settings size={14} />
+                        </button>
+                        <button
+                          onClick={() => { setAddingBoard(ts.id); setAddingTeamspace(false) }}
+                          aria-label={t('board.addBoardHere')}
+                          title={t('board.addBoardHere')}
+                          className="p-1.5 rounded-md text-warm-400 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {items.map((b) => (
+                    <div key={b.id} className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => { setActiveTeamspaceId(null); setActiveBoardId(b.id); closeBoardMenu() }}
+                        className={`flex-1 min-w-0 flex items-center justify-between gap-2 pl-6 pr-3 py-2 text-sm rounded-md text-left ${
+                          String(activeBoardId) === String(b.id)
+                            ? 'bg-teal/10 text-teal font-medium'
+                            : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        <span className="truncate">
+                          {b.name}
+                          {ts && String(ts.default_board_id) === String(b.id) && (
+                            <span className="ml-1.5 text-sm text-warm-400 dark:text-disc-muted">· {t('board.defaultBadge')}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-warm-400 dark:text-disc-muted">{b.card_count}</span>
+                      </button>
+                      <button
+                        onClick={() => { setSettingsTarget({ kind: 'board', item: b }); setBoardMenuOpen(false) }}
+                        aria-label={t('board.boardSettings')}
+                        title={t('board.boardSettings')}
+                        className="p-1.5 rounded-md text-warm-400 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+                      >
+                        <Settings size={14} />
+                      </button>
+                    </div>
                   ))}
+
+                  {/* ฟอร์มสร้างกระดานในทีมนี้ — โผล่ตรงที่กด [+] ไม่ใช่ท้ายลิสต์ (จะได้รู้ว่าลงทีมไหน) */}
+                  {ts && String(addingBoard) === String(ts.id) && (
+                    <form onSubmit={handleCreateBoard} className="flex flex-col gap-1.5 px-1 py-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={newBoardName}
+                          onChange={(e) => setNewBoardName(e.target.value)}
+                          placeholder={t('board.newBoardPlaceholder')}
+                          maxLength={100}
+                          className="flex-1 min-w-0 h-9 px-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                        />
+                        <button
+                          type="submit"
+                          disabled={creatingBoard || !newBoardName.trim()}
+                          className="flex items-center gap-1 h-9 px-3 text-sm font-medium rounded-md bg-teal text-white hover:opacity-90 disabled:opacity-50 shrink-0"
+                        >
+                          {creatingBoard && <Loader2 size={14} className="animate-spin" />}
+                          {t('board.createBoard')}
+                        </button>
+                      </div>
+                      {copyFieldsFrom && (
+                        <p className="px-1 text-sm text-warm-500 dark:text-disc-muted">
+                          {t('board.copyFieldsFrom', { name: copyFieldsFrom.name })}
+                        </p>
+                      )}
+                    </form>
+                  )}
                 </div>
               ))}
 
+              {!teamspaceGroups.length && (
+                <p className="px-3 py-3 text-sm text-warm-500 dark:text-disc-muted">{t('board.noMatch')}</p>
+              )}
+
               <div className="border-t border-warm-200 dark:border-disc-border mt-1.5 pt-1.5">
-                {addingBoard ? (
-                  <form onSubmit={handleCreateBoard} className="flex items-center gap-1.5 px-1">
+                {addingTeamspace ? (
+                  <form onSubmit={handleCreateTeamspace} className="flex flex-col gap-2 px-1 py-1">
+                    <p className="text-sm font-medium text-warm-900 dark:text-disc-text">{t('board.newTeamspaceHeading')}</p>
+
+                    {/* ทางหลัก = เลือกจากหน่วยงานที่มีอยู่ ระบบจะได้รู้ว่าทีมนี้ตรงกับใครในระบบยศ */}
+                    <label className="flex items-center gap-2 text-sm text-warm-900 dark:text-disc-text">
+                      <input type="radio" checked={newTsMode === 'node'} onChange={() => setNewTsMode('node')} className="accent-teal" />
+                      {t('board.fromScopeNode')}
+                    </label>
+                    <select
+                      value={newTsNodeId}
+                      disabled={newTsMode !== 'node'}
+                      onChange={(e) => setNewTsNodeId(e.target.value)}
+                      className="w-full h-9 px-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-teal"
+                    >
+                      <option value="">{t('board.chooseScopeNode')}</option>
+                      {scopeNodes.map((n) => (
+                        <option key={n.id} value={String(n.id)}>
+                          {n.parent_label ? `${n.parent_label} › ${n.label}` : n.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="flex items-center gap-2 text-sm text-warm-900 dark:text-disc-text">
+                      <input type="radio" checked={newTsMode === 'name'} onChange={() => setNewTsMode('name')} className="accent-teal" />
+                      {t('board.ownName')}
+                    </label>
                     <input
-                      autoFocus
-                      value={newBoardName}
-                      onChange={(e) => setNewBoardName(e.target.value)}
-                      placeholder={t('board.newBoardPlaceholder')}
+                      value={newTsName}
+                      disabled={newTsMode !== 'name'}
+                      onChange={(e) => setNewTsName(e.target.value)}
+                      placeholder={t('board.newTeamspacePlaceholder')}
                       maxLength={100}
-                      className="flex-1 min-w-0 h-9 px-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                      className="w-full h-9 px-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-teal"
                     />
+
                     <button
                       type="submit"
-                      disabled={creatingBoard || !newBoardName.trim()}
-                      className="flex items-center gap-1 h-9 px-3 text-sm font-medium rounded-md bg-teal text-white hover:opacity-90 disabled:opacity-50 shrink-0"
+                      disabled={creatingTs || (newTsMode === 'node' ? !newTsNodeId : !newTsName.trim())}
+                      className="flex items-center justify-center gap-1 h-9 px-3 text-sm font-medium rounded-md bg-teal text-white hover:opacity-90 disabled:opacity-50"
                     >
-                      {creatingBoard && <Loader2 size={14} className="animate-spin" />}
-                      {t('board.createBoard')}
+                      {creatingTs && <Loader2 size={14} className="animate-spin" />}
+                      {t('board.createTeamspace')}
                     </button>
                   </form>
                 ) : (
                   <button
-                    onClick={() => setAddingBoard(true)}
+                    onClick={() => { setAddingTeamspace(true); setAddingBoard(false) }}
                     className="w-full flex items-center gap-1.5 px-3 py-2 text-sm rounded-md text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
                   >
                     <Plus size={14} />
-                    {t('board.addBoard')}
+                    {t('board.addTeamspace')}
                   </button>
                 )}
               </div>
@@ -1843,6 +2157,25 @@ export default function KanbanHome() {
           onClose={() => setConfirmCard(null)}
           onHide={() => archiveCard(confirmCard)}
           onPurge={() => handlePurge(confirmCard)}
+        />
+      )}
+
+      {/* ตั้งค่ากระดาน / teamspace — เปิดจากเฟืองในลิสต์เลือกที่ทำงาน */}
+      {settingsTarget && (
+        <BoardSettingsModal
+          t={t}
+          kind={settingsTarget.kind}
+          item={settingsTarget.item}
+          teamspaces={teamspaces}
+          guilds={orgGuilds}
+          isDefaultBoard={settingsTarget.kind === 'board' && teamspaces.some(
+            (ts) => String(ts.default_board_id) === String(settingsTarget.item.id)
+          )}
+          busy={savingSettings}
+          error={settingsError}
+          onSave={handleSaveSettings}
+          onArchive={handleArchiveTarget}
+          onClose={() => { setSettingsTarget(null); setSettingsError('') }}
         />
       )}
 

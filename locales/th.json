@@ -67,7 +67,10 @@
       "createdPool": "✅ สร้างKANBAN {ref} แล้ว — **{title}**\nอยู่ในกอง \"ยังไม่มีคนรับ\" รอคนมารับ",
       "failed": "❌ สร้างKANBANไม่สำเร็จ",
       "publicMine": "📋 {by} เพิ่มข้อความนี้เป็นKANBANแล้ว · รหัส {ref} · รับไปทำเอง — {title}",
-      "publicPool": "📋 {by} เพิ่มข้อความนี้เป็นKANBANแล้ว · รหัส {ref} · ยังไม่มีเจ้าภาพ ใครสนใจกดรับได้เลย — {title}"
+      "publicPool": "📋 {by} เพิ่มข้อความนี้เป็นKANBANแล้ว · รหัส {ref} · ยังไม่มีเจ้าภาพ ใครสนใจกดรับได้เลย — {title}",
+      "moveBoardPlaceholder": "ย้ายไปกระดาน…",
+      "movedBoard": "ย้ายไปกระดาน \"{board}\" แล้ว",
+      "moveBoardFailed": "ย้ายกระดานไม่สำเร็จ"
     }
   }
 }

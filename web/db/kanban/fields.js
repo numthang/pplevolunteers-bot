@@ -88,6 +88,66 @@ export async function createFieldDef(orgId, { label, helpText = null, type, boar
   return rows[0]
 }
 
+/**
+ * ก็อปนิยามช่องข้อมูลทั้งชุดจากบอร์ดหนึ่งไปอีกบอร์ด (ตอนสร้างบอร์ดใหม่ · 2026-09-07)
+ *
+ * ⭐ ทำไมต้องมี: field ผูกบอร์ด 1:1 และ **ไม่มีคลังช่องข้อมูลของกลาง** (ตั้งใจ) →
+ *    บอร์ดที่เพิ่งสร้างจะไม่มีช่องสักช่องถ้าไม่ก็อปให้
+ * ⛔ ห้ามทำด้วยการวนเรียก createFieldDef + ensureFieldOption — ensureFieldOption **ตั้งสี/ลำดับใหม่เอง**
+ *    (autoColor + MAX+1) จะได้ตัวเลือกสีเพี้ยนลำดับสลับ · ต้อง INSERT…SELECT ยกแถวมาทั้งค่า
+ * ⚠️ ก็อปเฉพาะ "นิยามช่อง + ตัวเลือก" ไม่เอาค่าที่กรอกไว้ในการ์ด (kanban_card_field_values)
+ * ⚠️ key ต้องสร้างใหม่ต่อท้ายด้วย id ใหม่ — key เดิมมี id ของ field ต้นทางติดมา จะอ่านสับสน
+ *
+ * @returns {number} จำนวน field ที่ก็อปมา
+ */
+export async function copyFieldDefs(orgId, fromBoardId, toBoardId) {
+  if (!fromBoardId || !toBoardId || Number(fromBoardId) === Number(toBoardId)) return 0
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const { rows: defs } = await client.query(
+      `SELECT id, key, label, help_text, type, type_options, sort_order
+         FROM kanban_field_defs
+        WHERE org_id = $1 AND board_id = $2 AND archived_at IS NULL
+        ORDER BY sort_order, id`,
+      [orgId, fromBoardId]
+    )
+
+    for (const d of defs) {
+      const { rows: idRow } = await client.query(
+        `SELECT nextval(pg_get_serial_sequence('kanban_field_defs', 'id')) AS id`
+      )
+      const newId = idRow[0].id
+
+      await client.query(
+        `INSERT INTO kanban_field_defs (id, org_id, board_id, key, label, help_text, type, type_options, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [newId, orgId, toBoardId, slugifyFieldKey(d.label, newId), d.label, d.help_text,
+         d.type, d.type_options, d.sort_order]
+      )
+
+      // ตัวเลือกยกมาทั้งสีและลำดับ — ที่ซ่อนไว้ก็ก็อปมาซ่อนเหมือนกัน (บอร์ดใหม่ควรเหมือนต้นฉบับเป๊ะ)
+      await client.query(
+        `INSERT INTO kanban_field_options (field_id, name, color, sort_order, archived_at)
+         SELECT $1, o.name, o.color, o.sort_order, o.archived_at
+           FROM kanban_field_options o WHERE o.field_id = $2
+          ORDER BY o.sort_order, o.id`,
+        [newId, d.id]
+      )
+    }
+
+    await client.query('COMMIT')
+    return defs.length
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+}
+
 /** แก้ label/help_text — key และ type เปลี่ยนไม่ได้ (ไม่รับพารามิเตอร์นี้เข้ามาด้วยซ้ำ กันแก้ผิดที่) */
 export async function updateFieldDef(orgId, fieldId, { label, helpText } = {}) {
   const { rows: cur } = await pool.query(

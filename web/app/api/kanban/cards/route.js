@@ -1,6 +1,7 @@
 // /api/kanban/cards — รายการKANBAN + สร้างใหม่
 //
 // GET  ?view=board     → กระดาน (ค่าตั้งต้น · หน้า /kanban ใช้ตัวนี้)
+//      ?board=<id> / ?teamspace=<id> → กรองเฉพาะกระดานนั้น / ทุกกระดานในทีมนั้น
 //      ?view=unassigned → งานที่ยังไม่มีคนรับ
 //      ?view=all        → ทั้ง org
 // POST                  → สร้างKANBAN
@@ -25,6 +26,10 @@ export async function GET(req) {
   //    ที่ open_to_org ทุกคนใน org เห็นได้อยู่แล้ว · ถึงตอนมีกระดานปิด ให้กรองที่ listCards ที่เดียว
   const rawBoard = params.get('board')
   const boardId = rawBoard && /^\d+$/.test(rawBoard) ? rawBoard : null
+  // ?teamspace=<id> → การ์ดทุกกระดานในทีมนั้นรวมกัน (กดที่ "ชื่อทีม" ในลิสต์เลือก) · ส่งคู่กับ ?board ไม่ได้
+  //    ส่งมาทั้งคู่ = ?board ชนะ (เจาะจงกว่า) — ไม่ error เพราะเป็นการกดจากลิสต์เดียวกัน
+  const rawTs = params.get('teamspace')
+  const teamspaceId = !boardId && rawTs && /^\d+$/.test(rawTs) ? rawTs : null
 
   if (view === 'unassigned') {
     const { cards, truncated } = await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false, viewer: ctx.viewer })
@@ -36,7 +41,7 @@ export async function GET(req) {
   // ⭐ viewerUserId ติดไปด้วย — ตัวกรอง "ของฉัน" ตัดสินฝั่ง client จากชุดข้อมูลก้อนเดียวกันนี้
   //    (ไม่ยิง /api/me เพิ่ม และ **ห้ามให้ client เดา userId ตัวเองจาก session** — debug mode คืน null ตั้งใจ)
   if (view === 'board') {
-    const { cards, truncated } = await cardDB.listCards(ctx.orgId, { includeClosed: true, boardId, viewer: ctx.viewer })
+    const { cards, truncated } = await cardDB.listCards(ctx.orgId, { includeClosed: true, boardId, teamspaceId, viewer: ctx.viewer })
     return Response.json({
       cards,
       // ⭐ ชนเพดาน = บอกผู้ใช้ตรงๆ ว่ารายการไม่ครบ · ตัวกรอง/ตัวเรียงทำงานบนชุดนี้ทั้งคู่
@@ -51,7 +56,7 @@ export async function GET(req) {
   // กรุ (archive) — คนละเรื่องกับช่อง "พักไว้" ที่เป็น status_type
   // แยก endpoint ไม่ใช่กรองในเครื่อง: การ์ดที่เก็บเข้ากรุแล้วต้องไม่ถูกดึงมาในโหมดปกติเลย
   if (view === 'archived') {
-    const { cards, truncated } = await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, boardId, viewer: ctx.viewer })
+    const { cards, truncated } = await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, boardId, teamspaceId, viewer: ctx.viewer })
     return Response.json({
       cards,
       truncated,

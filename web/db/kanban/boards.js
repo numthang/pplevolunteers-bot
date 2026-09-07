@@ -10,9 +10,11 @@
 //      ห้ามเพิ่มตารางช่องโดยไม่อ่าน §แบ่งก้อนงาน ก่อน: ช่องกลายเป็นแหล่งสถานะที่ 2 = ทั้งดีไซน์พัง
 //   3. ทุก query มี org_id ใน WHERE เสมอ — ไม่พบ = ข้าม org หรือไม่มีจริง (guard ตอบ 404 ไม่ใช่ 403)
 import pool from '../index.js'
+import { ensureDefaultTeamspace } from './teamspaces.js'
 
-const COLS = `b.id, b.org_id, b.guild_id, b.name, b.detail, b.open_to_org,
+const COLS = `b.id, b.org_id, b.guild_id, b.teamspace_id, b.name, b.detail, b.open_to_org,
               b.sort_order, b.archived_at, b.created_by, b.created_at,
+              (SELECT t.name FROM kanban_teamspaces t WHERE t.id = b.teamspace_id) AS teamspace_name,
               (SELECT g.name FROM dc_guilds g WHERE g.guild_id = b.guild_id) AS guild_name`
 
 // จำนวนการ์ดที่ยังไม่เข้ากรุ — dropdown เลือกกระดานโชว์ตัวเลขนี้ข้างชื่อ
@@ -21,16 +23,24 @@ const CARD_COUNT = `(SELECT count(*) FROM kanban_cards c
 
 function shape(row) {
   if (!row) return null
-  return { ...row, id: Number(row.id), card_count: row.card_count ?? 0 }
+  return {
+    ...row,
+    id: Number(row.id),
+    teamspace_id: row.teamspace_id == null ? null : Number(row.teamspace_id),
+    card_count: row.card_count ?? 0,
+  }
 }
 
-export async function listBoards(orgId, { includeArchived = false } = {}) {
+export async function listBoards(orgId, { includeArchived = false, teamspaceId = null } = {}) {
+  const params = [orgId]
+  if (teamspaceId) params.push(teamspaceId)
   const { rows } = await pool.query(
     `SELECT ${COLS}, ${CARD_COUNT}
        FROM kanban_boards b
       WHERE b.org_id = $1 ${includeArchived ? '' : 'AND b.archived_at IS NULL'}
+            ${teamspaceId ? 'AND b.teamspace_id = $2' : ''}
       ORDER BY b.sort_order, b.id`,
-    [orgId]
+    params
   )
   return rows.map(shape)
 }
@@ -57,27 +67,33 @@ export async function ensureDefaultBoard(orgId, createdBy) {
   )
   if (rows[0]) return Number(rows[0].id)
 
+  // ⚠️ ตะเข็บ 2 ฝั่ง — ตัวนี้ **ไม่รู้จัก guild** โดยตั้งใจ (เว็บไม่มี guild ในมือ)
+  //    ฝั่งบอทมี resolveBoardId() ใน db/kanbanCards.js ที่ไล่จาก teamspace ของเซิร์ฟก่อน
+  //    แก้ที่ไหนให้ดูอีกฝั่งเสมอ · ทุกบอร์ดต้องมี teamspace ตั้งแต่ 2026-09-07
+  const teamspaceId = await ensureDefaultTeamspace(orgId, createdBy)
   const { rows: made } = await pool.query(
-    `INSERT INTO kanban_boards (org_id, name, created_by) VALUES ($1, $2, $3) RETURNING id`,
-    [orgId, 'กระดานหลัก', createdBy]
+    `INSERT INTO kanban_boards (org_id, name, teamspace_id, created_by) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [orgId, 'กระดานหลัก', teamspaceId, createdBy]
   )
   return Number(made[0].id)
 }
 
 /** สร้างกระดาน — user เคาะ 2026-08-24: กรอก "ชื่ออย่างเดียว" ที่เหลือไปตั้งทีหลังในเฟืองของกระดาน */
-export async function createBoard(orgId, { name, guildId = null, detail = null, openToOrg = true }, createdBy) {
+export async function createBoard(orgId, { name, guildId = null, detail = null, openToOrg = true, teamspaceId = null }, createdBy) {
+  // ไม่ระบุ teamspace = ลงอันตั้งต้นของ org — บอร์ดลอยไม่มีทีมไม่มีที่ยืนในลิสต์ 2 ชั้น
+  const tsId = teamspaceId || (await ensureDefaultTeamspace(orgId, createdBy))
   const { rows } = await pool.query(
-    `INSERT INTO kanban_boards (org_id, guild_id, name, detail, open_to_org, sort_order, created_by)
-     VALUES ($1, $2, $3, $4, $5,
+    `INSERT INTO kanban_boards (org_id, guild_id, teamspace_id, name, detail, open_to_org, sort_order, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6,
              (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM kanban_boards WHERE org_id = $1),
-             $6)
+             $7)
      RETURNING id`,
-    [orgId, guildId, name, detail, openToOrg, createdBy]
+    [orgId, guildId, tsId, name, detail, openToOrg, createdBy]
   )
   return await getBoard(orgId, rows[0].id)
 }
 
-export async function updateBoard(orgId, id, { name, detail, guildId, openToOrg } = {}) {
+export async function updateBoard(orgId, id, { name, detail, guildId, openToOrg, teamspaceId } = {}) {
   const sets = []
   const params = [orgId, id]
   const put = (sql, val) => { params.push(val); sets.push(`${sql} = $${params.length}`) }
@@ -86,6 +102,7 @@ export async function updateBoard(orgId, id, { name, detail, guildId, openToOrg 
   if (detail !== undefined)    put('detail', detail)
   if (guildId !== undefined)   put('guild_id', guildId)
   if (openToOrg !== undefined) put('open_to_org', openToOrg)
+  if (teamspaceId !== undefined) put('teamspace_id', teamspaceId)
   if (!sets.length) return await getBoard(orgId, id)
 
   await pool.query(`UPDATE kanban_boards SET ${sets.join(', ')} WHERE org_id = $1 AND id = $2`, params)

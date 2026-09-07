@@ -185,12 +185,19 @@ export const CARD_HARD_CAP = 3000
  * งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม
  * @returns {{cards: object[], truncated: boolean}} truncated = ชนเพดาน มีการ์ดที่ไม่ได้คืนมา
  */
-export async function listCards(orgId, { status = null, assigneeUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = CARD_HARD_CAP } = {}) {
+export async function listCards(orgId, { status = null, assigneeUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, teamspaceId = null, viewer = NO_VIEWER, limit = CARD_HARD_CAP } = {}) {
   // viewer อยู่ต้นแถวพารามิเตอร์เสมอ ($2–$4) — ที่เหลือ push ต่อท้ายได้ตามเดิมโดยเลขไม่ขยับ
   const params = [orgId, ...viewerParams(viewer)]
   let where = `c.org_id = $1 AND ${visibleLinkSql(2, 3, 4)}`
   // boardId = null → ทุกกระดานใน org (ตัวเลือก "ทั้งหมด" ใน dropdown = ค่าตั้งต้นของหน้าการบ้านของฉัน)
   if (boardId) { params.push(boardId); where += ` AND c.board_id = $${params.length}` }
+  // teamspaceId = ดูทุกบอร์ดในทีมนั้นรวมกัน (กดที่ "ชื่อทีม" ในลิสต์ 2 ชั้น)
+  // ⛔ ใช้ EXISTS ห้าม JOIN — ทั้งไฟล์ตั้งใจไม่มี JOIN ใน FROM เพื่อไม่ให้ทุก query ที่แปะสูตรร่วม
+  //    (visibleLinkSql / LIVE_STATUS_SQL / AGG) ต้องแก้ FROM ตามกันหมด
+  if (teamspaceId) {
+    params.push(teamspaceId)
+    where += ` AND EXISTS (SELECT 1 FROM kanban_boards b WHERE b.id = c.board_id AND b.teamspace_id = $${params.length})`
+  }
   // onlyArchived = หน้าถังขยะ · includeArchived = เอาทั้งคู่ (ยังไม่มีใครใช้ เก็บไว้เผื่อ export)
   if (onlyArchived)          where += ` AND c.archived_at IS NOT NULL`
   else if (!includeArchived) where += ` AND c.archived_at IS NULL`
@@ -430,6 +437,39 @@ export async function setCardStatus(orgId, id, statusType) {
     [orgId, id, statusType]
   )
   return rows[0] ? await getCard(orgId, id) : null
+}
+
+/**
+ * ย้ายการ์ดไปกระดานอื่น (2026-09-07 · ก่อนหน้านี้ทำไม่ได้เลย)
+ *
+ * ✅ การ์ดที่ผูกเคส/โพสต์ย้ายได้ — กระดานเป็นแค่ "ที่เก็บ" สถานะยังอ่านสดจากต้นทางเหมือนเดิม
+ * ✅ **ref (KB-xxx) ไม่เปลี่ยน** — เลขรันต่อ org ไม่ผูกกระดาน ลิงก์เก่ายังเปิดได้
+ * ⚠️ custom field ผูกกระดาน 1:1 (AGG ในไฟล์นี้เทียบ d.board_id = c.board_id) → ค่าช่องของกระดานเดิม
+ *    **หายจากจอแต่ไม่ถูกลบ** แถวยังอยู่ใน kanban_card_field_values ย้ายกลับแล้วกลับมาครบ
+ *    → route ต้องเตือนก่อนย้ายถ้าการ์ดใบนั้นมีค่าค้างอยู่ (countCardFieldValues ข้างล่าง)
+ * ⚠️ ขยับ updated_at ด้วย — เป็น lock token ของ autosave ช่องพิมพ์ คนที่เปิดค้างต้องรู้ว่าของเปลี่ยน
+ */
+export async function moveCardBoard(orgId, cardId, boardId) {
+  const { rows } = await pool.query(
+    `UPDATE kanban_cards SET board_id = $3, updated_at = now()
+      WHERE org_id = $1 AND id = $2 RETURNING id`,
+    [orgId, cardId, boardId]
+  )
+  return rows[0] ? await getCard(orgId, cardId) : null
+}
+
+/** จำนวนค่าช่องข้อมูลที่การ์ดใบนี้กรอกไว้กับกระดานปัจจุบัน — ใช้ตัดสินว่าต้องเตือนก่อนย้ายไหม */
+export async function countCardFieldValues(orgId, cardId) {
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS n
+       FROM kanban_card_field_values v
+      WHERE v.card_id = $2
+        AND EXISTS (SELECT 1 FROM kanban_cards c
+                    JOIN kanban_field_defs d ON d.id = v.field_id
+                   WHERE c.id = v.card_id AND c.org_id = $1 AND d.board_id = c.board_id)`,
+    [orgId, cardId]
+  )
+  return rows[0]?.n ?? 0
 }
 
 /**

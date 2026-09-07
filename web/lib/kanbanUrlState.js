@@ -25,6 +25,7 @@ export const KINDS = ['plain', 'case', 'post']
 
 export const DEFAULT_VIEW = {
   board: null,
+  teamspace: null,   // ดูทุกกระดานในทีมนั้น — ใช้แทน board ไม่ใช่คู่กัน (board เจาะจงกว่า จึงชนะ)
   scope: 'mine',
   group: 'status',
   status: [],
@@ -57,6 +58,7 @@ export function parseViewFromParams(input) {
   if (!p) return { ...DEFAULT_VIEW }
 
   const board = p.get('board')
+  const teamspace = p.get('teamspace')
   const sortRaw = p.get('sort')
   let sort = null
   if (sortRaw) {
@@ -66,6 +68,7 @@ export function parseViewFromParams(input) {
 
   return {
     board: board && /^\d+$/.test(board) ? Number(board) : null,
+    teamspace: teamspace && /^\d+$/.test(teamspace) ? Number(teamspace) : null,
     scope: oneOf(p.get('scope'), SCOPES, 'mine'),
     group: oneOf(p.get('group'), GROUP_MODES, 'status'),
     status: list(p.get('status')).filter((s) => STATUS_TYPES.includes(s)),
@@ -89,6 +92,8 @@ export function viewToQueryString(view = {}) {
   const p = new URLSearchParams()
 
   if (v.board) p.set('board', String(v.board))
+  // ส่งมาทั้งคู่ = เอาแค่ board (ฝั่ง API ก็ตัดสินแบบเดียวกัน — ห้ามให้ 2 ฝั่งตีความต่างกัน)
+  else if (v.teamspace) p.set('teamspace', String(v.teamspace))
   if (v.scope && v.scope !== DEFAULT_VIEW.scope) p.set('scope', v.scope)
   if (v.group && v.group !== DEFAULT_VIEW.group) p.set('group', v.group)
   if (v.status?.length) p.set('status', v.status.join(','))

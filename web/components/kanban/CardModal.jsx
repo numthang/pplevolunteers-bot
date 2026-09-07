@@ -12,10 +12,10 @@
  *    → ห้าม last-write-wins ให้ขึ้นแถบเตือนแล้วให้คนเลือกโหลดใหม่ (bug-071)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
+  AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot, Columns3,
   ExternalLink, Link as LinkIcon, Link2, Loader2, UserPlus, Users, X,
 } from 'lucide-react'
 import { formatRef, isDraggableCard, statusOptionsFor } from '@/lib/kanbanAccess.js'
@@ -28,11 +28,23 @@ import PersonProfileModal from '../org/PersonProfileModal.jsx'
 
 const AUTOSAVE_MS = 800
 
+/**
+ * ⚠️ ราคาแพงกว่าที่ตาเห็น — เขียน height:auto แล้วอ่าน scrollHeight ทันที = บังคับ browser
+ *    คำนวณ layout ใหม่แบบ synchronous (forced reflow) ระหว่างนั้น scroll position เพี้ยนได้
+ * → **เรียกได้ครั้งเดียวต่อการ render เท่านั้น** ห้ามเรียกซ้ำใน onChange อีก
+ *   (บั๊กเดียวกับที่เจอใน PostEditor.jsx 2026-08-27: เรียกทั้ง onChange และ effect = 2 reflow
+ *    ต่อ 1 ตัวอักษร → พิมพ์แล้วกล่องเด้ง/บรรทัดกระโดดขึ้นบนสุด)
+ */
 function autoGrow(el) {
   if (!el) return
+  const scrollY = window.scrollY
   el.style.height = 'auto'
   el.style.height = el.scrollHeight + 'px'
+  if (window.scrollY !== scrollY) window.scrollTo({ top: scrollY, behavior: 'instant' })
 }
+
+// useLayoutEffect ทำงานก่อน paint (ไม่กระพริบ) แต่ฝั่ง server ไม่มี layout → กัน warning ตอน SSR
+const useAutoGrowEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 // ขึ้นข้าง KB-xx ในหัวกล่อง — เอาแค่วันที่+เวลาสั้นๆ ไม่เอาวินาที (user สั่ง 2026-09-02: อย่าให้เกะกะข้างล่าง)
 function fmtCreatedAt(iso) {
@@ -46,6 +58,11 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
+  // ย้ายกระดาน (2026-09-07) — โผล่เฉพาะตอน org มีกระดานมากกว่าใบเดียว
+  const [boards, setBoards] = useState([])
+  const [fieldValueCount, setFieldValueCount] = useState(0)
+  const [confirmMove, setConfirmMove] = useState(null)   // { boardId, name }
+  const [movingBoard, setMovingBoard] = useState(false)
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, join: false, purge: false })
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [profileUserId, setProfileUserId] = useState(null)
@@ -91,6 +108,16 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
+  // รายชื่อกระดาน — โหลดครั้งเดียวตอนเปิดการ์ด · มีใบเดียว = ไม่มีอะไรให้ย้าย แถวนี้จะไม่ขึ้นเลย
+  useEffect(() => {
+    let alive = true
+    fetch('/api/kanban/boards')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j) setBoards(j.boards || []) })
+      .catch(() => { /* ย้ายกระดานเป็นของเสริม โหลดไม่ได้ก็ใช้การ์ดต่อได้ */ })
+    return () => { alive = false }
+  }, [])
+
   const load = useCallback(async () => {
     setLoadError('')
     try {
@@ -99,6 +126,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); return }
       setCard(json.card)
       setCan(json.can || {})
+      setFieldValueCount(json.fieldValueCount || 0)
       lockToken.current = json.card.lock_token
       // เขียนทับช่องกรอกเฉพาะตอนโหลดครั้งแรก/กดโหลดใหม่ — ไม่งั้นทับสิ่งที่กำลังพิมพ์
       const fresh = {
@@ -121,7 +149,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   useEffect(() => { load() }, [load])
 
   // ขยายช่อง detail ตามความยาวข้อความ — ยิงตอนโหลดค่าจริงมาด้วย ไม่ใช่แค่ตอนพิมพ์
-  useEffect(() => { autoGrow(detailRef.current) }, [loading, detail])
+  useAutoGrowEffect(() => { autoGrow(detailRef.current) }, [loading, detail])
 
   /**
    * ปิด 3 ทาง — ทางที่ 1: ESC
@@ -270,6 +298,23 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       onChanged?.()
     } catch {
       setActionError(t('saveFailed'))
+    }
+  }
+
+  /**
+   * ย้ายการ์ดไปกระดานอื่น (2026-09-07)
+   * ⚠️ ค่าช่องข้อมูลของกระดานเดิม **หายจากจอแต่ไม่ถูกลบ** (field ผูกกระดาน 1:1) → มีค่าค้างต้องถามก่อน
+   *    ย้ายกลับกระดานเดิมแล้วค่ากลับมาครบ — ข้อความในกล่องบอกแบบนี้ ไม่ใช่ขู่ว่า "ข้อมูลจะหาย"
+   * ⭐ เลข KB-xxx ไม่เปลี่ยน — ref เป็นเลขรันต่อ org ไม่ผูกกระดาน ลิงก์เก่ายังเปิดได้
+   */
+  async function moveToBoard(boardId) {
+    setMovingBoard(true)
+    setConfirmMove(null)
+    try {
+      await patch({ boardId: Number(boardId) })
+      await load()          // ชุด field ของการ์ดเปลี่ยนตามกระดานใหม่ → ต้องโหลดการ์ดใหม่ทั้งใบ
+    } finally {
+      setMovingBoard(false)
     }
   }
 
@@ -502,7 +547,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     ref={detailRef}
                     value={detail}
                     disabled={readOnly}
-                    onChange={(e) => { setDetail(e.target.value); autoGrow(e.target) }}
+                    /* ⛔ ห้ามใส่ autoGrow(e.target) กลับเข้าไปใน onChange — useAutoGrowEffect ทำให้แล้ว 1 ครั้งต่อ render
+                       (เรียกซ้ำ 2 ที่ = 2 forced reflow ต่อ 1 ตัวอักษร → กล่องเด้ง/เลื่อนขึ้นบนสุด bug-kb-scroll-jump) */
+                    onChange={(e) => setDetail(e.target.value)}
                     /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) */
                     onKeyDown={(e) => {
                       if (e.key !== 'Escape') return
@@ -577,11 +624,58 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   </p>
                 )}
 
+                {/* กระดาน — ย้ายการ์ดข้ามกระดานได้ตั้งแต่ 2026-09-07 (ก่อนหน้านี้ทำไม่ได้เลย)
+                    โผล่เฉพาะตอนมีมากกว่า 1 ใบ · การ์ดที่ผูกเคส/โพสต์ก็ย้ายได้ (กระดานเป็นที่เก็บ
+                    สถานะยังอ่านสดจากต้นทาง) จึงใช้ readOnly ไม่ใช่ isDraggableCard */}
+                {boards.length > 1 && (
+                  <FieldRow icon={Columns3} label={t('board.boardLabel')}>
+                    <TagCombobox
+                      type="select"
+                      numericIds={false}
+                      readOnly={readOnly || movingBoard}
+                      source={{ mode: 'static', options: boards.map((b) => ({
+                        id: String(b.id),
+                        name: b.teamspace_name ? `${b.teamspace_name} · ${b.name}` : b.name,
+                      })) }}
+                      value={card.board_id ? [{
+                        id: String(card.board_id),
+                        name: (() => {
+                          const b = boards.find((x) => String(x.id) === String(card.board_id))
+                          return b ? (b.teamspace_name ? `${b.teamspace_name} · ${b.name}` : b.name) : ''
+                        })(),
+                      }] : []}
+                      onCommit={(ids) => {
+                        const id = ids[0]
+                        if (!id || String(id) === String(card.board_id)) return
+                        const b = boards.find((x) => String(x.id) === String(id))
+                        // มีค่าช่องข้อมูลค้างอยู่ = ถามก่อน 1 ครั้ง · ไม่มี = ย้ายเลย ไม่ต้องถามให้เสียจังหวะ
+                        if (fieldValueCount > 0) setConfirmMove({ boardId: id, name: b?.name || '' })
+                        else moveToBoard(id)
+                      }}
+                      onError={setActionError}
+                      t={t}
+                    />
+                  </FieldRow>
+                )}
+
                 {/* ⛔ แถว "ป้าย" ถูกถอดออก 2026-08-19 — ยุบเข้า custom field แล้ว
                     สายงาน/พื้นที่/อุปกรณ์ ขึ้นเป็นแถว field ปกติในกล่อง "ข้อมูลของทีม" ข้างล่างแทน
                     อย่าเอากลับมา: มีที่เก็บ 2 ที่เมื่อไหร่ ข้อมูลใหม่จะแตกไปคนละทางทันที */}
 
               </div>
+
+              {/* ยืนยันก่อนย้ายกระดาน — ขึ้นเฉพาะตอนการ์ดมีค่าช่องข้อมูลที่จะหลุดจากจอ
+                  ปิดได้ 3 ทางตามกฎบ้าน: ปุ่ม X · ESC (ผูกในกล่อง) · คลิกนอกกล่อง */}
+              {confirmMove && (
+                <MoveBoardConfirm
+                  t={t}
+                  boardName={confirmMove.name}
+                  count={fieldValueCount}
+                  busy={movingBoard}
+                  onConfirm={() => moveToBoard(confirmMove.boardId)}
+                  onClose={() => setConfirmMove(null)}
+                />
+              )}
 
               {profileUserId && (
                 <PersonProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} t={t} />
@@ -686,6 +780,66 @@ export default function CardModal({ cardId, onClose, onChanged }) {
           onPurge={() => removeCard(true)}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * กล่องยืนยันก่อนย้ายการ์ดข้ามกระดาน — ขึ้นเฉพาะตอนมีค่าช่องข้อมูลที่จะหลุดจากจอ
+ *
+ * ⭐ ข้อความต้องบอก **ความจริง**: ค่าไม่ได้ถูกลบ แค่ไม่แสดงเพราะช่องข้อมูลผูกกับกระดาน 1:1
+ *    ย้ายกลับกระดานเดิมแล้วกลับมาครบ (แถวยังอยู่ใน kanban_card_field_values)
+ * ⚠️ ESC ต้องดัก capture + stopPropagation — CardModal ผูก ESC ไว้ก่อน (เหตุผลเดียวกับ DeleteChoiceDialog)
+ */
+function MoveBoardConfirm({ boardName, count, busy, onConfirm, onClose, t }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 w-full max-w-md flex flex-col gap-3"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('board.moveBoardHeading')}</h2>
+          <button
+            onClick={onClose}
+            aria-label={t('actions.cancel')}
+            className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-base text-warm-700 dark:text-disc-text break-words">“{boardName}”</p>
+        <p className="text-sm text-warm-500 dark:text-disc-muted">{t('board.moveBoardWarn', { count })}</p>
+
+        <div className="flex flex-wrap gap-2 justify-end mt-1">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50"
+          >
+            {t('actions.cancel')}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-teal text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {busy && <Loader2 size={14} className="animate-spin" />}
+            {t('board.moveBoardConfirm')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

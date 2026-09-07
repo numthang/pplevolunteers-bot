@@ -81,9 +81,16 @@ describe('viewToQueryString', () => {
     expect(viewToQueryString({ ...DEFAULT_VIEW, q: '   ' })).toBe('')
   })
 
+  it('teamspace ลง URL เฉพาะตอนไม่ได้เจาะกระดาน — board เจาะจงกว่าจึงชนะ', () => {
+    expect(viewToQueryString({ ...DEFAULT_VIEW, teamspace: 5 })).toBe('teamspace=5')
+    expect(viewToQueryString({ ...DEFAULT_VIEW, board: 3, teamspace: 5 })).toBe('board=3')
+    expect(parseViewFromParams('teamspace=5').teamspace).toBe(5)
+    expect(parseViewFromParams('teamspace=abc').teamspace).toBe(null)
+  })
+
   it('ไป-กลับแล้วได้ของเดิม (round-trip)', () => {
     const view = {
-      board: 3, scope: 'all', group: 'due',
+      board: 3, teamspace: null, scope: 'all', group: 'due',
       status: ['backlog'], kind: ['case', 'post'], assignee: ['12'],
       label: [{ id: '88', field_id: '12' }], q: 'ทดสอบ',
       sort: { key: 'field_9', dir: 'desc' },

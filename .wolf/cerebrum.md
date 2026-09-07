@@ -115,6 +115,10 @@
 - `scripts/smoke/kanbanLabels.mjs` ตายแล้ว (ตารางป้ายถูก DROP ไปตั้งแต่ 2026-08-19) — รันแล้ว MODULE_NOT_FOUND
 
 ## Key Learnings
+- **KANBAN มีชั้น `teamspace` แล้ว: `org > teamspace > boards > cards`** (2026-09-07 · migration `1788700000000_kanban-teamspaces.sql`) — ⛔ **ห้ามแปลคำว่า teamspace** เป็น "แผนก"/"ทีม"/"space" ทั้งในโค้ดและบนจอ (user เคาะหลังคุย 3 รอบ) · ⚠️ `kanban_teamspaces` **ไม่ใช่**หน้า `/team` (รายชื่อสมาชิกในเซิร์ฟดิสฯ) · การผูก Discord ย้ายมาอยู่ที่ `kanban_teamspaces.guild_id` + `default_board_id` — **ห้ามเพิ่ม `kanban_boards.is_guild_default` หรือ `kanban_board_channels`** (เก็บ guild 2 ที่ = ขัดกันเอง)
+- **สิทธิ์ KANBAN รอบ teamspace = เปิดหมดโดยตั้งใจ** — user สั่ง "เห็นได้ทุก teamspace ทุกบอร์ด ทุกการ์ด ค่อยจำกัดสิทธิ์ทีหลัง" → ตะเข็บอยู่ `web/db/kanban/scopeSql.js` (`teamspaceScopeSql()` คืน `TRUE`) วันไหนจะกันจริงต้องวางลงพร้อมกัน 3 จุด: `canViewTeamspace` · `listCards` · `getCardForViewer` · ⛔ ห้ามยัดสูตรนี้ลง `statusSql.js` (ไฟล์นั้นสงวนไว้แปลงสถานะ entity เท่านั้น)
+- **ก็อป custom field ข้ามบอร์ดต้อง `copyFieldDefs()` เท่านั้น** (`web/db/kanban/fields.js`) — วนเรียก `createFieldDef` + `ensureFieldOption` ไม่ได้ เพราะ `ensureFieldOption` **ตั้งสี/ลำดับใหม่เอง** (autoColor + MAX+1) → ได้ตัวเลือกสีเพี้ยนลำดับสลับ
+- **ย้ายการ์ดข้ามบอร์ดแล้วค่า custom field ของบอร์ดเดิม "หายจากจอ แต่ไม่ถูกลบ"** — field ผูกบอร์ด 1:1 (`d.board_id = c.board_id` ใน cards.js) แถวยังอยู่ใน `kanban_card_field_values` ย้ายกลับแล้วกลับมาครบ · ref `KB-xxx` ไม่เปลี่ยนเพราะเป็นเลขรันต่อ org ไม่ผูกบอร์ด
 - **โมดูล CJS ที่ repo root ห้ามให้ `web/` `import`/`await import()` ตรงๆ ถ้ามันแตะ native dep** — `serverExternalPackages` ใน next.config.js **ไม่ครอบไฟล์นอก `web/`** · webpack จะตาม `require('sharp')` เข้าไป bundle แล้วได้ warning "Can't resolve '@img/sharp-libvips-dev/include'" (2026-09-05) → โหลดด้วย createRequire ที่ปักหมุดที่ราก แบบเดียวกับ `lib/quoteRender.js`
 - **`REPO_ROOT` ใน `web/lib/postsStorage.js` คิดจาก `process.cwd()`** (`web/` → `../`) — ถูกเฉพาะตอนเว็บรัน · สคริปต์/เทสที่รันจากรากโปรเจกต์จะได้ path เลยรากไป 1 ชั้น (MODULE_NOT_FOUND เงียบๆ)
 - **การ์ดคำคมสไตล์ "มีรูป" เรนเดอร์ที่ขนาดเท่ารูปพื้นหลัง** (`const W = img.width` ใน quoteStyles.js) — พื้นหลัง 60 ล้านพิกเซล = การ์ด PNG 35 MB ที่โพสต์ไม่ออกสักแพลตฟอร์ม · เพดานเดียวที่มีคือ **ขนาดไฟล์ขาเข้า** ซึ่งกันเคสนี้ไม่ได้เลย (bug-465) → ตัวย่อกลางอยู่ที่ `utils/imageDownscale.js` ใช้ร่วมทั้งบอทและเว็บ
@@ -2109,3 +2113,25 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
 ช่องค่าเดี่ยวจะล้างค่าไม่ได้ — ล้างแล้วค่าที่ AI เดาเด้งกลับมาเงียบๆ · ช่องที่เป็น array ไม่มีปัญหานี้
 (`[]` ต่างจาก NULL) → **ออกแบบเป็น array ไปเลยถ้าเป็นไปได้ ดีกว่าเพิ่มคอลัมน์ธงคู่กัน**
 (เคสจริง: pick_no_event_date ต้องมี แต่ pick_no_assignee ถูกลบทิ้งตอนเปลี่ยนผู้รับผิดชอบเป็นหลายคน)
+
+### KANBAN — โครง org > teamspace > board > card (เคาะ 2026-09-07)
+
+- **คำที่ใช้คือ `teamspace` ทับศัพท์** ห้ามแปลเป็น "แผนก"/"ทีม" และห้ามย่อเป็น "space"
+  (คุยกัน 3 รอบ: แผนก → space → teamspace · เหตุผลที่ทิ้ง "space" เดี่ยวๆ = ในระบบนี้มี org/guild/
+  scope node/board อยู่แล้ว คำว่า space ไม่บอกว่าเป็นของใคร Notion ถึงเรียก teamspace)
+- **user มอง org ว่าใหญ่เกินกว่าจะเป็นทีมเดียว** (พรรคระดับประเทศ + เซิร์ฟจังหวัดยิบย่อย) → ต้องมีชั้นกลาง
+  แต่ **ห้ามแตกเป็นหลาย org** — ตัวตน/roster/การเงิน/เคส anchor org เดียวหมด และ user เคยบ่นเรื่อง
+  3 guild แยกกันจนไม่เห็นข้อมูลร่วมกันมาแล้ว ([[project_multi_guild_same_org]])
+- **สิทธิ์: เปิดหมดก่อน จำกัดทีหลัง** (คำ user: "คนในองค์กรเดียวกันเห็นได้ทุก teamspace ทุกบอร์ด
+  ทุกการ์ด เหมือนกันหมดก่อนได้เลย") · ตะเข็บ = `teamspaceScopeSql()` คืน TRUE เสมอ วางไว้ที่
+  `web/db/kanban/scopeSql.js` (ไฟล์ใหม่) ไม่ใช่ statusSql.js
+- **ชั้น teamspace ห้ามเป็นตารางที่ลอยจาก `org_scope_nodes`** — ระบบมีต้นไม้หน่วยงานอยู่แล้ว 97 แถว
+  ผูกกับยศ (`org_role_defs.scope_node_id`) และกับยศดิสคอร์ด (`dc_guild_roles.scope_node`)
+  → กล่องสร้าง teamspace ต้องให้ "เลือกจากหน่วยงานที่มีอยู่" เป็นทางหลัก (เซ็ต `scope_node_id`)
+  ไม่งั้นจะมี "ราชบุรี" 2 อันที่เครื่องไม่รู้ว่าเกี่ยวกัน
+- **สมาชิก teamspace ต้องเข้าได้โดยไม่มี Discord เสมอ** — 3 ทาง: ใส่ชื่อเอง ∪ ยศที่ผูก scope node ∪
+  สมาชิกเซิร์ฟที่ผูก · Discord เป็นทางลัด ไม่ใช่ทางเดียว ([[project_discord_optional_goal]])
+- **ข้อมูลจริงที่ query แล้ว 2026-09-07:** บอร์ดเดียว id=1 การ์ด 1,263 (โพสต์ 1,000 · 914 ใบมาจาก
+  เซิร์ฟราชบุรี · เคส 176 · ราชบุรี 175) → กระดานหลักคืองานของทีมราชบุรี ไม่ใช่ของกลาง
+- ⚠️ **ที่ต้องคิดต่อ:** สิทธิ์เคสเปิดทั้ง org ตั้งแต่ 2026-09-04 · พอมี teamspace ที่ 2 = คนทีมอื่น
+  อ่านเรื่องร้องเรียนของประชาชนได้ทุกใบ → ถ้าจะกันจุดแรก ให้กันจุดนี้ก่อนจุดอื่น

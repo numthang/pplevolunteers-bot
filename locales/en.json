@@ -67,7 +67,10 @@
       "createdPool": "✅ Created {ref} — **{title}**\nIt is in the \"Unclaimed\" pool",
       "failed": "❌ Could not create the homework",
       "publicMine": "📋 {by} turned this into a task · ref {ref} · taken on — {title}",
-      "publicPool": "📋 {by} turned this into a task · ref {ref} · no owner yet, anyone can claim it — {title}"
+      "publicPool": "📋 {by} turned this into a task · ref {ref} · no owner yet, anyone can claim it — {title}",
+      "moveBoardPlaceholder": "Move to board…",
+      "movedBoard": "Moved to board \"{board}\"",
+      "moveBoardFailed": "Could not move board"
     }
   }
 }
