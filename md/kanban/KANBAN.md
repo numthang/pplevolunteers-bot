@@ -345,6 +345,10 @@ kanban_teamspaces        id · org_id · name · detail
                          · sort_order · archived_at · created_by · created_at
                          ⚠️ FK วนกับ kanban_boards.teamspace_id → ทั้งคู่ nullable โดยจำเป็น
 
+> ⭐ **custom field ผูกกับ "กระดาน" ไม่ใช่ teamspace** (ยืนยันซ้ำ 2026-09-08 หลัง Claude เสนอให้ย้าย)
+> user: *"แต่ละบอร์ดมันต้องมี field ไม่เหมือนกัน ไม่งั้นจะแยกบอร์ดทำไม"* — `copyFieldDefs()` ตอนสร้างบอร์ดใหม่
+> เป็นแค่ **จุดตั้งต้น ไม่ใช่การ sync** · ตัวเลือกของแต่ละบอร์ดแยกทางกันได้และตั้งใจให้แยก
+
 kanban_boards            id · org_id · key · name · detail
                          · teamspace_id → kanban_teamspaces  ← ชั้นใหม่ 2026-09-07
                          · open_to_org bool          ← เปิดให้ทุกคนใน org เห็น
