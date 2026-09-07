@@ -829,20 +829,13 @@ export default function KanbanHome() {
     return groups
   }, [boards, teamspaces, pickerQuery])
 
-  // ทีมปลายทางของปุ่ม "เพิ่มกระดาน" บนหัว — ทีมที่ดูอยู่ ไม่งั้นทีมของกระดานที่เปิดอยู่ ไม่งั้นทีมแรก
-  const newBoardTeamspaceId = useMemo(() => {
-    if (activeTeamspaceId) return activeTeamspaceId
-    const b = boards.find((x) => String(x.id) === String(activeBoardId))
-    return b?.teamspace_id || teamspaces[0]?.id || null
-  }, [activeTeamspaceId, activeBoardId, boards, teamspaces])
-
   /**
    * กระดานต้นแบบที่จะก็อปช่องข้อมูลไปให้กระดานใหม่ — กระดานที่ดูอยู่ ไม่งั้นกระดานแรกของทีมที่กด [+]
    * (ไม่มีคลัง field ของกลาง — กระดานใหม่ที่ไม่ก็อปจะไม่มีช่องสักช่อง ดู db/kanban/fields.js §copyFieldDefs)
    */
   const copyFieldsFrom = useMemo(() => {
     if (activeBoardId) return boards.find((b) => String(b.id) === String(activeBoardId)) || null
-    const tsId = addingBoard === true ? activeTeamspaceId : addingBoard
+    const tsId = addingBoard || activeTeamspaceId    // addingBoard = id ของทีมที่กด [+] · false = ไม่ได้เปิดฟอร์ม
     if (tsId) return boards.find((b) => String(b.teamspace_id) === String(tsId)) || null
     return boards[0] || null
   }, [activeBoardId, activeTeamspaceId, addingBoard, boards])
@@ -1191,7 +1184,7 @@ export default function KanbanHome() {
     setCreatingBoard(true)
     setActionError('')
     try {
-      const teamspaceId = addingBoard === true ? (activeTeamspaceId || undefined) : addingBoard
+      const teamspaceId = addingBoard || activeTeamspaceId || undefined
       const res = await fetch('/api/kanban/boards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1330,22 +1323,12 @@ export default function KanbanHome() {
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('page.title')}</h1>
           <p className="text-base text-warm-500 dark:text-disc-muted">{t('page.subtitle')}</p>
         </div>
-        {/* ⭐ 2026-08-24 เปลี่ยนจาก "เพิ่มการบ้าน" เป็น "เพิ่มกระดาน" (user เคาะ)
-            เหตุผล: เพิ่มการบ้านทำได้จากปุ่ม + บนหัวกองอยู่แล้วทุกกอง — ปุ่มบนเลยซ้ำซ้อน
-            ⚠️ ที่ทำคู่กันคือเปิดปุ่ม + ให้โหมด "กำหนดส่ง" ด้วย ไม่งั้นโหมดนั้นจะไม่เหลือทางสร้างเลย
-            ในกรุไม่มีปุ่ม — สร้างของใหม่เข้ากรุไม่มีความหมาย (เหตุผลเดิมของปุ่มก่อนหน้า) */}
-        {BOARDS_UI && !inArchive && (
-          <button
-            /* ⚠️ ต้องระบุทีมปลายทางมาด้วย — ฟอร์มสร้างกระดานอยู่ใต้หัวข้อทีมในลิสต์ ไม่ใช่ท้ายลิสต์แล้ว
-               ส่ง true เฉยๆ = เปิดเมนูมาแล้วไม่มีฟอร์มโผล่ที่ไหนเลย */
-            onClick={() => { setBoardMenuOpen(true); setAddingBoard(newBoardTeamspaceId) }}
-            disabled={!newBoardTeamspaceId}
-            className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
-          >
-            <Plus size={16} />
-            {t('board.addBoard')}
-          </button>
-        )}
+        {/* ⛔ **ไม่มีปุ่มใหญ่มุมขวาบนแล้ว** (user สั่ง 2026-09-08: "ใครมันจะเพิ่มกระดานกันบ่อยๆ")
+            ประวัติ: 2026-08-24 ปุ่มนี้เคยเป็น "เพิ่มการบ้าน" แล้วเปลี่ยนเป็น "เพิ่มกระดาน" —
+            พอเปิด BOARDS_UI จริงกลับกลายเป็นว่าเอาที่ทางแพงที่สุดบนจอไปให้งานที่ทำปีละครั้ง
+            ตอนนี้ทางสร้างของอยู่ตรงที่มันเกิดจริง: **การบ้าน** = ปุ่ม + บนหัวกองทุกกอง ·
+            **กระดาน/teamspace** = ในลิสต์เลือกที่ทำงาน ([+] ต่อทีม + "สร้าง teamspace ใหม่")
+            ⛔ อย่าเอาปุ่มใหญ่กลับมาโดยไม่ถามก่อน */}
       </div>
 
       {/* แถบควบคุม — ปุ่มพวกนี้แทนที่การมีหลายหน้า (กระดาน / เห็นของใคร / กองตามอะไร) */}
