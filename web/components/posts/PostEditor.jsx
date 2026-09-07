@@ -17,6 +17,7 @@ const AI_MODES = [
     ['draft', 'ร่างใหม่ทั้งหมด', 'เขียนใหม่ทั้งก้อนจากชื่อ/ไอเดีย (ทับของเดิม)'],
     ['guided', 'ร่างตามคำแนะนำ', 'AI หาจุดที่ควรแก้ที่สุด แล้วแก้ให้เลย — ไม่เติมข้อมูลใหม่ (ทับของเดิม)'],
     ['polish', 'เกลาสำนวน', 'ขัดภาษาของที่มีอยู่ ไม่ขยับโครง ไม่เพิ่มประเด็นใหม่'],
+    ['typo', 'แก้คำผิด', 'แก้เฉพาะคำผิด/วรรคตอนที่ผิดชัดเจน ไม่แตะคำหรือสำนวนอื่นเลย'],
     ['shorter', 'ย่อให้สั้น', 'ย่อประมาณครึ่งหนึ่ง เก็บใจความสำคัญไว้ครบ'],
     ['friendly', 'เป็นกันเองขึ้น', 'ปรับให้อ่านง่ายเหมือนเล่าให้เพื่อนฟัง'],
   ]],
@@ -272,7 +273,7 @@ export default function PostEditor({ id }) {
   // สิ่งที่ AI บอกว่ามันแก้ให้ (โหมด guided) — ไม่เก็บลง DB โดยตั้งใจ ดูหัวข้อ handleGuided
   const [aiNote, setAiNote] = useState('')
   // AI ทุกแบบรวมเป็นเมนูเดียว — เดิมแยก 3 ปุ่มแล้วอ่านไม่ออกว่าต่างกันยังไง
-  const [aiMode, setAiMode] = useState('caption')  // draft | guided | polish | shorter | friendly | caption | review
+  const [aiMode, setAiMode] = useState('caption')  // draft | guided | polish | typo | shorter | friendly | caption | review
   const [confirmAsk, setConfirmAsk] = useState(null)  // { title, message, confirmLabel, danger, onConfirm }
   const [suggesting, setSuggesting] = useState(false)
   const [reviewing, setReviewing] = useState(false)

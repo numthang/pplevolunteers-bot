@@ -8275,6 +8275,38 @@
       ],
       "occurrences": 3,
       "last_seen": "2026-09-06T11:11:40.223Z"
+    },
+    {
+      "id": "bug-476",
+      "timestamp": "2026-09-06T15:30:33.552Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/page.js",
+      "root_cause": "Had '@/db/orgMemberRoles.js'",
+      "fix": "Changed to '@/db/userIdentities.js'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T15:30:33.552Z"
+    },
+    {
+      "id": "bug-477",
+      "timestamp": "2026-09-06T16:53:17.225Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/posts/PostEditor.jsx",
+      "root_cause": "Had 'shorter'",
+      "fix": "Changed to 'typo'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-06T16:53:17.225Z"
     }
   ]
 }

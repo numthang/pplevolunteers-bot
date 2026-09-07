@@ -13,7 +13,6 @@ import { countCardStats } from '@/db/kanban/cards.js'
 import { countCaseStats } from '@/db/cases.js'
 import { countByStatus as countPostsByStatus } from '@/db/posts/episodes.js'
 import { getFavoriteAccounts } from '@/db/finance/accounts.js'
-import { listMemberRoleNames } from '@/db/orgMemberRoles.js'
 import { getUserIdentities } from '@/db/userIdentities.js'
 import { getGuilds } from '@/db/guilds.js'
 import { canViewAccount } from '@/lib/financeAccess.js'
@@ -271,7 +270,7 @@ export default async function HomePage() {
   const [
     docsPending, cardStats, callPending, contactPending,
     caseStats, postCounts,
-    favAccounts, roleNames, identities,
+    favAccounts, identities,
   ] = await Promise.all([
     on('docs') && userId ? getPendingSignaturesForUser(userId, orgId) : Promise.resolve({ recipient: [], payer: [] }),
     on('kanban') ? countCardStats(orgId, userId, viewer) : Promise.resolve({ unassigned: 0, mine: 0, assigned: 0, done: 0 }),
@@ -282,7 +281,6 @@ export default async function HomePage() {
     on('finance') && userId
       ? getFavoriteAccounts(orgId, userId, { canView: (a) => canViewAccount(a, userId, access) })
       : Promise.resolve([]),
-    userId ? listMemberRoleNames(orgId, userId) : Promise.resolve([]),
     discordId ? getUserIdentities(discordId) : Promise.resolve([]),
   ])
 
@@ -296,9 +294,7 @@ export default async function HomePage() {
       {/* ผูกบัญชีสำรอง — เฉพาะ login ด้วย Discord และยังไม่ผูกอะไรเลยสักอัน */}
       {discordId && <LinkAccountsBanner linkedProviders={identities.map(i => i.provider)} />}
 
-      {/* 1 · โปรไฟล์ฉัน — user มาก่อน org (org สลับได้ที่ Nav)
-          ⚠️ ชิปยศอยู่ **แถวของตัวเอง** ไม่ใช่ในคอลัมน์กลาง — บนมือถือมันเบียดจนชื่อองค์กรโดนตัด
-             และดันปุ่มไปทับ (เจอตอนถ่ายจอที่ 430px) */}
+      {/* 1 · โปรไฟล์ฉัน — user มาก่อน org (org สลับได้ที่ Nav) */}
       <div className="bg-card-bg rounded-lg border border-brand-blue-light dark:border-disc-border px-4 py-3">
         <div className="flex items-center gap-3">
           <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
@@ -318,25 +314,6 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {(activeOrg.role === 'owner' || roleNames.length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {activeOrg.role === 'owner' && (
-              <span className="px-3 py-1 text-sm font-medium rounded-full bg-brand-orange/10 text-brand-orange">
-                {t('profile.owner')}
-              </span>
-            )}
-            {roleNames.slice(0, 3).map((r) => (
-              <span key={r} className="px-3 py-1 text-sm font-medium rounded-full bg-warm-100 dark:bg-disc-hover text-warm-700 dark:text-disc-text">
-                {r}
-              </span>
-            ))}
-            {roleNames.length > 3 && (
-              <span className="text-sm text-warm-500 dark:text-disc-muted">
-                {t('profile.moreRoles', { count: roleNames.length - 3 })}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 2 · การ์ดโมดูล — ใบละฟีเจอร์ · เลขกดได้ลิงก์ไปหน้าที่กรองไว้แล้ว

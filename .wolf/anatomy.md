@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T11:03:24.168Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T16:53:28.430Z
 > Files: 1140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -674,7 +674,7 @@
 
 - `globals.css` — Styles: 5 rules, 7 vars (~237 tok)
 - `layout.js` — Next.js layout (~912 tok)
-- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7928 tok)
+- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7594 tok)
 
 ## web/app/admin/logs/
 
@@ -1459,7 +1459,7 @@
 
 ## web/app/api/posts/ai/polish/
 
-- `route.js` — POST /api/posts/ai/polish — เกลาสำนวนเนื้อหาที่เขียนไว้แล้ว (ก้อน 5) (~741 tok)
+- `route.js` — POST /api/posts/ai/polish — เกลาสำนวนเนื้อหาที่เขียนไว้แล้ว (ก้อน 5) (~734 tok)
 
 ## web/app/api/posts/ai/review/
 
@@ -2100,7 +2100,7 @@
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
 - `ImageEditorModal.jsx` — MAX_SIDE (~9837 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
-- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~14007 tok)
+- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~14034 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7480 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)

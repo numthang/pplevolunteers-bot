@@ -1,5 +1,4 @@
 My Tasks and bug issue
-- เอา งานกองทุนเข้า kanban ของปีนี้
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 
@@ -8,7 +7,6 @@ My Tasks and bug issue
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - JotForm ลอกมาเลยครับ มีแบบให้ login และ public ลองดู spec ก่อน แต่ feature ยากไม่จำเป็น ตัดทิ้ง แต่ให้ถามก่อน
 - Poll anonymous, semi-anon, public ลอก pollbotplus มาเลย แต่อาจจะอัพเกรดนิดหน่อย ลองดูว่าควรอัพเกรดอะไร อย่างน้อยผมว่า max 7 วันควรเพิ่มได้อีก, แล้วก็แก้ไขโพล
-- dashboard ยศที่แสดงบน card แรกสุด มีประโยชน์อะไร เอาออกไปก่อน 
 - Theme https://designmd.ai/
 
 # Kanban
@@ -21,20 +19,17 @@ My Tasks and bug issue
 - session design คือ ตารางบอกว่าใคร ทำอะไร ใช้เวลาเท่าไร
 - pain point ตอนนี้ทำบน excel กระจัดกระจาย หลาย format มาก แล้วก็หาไม่เจออยากทำระบบรวมไว้ตรงนี้อีกส่วน หน้าตาเป็นแบบนี้ จะเหลือ field ไหนบ้างสำคัญมาคุยกันอีกที
 
-
 # Posts
 
 
 # Team
-- เพิ่ม view ใหม่ ตรง เครือข่าย ตาราง จะเพิ่ม bubble แสดง ranking แบบรวมคะแนนแต่ละคนทั้งหมด แสดงทุกคนทั้ง server อาจจมี limit ไว้แค่ 100 คนแรก ไม่ต้องแยกหมวด ให้ขยับๆ ได้ด้วย แบบนี้ https://cryptobubbles.net/en ถ้ามีอัตราการใช้งาน + หรือลบ - เหมือนตลาดหุ้นได้ยิ่งแจ๋ว 5555
+
 
 # Web
 - อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี ควรเปลี่ยนเป็น bot/settings ดีไหม และอาจะต้องย้ายหรือลบ setting ส่วน bot นี้ไปอยู่ใน org/settings/ เอาตรงๆ ยังงงๆ อยู่ แต่เห็นความซ้ำซ้อนและ ไม่เป็นที่เป็นทางบางอย่างอยู่ กับ https://localhost:3000/org/settings
-- project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
 - อยากทำ Project ย้ายจาก LINE กลุ่มมาใช้ discord เพื่อองค์กรกันเถอะ รายละเอียดยังไม่ได้คิด
 - ต้องทำให้รองรับ config WEB_BASE_URL ที่ไม่ได้มาจาก .env แล้ว แต่ต้องสะท้อน จาก guild_config
 - dc_server_settings เราเลิกใช้แล้วใช่ไหม ถ้าใช่ลบทิ้งไปเลย
-- ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
 - จัดระเบียบไฟล์ใน web/components หน่อย พวกของกลางใช้ร่วมกันคงไว้ได้
 - จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
 - ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
@@ -56,11 +51,7 @@ My Tasks and bug issue
 # Calling
 
 # Cases
-- https://pplevolunteers.org/case/manage ทำ filter สถานะเรื่องร้องเรียนให้เลือกเป็น dropdown
-- ดูเหมือน bot นำเข้าเคส จะยังไม่ได้ดึง attachment และหน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
-- เหมือนปี ร้องเรียนจะผิด https://pplevolunteers.org/case/manage/70-69-6D9F
-- Cases ที่ backfill บน production เหมือนตอนนี้ลองกดดึงข้อมูลทาง discord แล้วไม่มี timeline เข้ามา มันแจ้งว่า ไม่มีข้อความใหม่ใน Discord
-- ตอนนี้ถ้าสร้างกระทู้ร้องเรียนใหม่ จะนำเข้าะระบบ cases กับ kanban ให้เลยไหมหรือต้อง นำเข้าเรื่องร้องเรียน เอง
+- ดูเหมือนหน้าจัดการ cases หน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
 
 # Rag-AI
 - Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา
