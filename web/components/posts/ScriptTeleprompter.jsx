@@ -505,14 +505,39 @@ export default function ScriptTeleprompter({ id }) {
             </>
           )}
 
+          {/* ระหว่างอัด: ต้องเร่ง/ชะลอบทได้โดยไม่ต้องทิ้งเทค — user เจอเอง 2026-09-08 ("ความเร็วเลื่อน
+              ไม่พอดี") เพราะของเดิมมีแค่ปุ่มหยุด · ปุ่มลูกศรคีย์บอร์ดช่วยไม่ได้ มือถือไม่มีคีย์บอร์ด
+              ⛔ ห้ามใส่ปุ่มปรับ "ขนาดตัวอักษร" ตรงนี้ — เปลี่ยนกลางเทคแล้วบทจะรีโฟลว์ กระโดดหลุดบรรทัด
+              วาง -/+ คร่อมปุ่มหยุดโดยเว้นระยะห่าง กันนิ้วพลาดไปโดนปุ่มหยุดกลางเทค */}
           {recordPhase === 'recording' && (
-            <button
-              onClick={stop}
-              aria-label={t('stopRecording')}
-              className="h-16 w-16 rounded-full bg-white flex items-center justify-center"
-            >
-              <Square size={22} className="text-red-600 fill-red-600" />
-            </button>
+            <>
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={decSpeed}
+                  aria-label={`${t('speed')} -`}
+                  className="h-14 w-14 rounded-full bg-black/60 text-white flex items-center justify-center active:bg-black/80"
+                >
+                  <Minus size={24} />
+                </button>
+                <button
+                  onClick={stop}
+                  aria-label={t('stopRecording')}
+                  className="h-16 w-16 rounded-full bg-white flex items-center justify-center"
+                >
+                  <Square size={22} className="text-red-600 fill-red-600" />
+                </button>
+                <button
+                  onClick={incSpeed}
+                  aria-label={`${t('speed')} +`}
+                  className="h-14 w-14 rounded-full bg-black/60 text-white flex items-center justify-center active:bg-black/80"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-black/60 text-white text-sm tabular-nums">
+                {t('speed')} {speed}
+              </span>
+            </>
           )}
 
           {recordPhase === 'preview' && (

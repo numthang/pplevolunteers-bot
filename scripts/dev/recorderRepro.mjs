@@ -167,6 +167,18 @@ for (let i = 1; i <= Number(process.env.WATCH || 12); i++) {
   if (i % 5 === 0 || s.มีวิดีโอตัวอย่าง || !s.กล่องบท) console.log(`t=${i}s · กล่องบท=${s.กล่องบท ? `เลื่อน ${s.กล่องบท.เลื่อนอยู่ที่}/${s.กล่องบท.สูงเนื้อหา - s.กล่องบท.สูงที่เห็น} · ท้ายจอยังมีข้อความ: "${s.กล่องบท.ท้ายจอ}"` : 'หายไปแล้ว'} · มีตัวอย่างคลิป=${s.มีวิดีโอตัวอย่าง}`)
   if (s.มีวิดีโอตัวอย่าง) { console.log('→ เด้งเข้าหน้าดูตัวอย่าง (จบเทค) ที่ t=' + i + 's'); break }
 }
+// ระหว่างอัด: ปุ่มเร่ง/ชะลอต้องกดได้จริงโดยไม่หลุดเทค
+const speedBefore = await cdp.eval(`(() => document.body.innerText.match(/ความเร็ว\\s*(\\d+)/)?.[1] || 'ไม่เจอป้ายความเร็ว')()`)
+const bumped = await cdp.eval(`(() => {
+  const up = [...document.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'ความเร็ว +')
+  if (!up) return 'ไม่มีปุ่มเร่งระหว่างอัด'
+  up.click(); up.click(); return 'กดเร่ง 2 ครั้ง'
+})()`)
+await sleep(600)
+const speedAfter = await cdp.eval(`(() => document.body.innerText.match(/ความเร็ว\\s*(\\d+)/)?.[1] || 'ไม่เจอป้ายความเร็ว')()`)
+const stillRec = await state()
+console.log(`\nปรับความเร็วระหว่างอัด: ${bumped} · ${speedBefore} → ${speedAfter} · ยังอัดอยู่ (ยังไม่เด้งดูตัวอย่าง)=${!stillRec.มีวิดีโอตัวอย่าง}`)
+
 // กดปุ่มหยุดเอง — ต้องเป็นทางเดียวที่จบเทค
 const stopped = await cdp.eval(`(() => {
   const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label')?.includes('จบเทค'))
