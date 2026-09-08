@@ -63,8 +63,10 @@ export default function CamTestPage() {
     setResult(null)
     setStatus('กำลังขอสิทธิ์กล้อง/ไมค์…')
     try {
+      // ทดสอบสมมติฐาน 2026-09-08: ขอ portrait ตรงๆ (1080x1920) ทำให้บางกล้องครอป FOV แคบมาตั้งแต่ไดรเวอร์ (ซูมเกินจริง)
+      // เปลี่ยนมาขอตามสัดส่วนธรรมชาติของเซนเซอร์ (landscape) แล้วให้ CSS ครอปเป็นแนวตั้งทีหลังแทน
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } },
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       })
       streamRef.current = stream

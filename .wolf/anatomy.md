@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T06:40:47.328Z
-> Files: 1142 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T16:37:24.608Z
+> Files: 1143 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -1750,6 +1750,10 @@
 ## web/app/dashboard/
 
 - `page.js` — Next.js page component (~30 tok)
+
+## web/app/dev/camtest/
+
+- `page.js` — Next.js page component (~2542 tok)
 
 ## web/app/dl/[token]/[type]/
 
