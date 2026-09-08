@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-06T16:53:28.430Z
-> Files: 1140 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-07T18:50:26.984Z
+> Files: 1142 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -179,7 +179,7 @@
 
 - `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~546 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
-- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~4132 tok)
+- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~4667 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
 - `callingCategories.js` — Exports CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS (~595 tok)
 - `case-options.json` (~191 tok)
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~3501 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~51944 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~52832 tok)
 - `WEB.md` — Web App — Next.js Frontend (~6698 tok)
 
 ## md/archive/
@@ -459,7 +459,7 @@
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
 - `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7090 tok)
-- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~560 tok)
+- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~646 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
 ## scripts/docs/
@@ -552,6 +552,7 @@
 - `kanbanCards.mjs` — smoke test ชั้น DB ของ kanban ก้อน 1 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1827 tok)
 - `kanbanLabels.mjs` — smoke test ชั้น DB ของ "คลังป้าย" kanban — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1398 tok)
 - `kanbanPostSync.mjs` — สโมค: ตะเข็บ post_assignees ↔ การ์ด kanban (เฟส C) (~1140 tok)
+- `postsScript.mjs` — สโมค: บทพูด (posts.script) — ทั้ง prompt และที่เก็บ bodies.script (~1371 tok)
 
 ## scripts/social/
 
@@ -1459,7 +1460,7 @@
 
 ## web/app/api/posts/ai/polish/
 
-- `route.js` — POST /api/posts/ai/polish — เกลาสำนวนเนื้อหาที่เขียนไว้แล้ว (ก้อน 5) (~734 tok)
+- `route.js` — POST /api/posts/ai/polish — เกลาสำนวนเนื้อหาที่เขียนไว้แล้ว (ก้อน 5) (~744 tok)
 
 ## web/app/api/posts/ai/review/
 
@@ -2053,7 +2054,7 @@
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardAttachmentsBox.jsx` — CardAttachmentsBox — รูป/ไฟล์แนบของการ์ด 1 ใบ (สูงสุด 30 — เคาะ 2026-09-06) (~1863 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~8174 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~9252 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~11410 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6915 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
@@ -2100,13 +2101,14 @@
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
 - `ImageEditorModal.jsx` — MAX_SIDE (~9837 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
-- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~14034 tok)
+- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~14894 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7480 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
 - `PostsHome.jsx` — STATUS_LABELS (~9728 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13237 tok)
+- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~4072 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
 ## web/components/profile/

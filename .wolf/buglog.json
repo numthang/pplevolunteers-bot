@@ -8390,6 +8390,70 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-07T13:52:38.562Z"
+    },
+    {
+      "id": "bug-483",
+      "timestamp": "2026-09-07T17:49:53.530Z",
+      "error_message": "Missing error handling in function()",
+      "file": "web/components/posts/PostEditor.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T17:49:53.530Z"
+    },
+    {
+      "id": "bug-484",
+      "timestamp": "2026-09-07T17:50:44.268Z",
+      "error_message": "Null/undefined access in PostEditor.jsx",
+      "file": "web/components/posts/PostEditor.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T17:50:44.268Z"
+    },
+    {
+      "id": "bug-485",
+      "timestamp": "2026-09-07T18:00:46.692Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/smoke/postsScript.mjs",
+      "root_cause": "Had 'team'",
+      "fix": "Changed to 'personal'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T18:00:46.692Z"
+    },
+    {
+      "id": "bug-486",
+      "timestamp": "2026-09-07T18:35:57.042Z",
+      "error_message": "Significant refactor of mobileAudit.routes.mjs",
+      "file": "scripts/dev/mobileAudit.routes.mjs",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-07T18:35:57.042Z"
     }
   ]
 }

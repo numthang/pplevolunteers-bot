@@ -1,5 +1,5 @@
 My Tasks and bug issue
-- calling ลงพื้นที่แม่นยำ ให้พิยะโดม
+- calling ลงพื้นที่แม่นยำ ให้พิยะโดม ตรวจ calling จากพี่ฝนสักหน่อย ว่ามีอะไรที่ไปต่อได้บ้าง
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 
 # PLATFOR{m}.ORG
@@ -14,13 +14,14 @@ My Tasks and bug issue
 - ลิงก์ google calendar แสดง deadline 
 - แต่ละ card มีกล่องให้แสดง comment ด้วยอ่ะ เห็นมีใน notion เป็น fix field
 - ผมนำเข้าหมดแล้ว กระทู้ที่นำเข้าด้วย https://pplevolunteers.org/kanban/import/forum สิ่งนี้ ผมว่า description โดย ai สั้นไปอ่ะ ถ้าจะขอให้อัพเดท description อีกรอบได้ไหม แบบขอสรุปประเด็นทั้งจากกระทู้เลย แต่ก็กระชับด้วย ไม่ใช่สั้นแบบนีี้  คุยให้รู้เรื่องก่อนค่อยทำ
+- เพิ่ม kanbanmodal ให้ edit source_url ได้ แปะตรง มาจากข้อความในดิสฯ ได้เลย มีให้แก้ไข 
 
 # Session Design
 - session design คือ ตารางบอกว่าใคร ทำอะไร ใช้เวลาเท่าไร
 - pain point ตอนนี้ทำบน excel กระจัดกระจาย หลาย format มาก แล้วก็หาไม่เจออยากทำระบบรวมไว้ตรงนี้อีกส่วน หน้าตาเป็นแบบนี้ จะเหลือ field ไหนบ้างสำคัญมาคุยกันอีกที
 
 # Posts
-
+- faceless /home/tee/.claude/plans/rosy-wibbling-wand.md 
 
 # Team
 
