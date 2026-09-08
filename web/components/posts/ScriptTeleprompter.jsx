@@ -114,6 +114,7 @@ export default function ScriptTeleprompter({ id }) {
   const chunksRef = useRef([])
   const blobRef = useRef(null)
   const blobMimeRef = useRef('')   // ชนิดไฟล์ที่ MediaRecorder เลือกไว้จริง — ห้ามเดาจาก blob.type ตอนอัป
+  const inTakeRef = useRef(false)  // อยู่ในโหมดอัด (จ่อกล้อง/กำลังอัด) ไหม — ใช้ในลูปเลื่อนโดยไม่ต้อง restart ลูป
   const elapsedTimerRef = useRef(null)
 
   const lockTokenRef = useRef(null)
@@ -164,6 +165,10 @@ export default function ScriptTeleprompter({ id }) {
       typeof window !== 'undefined' && !!window.MediaRecorder && !!pickRecorderMime()
     setRecordSupported(ok)
   }, [])
+
+  useEffect(() => {
+    inTakeRef.current = recordOpen && (recordPhase === 'camera' || recordPhase === 'recording')
+  }, [recordOpen, recordPhase])
 
   // เผื่อ unmount ระหว่างเปิดกล้องอยู่ (เช่นกดกลับของเบราว์เซอร์) — ปิดกล้องทิ้งเสมอ
   useEffect(() => () => { streamRef.current?.getTracks().forEach(tr => tr.stop()) }, [])
@@ -240,7 +245,10 @@ export default function ScriptTeleprompter({ id }) {
         if (whole > 0) {
           carry -= whole
           el.scrollTop += whole
-          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) setRunning(false)
+          // ⛔ ถึงท้ายบทแล้ว **ห้ามหยุดเทค** — bug จริง 2026-09-08: user อัดแล้วคลิปตัดจบ
+          //    ก่อนพูดจบ เพราะตอนเลื่อนสุด ข้อความท้ายบทยังค้างบนจอให้อ่านอีกเกือบเต็มกล่อง
+          //    (ยิ่งบทสั้นจนกล่องไม่ล้น ยิ่งจบทันทีที่เริ่ม) · โหมดอ่านเฉยๆ หยุดเองได้ตามเดิม
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && !inTakeRef.current) setRunning(false)
         }
       }
       last = now
@@ -468,7 +476,9 @@ export default function ScriptTeleprompter({ id }) {
             style={{ fontSize: `${fontSize}px` }}
           >
             {script}
-            <div aria-hidden className="h-[20vh]" />
+            {/* หางว่างท้ายบท — ต้องเกือบเท่าความสูงกล่อง (38vh) ไม่งั้นบรรทัดสุดท้ายค้างอยู่ก้นกล่อง
+                อ่านไม่ทันตอนเลื่อนหยุด · ของเดิม 20vh สั้นไปจนเป็นส่วนหนึ่งของบั๊ก "อัดจบก่อนพูดจบ" */}
+            <div aria-hidden className="h-[32vh]" />
           </div>
         )}
 

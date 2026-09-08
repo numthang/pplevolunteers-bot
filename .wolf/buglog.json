@@ -8486,6 +8486,55 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-08T06:40:47.366Z"
+    },
+    {
+      "id": "bug-489",
+      "timestamp": "2026-09-08T09:11:49.154Z",
+      "error_message": "Incorrect value in code",
+      "file": "utils/quoteStyleKeys.js",
+      "root_cause": "Had 'แถบสีแบรนด์ วางคำคมในแถบ'",
+      "fix": "Changed to 'แถบสีแบรนด์ วางโควตในแถบ'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-08T09:11:49.154Z"
+    },
+    {
+      "id": "bug-490",
+      "timestamp": "2026-09-08T09:11:58.193Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/lib/quoteStyles.js",
+      "root_cause": "Had 'แถบสีแบรนด์ วางคำคมในแถบ'",
+      "fix": "Changed to 'แถบสีแบรนด์ วางโควตในแถบ'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-08T09:11:58.193Z"
+    },
+    {
+      "id": "bug-491",
+      "timestamp": "2026-09-08T09:26:30.217Z",
+      "error_message": "อัดคลิปในเบราว์เซอร์: บทพูดหายไปจากจอ + คลิปตัดจบเองก่อนพูดจบ (ไม่มี exception)",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "ลูปเลื่อนบทอัตโนมัติสั่ง setRunning(false) เมื่อ scrollTop+clientHeight >= scrollHeight-1 คือ \"เลื่อนจนสุด\" · โหมดอัดคลิปผูก running ตัวเดียวกันเป็นสัญญาณจบเทค → พอบทเลื่อนถึงบรรทัดสุดท้าย MediaRecorder หยุดทันที แล้ว recordPhase เปลี่ยนเป็น preview ทำให้กล่องบท unmount (เงื่อนไข camera||recording) = อาการ \"บทหาย\" กับ \"อัดจบเอง\" คืออีเวนต์เดียวกัน · ตอนเลื่อนสุด ข้อความท้ายบทยังค้างบนจอให้อ่านอีกเกือบเต็มกล่อง เพราะหางว่างท้ายบทมีแค่ 20vh ในกล่องสูง 38vh · เคสบทสั้นจนกล่องไม่ล้นเลย เงื่อนไขเป็นจริงตั้งแต่เฟรมแรก = จบเทคทันทีที่เริ่ม",
+      "fix": "ใส่ inTakeRef (recordOpen && phase camera|recording) แล้วเช็ค && !inTakeRef.current ก่อน setRunning(false) — เลื่อนสุดในโหมดอัดแปลว่าแค่หยุดเลื่อน เทคจบเมื่อกดปุ่มหยุดหรือชนเพดาน 120 วิเท่านั้น · ขยายหางว่างท้ายบท 20vh → 32vh ให้บรรทัดสุดท้ายลอยขึ้นมาในระยะสายตา · โหมดอ่านเฉยๆ ยังหยุดเองตอนจบบทเหมือนเดิม (ยืนยันด้วย scripts/dev/recorderRepro.mjs)",
+      "tags": [
+        "posts",
+        "teleprompter",
+        "mediarecorder",
+        "ui",
+        "scroll"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-08T09:26:30.218Z"
     }
   ]
 }
