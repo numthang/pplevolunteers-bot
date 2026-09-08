@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-07T18:50:26.984Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T06:40:47.328Z
 > Files: 1142 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~3501 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~52832 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~53100 tok)
 - `WEB.md` — Web App — Next.js Frontend (~6698 tok)
 
 ## md/archive/
@@ -458,7 +458,7 @@
 - `.tmp-cleanup-assignees.mjs` — CHROME: launchChrome (~1442 tok)
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
-- `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7090 tok)
+- `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7492 tok)
 - `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~646 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
@@ -1785,7 +1785,7 @@
 ## web/app/docs/sign/[token]/
 
 - `layout.js` — Next.js layout (~71 tok)
-- `page.js` — Next.js page component (~13010 tok)
+- `page.js` — Next.js page component (~13773 tok)
 
 ## web/app/dojo/
 
@@ -2108,7 +2108,7 @@
 - `PostRevisions.jsx` — fmt (~1260 tok)
 - `PostsHome.jsx` — STATUS_LABELS (~9728 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13237 tok)
-- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~4072 tok)
+- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~7886 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
 ## web/components/profile/
@@ -2371,8 +2371,8 @@
 
 ## web/locales/
 
-- `en.json` (~28548 tok)
-- `th.json` (~27339 tok)
+- `en.json` (~29398 tok)
+- `th.json` (~28152 tok)
 
 ## web/public/media-temp/
 

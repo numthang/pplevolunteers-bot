@@ -31,6 +31,10 @@
  *   K  รกในแถวเดียว              ลูกตั้งแต่ 6 ชิ้น และมีปุ่ม/ตัวควบคุมอย่างน้อย 3 → ควรยุบเข้าเมนู
  *   G  ไม่เป็นระเบียบ             ขอบซ้าย/ขวาต่างกันเกิน 8px · ช่องไฟในแถวเดียวต่างกันเกิน 6px
  *      (ข้ามกล่องที่มี text node ปนกับ element — ระยะที่คร่อมตัวหนังสือไม่ใช่ช่องไฟ)
+ *   H  ข้อความแน่นจนตัดบรรทัด      แถว flex แนวนอน items-center ที่มีตัวหนังสือลอยปนกับ element
+ *      (ไอคอน+ข้อความ+badge ในแถวเดียว) ≥2 ชิ้น แล้วตัดขึ้นบรรทัดใหม่ — อาการ "เขียนซ้อนกันจนหนังสือตก"
+ *      (2026-09-08: banner เซ็นเอกสารเคยเป็นแบบนี้ ตรวจ overflow ไม่เจอเพราะไม่ได้ล้นขอบจอ แค่ตัดบรรทัดรก)
+ *      จำกัดเฉพาะ items-center เพื่อเลี่ยงย่อหน้าข้อความปกติที่ตั้งใจตัดบรรทัดอยู่แล้ว (ไม่ใช่ badge/label)
  *
  * ⚠️ ข้อจำกัด: เห็นเฉพาะสิ่งที่ render อยู่จริงในสถานะที่สคริปต์พาไปถึง (ดู steps ใน
  *    mobileAudit.routes.mjs) — **ยังไม่แทนการกดจริงในเบราว์เซอร์** แค่ตัดงานค้นหาจุดล้นออกจาก user
@@ -83,9 +87,10 @@ const HELP = `mobileAudit — ตรวจ layout จอมือถือ
   --width 375      ความกว้างจอ (ค่าเริ่มต้น 375 ตาม .wolf/config.json · ลองที่ 320 ดูขอบล่างสุดได้)
   --height 812     ความสูงจอ
   --base URL       ค่าเริ่มต้น http://localhost:3000 (dev server ของ user)
-  --mode MODE      overflow (ค่าเริ่มต้น · A/B/C/D/E) | tidy (T/F/K/G) | both
+  --mode MODE      overflow (ค่าเริ่มต้น · A/B/C/D/E) | tidy (T/F/K/G/H) | both
                    tidy = "ฟลูอิดและเป็นระเบียบ" — ปุ่มเล็กเกินนิ้ว · แถวไม่เต็มความกว้าง ·
-                   ของรกในแถวเดียว · ขอบ/ช่องไฟไม่เท่ากัน · **เป็นคำแนะนำล้วน ไม่ทำให้ exit 1**
+                   ของรกในแถวเดียว · ขอบ/ช่องไฟไม่เท่ากัน · ข้อความแน่นจนตัดบรรทัด ·
+                   **เป็นคำแนะนำล้วน ไม่ทำให้ exit 1**
   --debug          พิมพ์ค่าที่วัดได้ดิบๆ ทุก state (ไว้ไล่ดูตอนสงสัยว่า probe ไม่จับ)
   --shot           เก็บภาพลง ${OUT_DIR}/ ด้วย (ไม่ใช่ค่าเริ่มต้น — รูปกิน token เยอะ)`
 
@@ -355,6 +360,19 @@ const PROBE = (target, mode = 'overflow') => `(() => {
       // ⚠️ ต้องข้ามกล่องที่มีตัวหนังสือลอยๆ ปนกับ element (text node ไม่ใช่ลูกที่วัด rect ได้)
       //    ไม่งั้นระยะที่ "ข้ามตัวหนังสือ" จะถูกอ่านเป็นช่องไฟ 83px ทั้งที่เป็นคำอ่านปกติ (ชิปกลุ่มใน /team)
       const mixedText = [...el.childNodes].some((nd) => nd.nodeType === 3 && nd.textContent.trim())
+
+      // H — ไอคอน/ข้อความ/badge ปนกันในแถว items-center แล้วแน่นจนตัดขึ้นบรรทัดใหม่
+      //    (จำกัด items-center เพื่อเลี่ยงย่อหน้าข้อความปกติที่ตั้งใจตัดบรรทัด — นั่นไม่ใช่ badge/label row)
+      // ⚠️ ห้ามเทียบ top/bottom ของลูกแต่ละตัวตรงๆ — ตัว badge เองก็ตัดบรรทัดได้ ทำให้กรอบมันคาบเกี่ยว
+      //    กับกรอบไอคอนอยู่ดี (ไม่ nonoverlap) ทั้งที่หน้าจริงเห็นเป็น 2 บรรทัดชัดๆ ต้องวัดที่ "ความสูงรวม
+      //    ของแถว" เทียบ line-height บรรทัดเดียวแทน — สูงเกิน 1.6 เท่า = ตัดบรรทัดแน่นอน
+      if (mixedText && kidsM.length >= 2 && cs.alignItems === 'center') {
+        const fontPx = parseFloat(cs.fontSize) || 16
+        const lineHeightPx = cs.lineHeight === 'normal' ? fontPx * 1.2 : parseFloat(cs.lineHeight)
+        if (m.r.height > lineHeightPx * 1.6) {
+          tidy.push({ type: 'H', px: kidsM.length, note: \`\${kidsM.length} ชิ้นในแถวตัดขึ้นบรรทัดใหม่ (สูง \${Math.round(m.r.height)}px)\`, ...describe(el) })
+        }
+      }
       if (!mixedText && kidsM.length >= 3 && !/space-(between|around|evenly)/.test(cs.justifyContent)) {
         const row = [...kidsM].sort((a, b) => a.r.left - b.r.left)
         const wrapped = row.some((k) => k.r.top > row[0].r.bottom - 1)
@@ -388,7 +406,7 @@ const PROBE = (target, mode = 'overflow') => `(() => {
 
   // แยกโควตาต่อชนิด — px ของแต่ละกฎคนละหน่วย (px กับ "จำนวนชิ้น") เรียงรวมแล้วกฎที่ตัวเลขเล็กจะถูกเบียดหายทั้งกฎ
   const capped = []
-  for (const type of ['T', 'F', 'K', 'G']) {
+  for (const type of ['T', 'F', 'K', 'G', 'H']) {
     capped.push(...tidy.filter((f) => f.type === type).sort((a, b) => b.px - a.px).slice(0, 6))
   }
 
@@ -526,6 +544,7 @@ async function main() {
             F: `F · แถวปุ่มไม่เต็มความกว้าง เหลือที่ว่าง ${f.px}px`,
             K: `K · รกในแถวเดียว — ${f.note} พิจารณายุบเข้าเมนู/ซ่อนบางตัว`,
             G: `G · ไม่เป็นระเบียบ — ${f.note}`,
+            H: `H · ข้อความแน่นจนตัดบรรทัด — ${f.note} พิจารณาตัดข้อความ/ย่อ/แยกบรรทัด`,
           }[f.type]
           lines.push(`    ${head} · <${f.tag}> ${f.box} "${f.txt}"`)
           lines.push(`        ${f.cls}`)

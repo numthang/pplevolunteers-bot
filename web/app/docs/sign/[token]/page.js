@@ -579,11 +579,6 @@ export default function SignPage({ params }) {
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
               <CheckCircle size={18} className="shrink-0" /> {t('sign.signedBanner')}
-              {/* "เซ็นใหม่ทับได้" ไม่จริงเมื่อใบถูกล็อก — ตัดคำนั้นทิ้งไปเฉยๆ
-                  เหตุผลที่เซ็นทับไม่ได้อยู่ใต้ปุ่มส่งแล้ว (sign.openLink.lockedNote) ไม่ต้องบอกซ้ำ 2 ที่ */}
-              {!(sigLocked && !done) && (
-                <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">{t('sign.signedBannerNote')}</span>
-              )}
             </span>
             <a
               href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}

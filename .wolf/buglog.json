@@ -8454,6 +8454,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-07T18:35:57.042Z"
+    },
+    {
+      "id": "bug-487",
+      "timestamp": "2026-09-08T06:35:26.729Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "Had ', px: kidsM.length, note: `",
+      "fix": "Changed to ', px: kidsM.length, note: \\`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-08T06:35:26.729Z"
+    },
+    {
+      "id": "bug-488",
+      "timestamp": "2026-09-08T06:40:47.366Z",
+      "error_message": "Significant refactor of mobileAudit.mjs",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→12 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-08T06:40:47.366Z"
     }
   ]
 }
