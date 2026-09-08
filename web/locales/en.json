@@ -2018,7 +2018,19 @@
       "fontSize": "Text size",
       "readMode": "Read mode",
       "editMode": "Edit script",
-      "keysHint": "Space = start/pause · Up/Down arrows = speed · Esc = stop"
+      "keysHint": "Space = start/pause · Up/Down arrows = speed · Esc = stop",
+      "recordButton": "Record with script",
+      "backFromRecord": "Exit",
+      "startRecording": "Start recording",
+      "stopRecording": "Stop recording",
+      "cameraDenied": "Cannot open the camera — allow camera and microphone access for this site, then try again",
+      "retake": "Retake",
+      "sendClip": "Use this clip",
+      "sendClipReplace": "Replace existing clip",
+      "existingVideoNotice": "This post already has a clip — sending this one will replace it",
+      "uploading": "Uploading… {pct}%",
+      "uploadSuccess": "Clip uploaded",
+      "uploadFailed": "Upload failed — please try again (your clip is still here)"
     }
   },
   "kanban": {

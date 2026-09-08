@@ -48,6 +48,22 @@ export async function countVideos(episodeId) {
   return rows[0].n
 }
 
+/**
+ * คลิปของโพสต์นี้ (ถ้ามี) — โพสต์หนึ่งมีได้ตัวเดียวตาม MAX_VIDEO_PER_EPISODE
+ * ใช้ตอน "อัดทับ" จากเครื่องอัดในเบราว์เซอร์: ต้องรู้ id/path ของตัวเก่าเพื่อสลับไฟล์แล้วลบของเดิม
+ * ⛔ อย่าให้ client ส่ง id ตัวเก่ามาเอง — หน้าจอโหลด id ไว้ตั้งแต่ตอนเปิดหน้า อาจค้างเก่าไปแล้ว
+ */
+export async function findVideoOfPost(episodeId) {
+  const { rows } = await pool.query(
+    `SELECT id, path FROM post_episode_media
+      WHERE episode_id = $1 AND kind = 'video'
+      ORDER BY sort_order, id
+      LIMIT 1`,
+    [episodeId]
+  )
+  return rows[0] || null
+}
+
 /** ต่อท้ายเสมอ (sort_order = MAX+1) — เรียงใหม่ทำผ่าน reorderMedia */
 export async function addMedia({ episodeId, kind = 'upload', path, quoteText = null, quoteStyle = null, bgPath = null, sourceHash = null, addedBy = null, sourceAssetId = null }) {
   const { rows } = await pool.query(
