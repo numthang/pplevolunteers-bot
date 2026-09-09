@@ -35,6 +35,14 @@ const SPEED = { min: 8, max: 90, step: 4, def: 28 }
 const FONT = { min: 20, max: 96, step: 4, def: 40 }
 const COUNTDOWN_SECONDS = 3
 
+// จำนวนบรรทัดของ "แถบบท" ในโหมดอัด — ตัวแปรที่ตัดสินว่าคนดูจับได้ไหมว่าเรากำลังอ่านอยู่
+// จุดชัดกลางจอตา (fovea) กว้างราว 2° → อะไรที่อยู่ในกรอบนั้นอ่านออกทั้งที่สายตายังจับอยู่ที่เลนส์
+// แปลงเป็นความสูงบนจอ: ระยะ 40 ซม. ≈ 1.4 ซม. · 50 ซม. ≈ 1.7 ซม. · 1 ม. ≈ 3.5 ซม.
+// ⇒ ยิ่งตั้งมือถือไกล ยิ่งมีบรรทัดให้อ่านล่วงหน้าได้มากโดยตายังไม่ต้องขยับ
+// ของเดิมสูง 38vh (~6.5 ซม.) = 8-9° ตาต้องไถขึ้นลง คนดูเห็นชัด (user เจอเอง 2026-09-09)
+const BAND = { min: 1, max: 3, def: 2 }
+const LINE_HEIGHT = 1.625   // = leading-relaxed ของ Tailwind ต้องตรงกัน ไม่งั้นบรรทัดโดนตัดครึ่ง
+
 // เพดานเวลาอัด — 120 วิ ที่ 4Mbps วิดีโอ + 128kbps เสียง ≈ 62MB ยังเหลือมาร์จิ้นเยอะจากเพดานเซิร์ฟเวอร์ 200MB
 // (ตั้ง bitrate เองแทนค่า default ของเบราว์เซอร์ เพราะ default มักสูงเกินจนไฟล์ใหญ่โดยไม่รู้ตัว)
 const MAX_RECORD_SECONDS = 120
@@ -92,6 +100,7 @@ export default function ScriptTeleprompter({ id }) {
   const [countdown, setCountdown] = useState(0)
   const [speed, setSpeed] = useState(SPEED.def)
   const [fontSize, setFontSize] = useState(FONT.def)
+  const [bandLines, setBandLines] = useState(BAND.def)
 
   const [saveState, setSaveState] = useState('idle')
   const [saveError, setSaveError] = useState('')
@@ -442,6 +451,11 @@ export default function ScriptTeleprompter({ id }) {
   const incSpeed = useCallback(() => setSpeed(s => Math.min(SPEED.max, s + SPEED.step)), [])
   const decFont = useCallback(() => setFontSize(f => Math.max(FONT.min, f - FONT.step)), [])
   const incFont = useCallback(() => setFontSize(f => Math.min(FONT.max, f + FONT.step)), [])
+  const decBand = useCallback(() => setBandLines(n => Math.max(BAND.min, n - 1)), [])
+  const incBand = useCallback(() => setBandLines(n => Math.min(BAND.max, n + 1)), [])
+
+  // ความสูงแถบบท = จำนวนบรรทัด × ระยะบรรทัด + ระยะขอบบน-ล่าง (py-1 = 4px สองด้าน)
+  const bandHeight = Math.round(fontSize * LINE_HEIGHT * bandLines) + 8
 
   // ─── หน้าจอ ─────────────────────────────────────────────────────
   if (loading) {
@@ -474,41 +488,35 @@ export default function ScriptTeleprompter({ id }) {
           }}
         />
 
-        <div className="relative z-10 flex items-center justify-between p-3">
-          <button
-            onClick={closeRecord}
-            disabled={recordPhase === 'recording' || recordPhase === 'uploading'}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/60 text-white disabled:opacity-40"
-          >
-            <X size={16} /> {t('backFromRecord')}
-          </button>
-          {recordPhase === 'recording' && (
-            <span className="px-3 py-1.5 rounded-full bg-red-600 text-white text-sm font-medium tabular-nums flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-white animate-pulse" /> {fmtTime(elapsed)} / {fmtTime(MAX_RECORD_SECONDS)}
-            </span>
-          )}
-        </div>
-
         {camError && (
-          <div className="relative z-10 mx-4 p-4 rounded-lg bg-red-950/80 text-white text-base">{camError}</div>
+          <div className="relative z-10 m-4 p-4 rounded-lg bg-red-950/80 text-white text-base">{camError}</div>
         )}
 
-        {/* บทซ้อนติดขอบบนสุด ใกล้เลนส์กล้องหน้าที่สุดเท่าที่ทำได้บนจอเดียว — แก้ปัญหาตาเหลือบ
-            · `max-w-[46ch]` จำกัดความยาวบรรทัดราว 46 ตัวอักษรไม่ว่าจอกว้างแค่ไหน — ของเดิมกว้างเต็มจอ
-              พอเป็นจอคอมต้องกวาดตาซ้าย-ขวาทั้งบรรทัด อ่านตามไม่ทัน (user เจอเอง 2026-09-09)
-              ใช้หน่วย `ch` เพราะโตตาม `fontSize` ที่ user ปรับได้ → ตัวอักษรต่อบรรทัดคงที่เสมอ
-            · `bg-black/40` (เดิม `/70`) + text-shadow — user อยากเห็นหน้าตัวเองระหว่างอัด
-              ⛔ ถ้าอ่านไม่ออกบนพื้นสว่าง ให้เพิ่มเงาตัวอักษร อย่าเพิ่มความทึบพื้นกลับ */}
+        {/* แถบบท — ต้องชิด `top-0` จริงๆ ห้ามมีอะไรมาแทรกเหนือมันอีก (ปุ่มปิด/ตัวจับเวลาย้ายลงล่างแล้ว)
+            เลนส์กล้องหน้าอยู่ขอบบนสุดของจอ → ทุกพิกเซลที่ดันบทลงมา = มุมที่ตาต้องเหลือบ = คนดูจับได้
+            · สูงแค่ 1-3 บรรทัด (BAND) เพื่อให้ตา "อยู่กับที่" ไม่ต้องไถขึ้นลง — ดูเหตุผลที่ค่าคงที่ BAND
+            · `max-w-[46ch]` คุมความยาวบรรทัดไม่ให้กวาดตาซ้าย-ขวาบนจอคอม (หน่วย ch โตตาม fontSize)
+            · `bg-black/40` + text-shadow — user อยากเห็นหน้าตัวเองระหว่างอัด
+              ⛔ ถ้าอ่านไม่ออกบนพื้นสว่าง ให้เพิ่มเงาตัวอักษร อย่าเพิ่มความทึบพื้นกลับ
+            · mask ไล่จางที่ก้นแถบ = ตรึงสายตาไว้บรรทัดบน แต่ยังเห็นบรรทัดถัดไปลางๆ (2+ บรรทัดเท่านั้น) */}
         {(recordPhase === 'camera' || recordPhase === 'recording') && !camError && (
           <div
             ref={scrollRef}
-            className="relative z-10 mt-1 mx-auto w-[calc(100%-1.5rem)] max-w-[46ch] h-[38vh] overflow-y-auto rounded-lg bg-black/40 text-[#f2f5f8] p-4 leading-relaxed whitespace-pre-wrap break-words"
-            style={{ fontSize: `${fontSize}px`, textShadow: '0 1px 3px rgba(0,0,0,.9)' }}
+            className="absolute top-0 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-1.5rem)] max-w-[46ch] overflow-y-auto rounded-b-lg bg-black/40 text-[#f2f5f8] px-3 py-1 leading-relaxed whitespace-pre-wrap break-words"
+            style={{
+              fontSize: `${fontSize}px`,
+              height: `${bandHeight}px`,
+              textShadow: '0 1px 3px rgba(0,0,0,.9)',
+              ...(bandLines > 1 && {
+                maskImage: 'linear-gradient(to bottom, #000 65%, rgba(0,0,0,.35) 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, #000 65%, rgba(0,0,0,.35) 100%)',
+              }),
+            }}
           >
             {script}
-            {/* หางว่างท้ายบท — ต้องเกือบเท่าความสูงกล่อง (38vh) ไม่งั้นบรรทัดสุดท้ายค้างอยู่ก้นกล่อง
-                อ่านไม่ทันตอนเลื่อนหยุด · ของเดิม 20vh สั้นไปจนเป็นส่วนหนึ่งของบั๊ก "อัดจบก่อนพูดจบ" */}
-            <div aria-hidden className="h-[32vh]" />
+            {/* หางว่างท้ายบท = ความสูงแถบพอดี เพื่อให้บรรทัดสุดท้ายเลื่อนขึ้นมาถึงตำแหน่งอ่าน (บนสุด) ได้
+                ⛔ สั้นกว่านี้ = บรรทัดสุดท้ายค้างอยู่ก้นแถบตอนเลื่อนสุด อ่านไม่ทัน — เคยเป็นบั๊ก 2026-09-08 */}
+            <div aria-hidden style={{ height: `${bandHeight}px` }} />
           </div>
         )}
 
@@ -519,6 +527,23 @@ export default function ScriptTeleprompter({ id }) {
         )}
 
         <div className="relative z-10 mt-auto p-4 flex flex-col items-center gap-3">
+          {/* ปุ่มปิด + ตัวจับเวลาอยู่ "ล่างสุด" ไม่ใช่บนสุด — พื้นที่ใต้เลนส์สงวนไว้ให้บทอย่างเดียว
+              ⛔ ห้ามย้ายกลับขึ้นไปข้างบน: มันดันแถบบทลงมา = ตาเหลือบ = ปัญหาที่กำลังแก้อยู่นี่แหละ */}
+          <div className="w-full flex items-center justify-between gap-2">
+            <button
+              onClick={closeRecord}
+              disabled={recordPhase === 'recording' || recordPhase === 'uploading'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/60 text-white disabled:opacity-40"
+            >
+              <X size={16} /> {t('backFromRecord')}
+            </button>
+            {recordPhase === 'recording' && (
+              <span className="px-3 py-1.5 rounded-full bg-red-600 text-white text-sm font-medium tabular-nums flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-white animate-pulse" /> {fmtTime(elapsed)} / {fmtTime(MAX_RECORD_SECONDS)}
+              </span>
+            )}
+          </div>
+
           {recordPhase === 'camera' && camReady && (
             <>
               <button
@@ -528,9 +553,11 @@ export default function ScriptTeleprompter({ id }) {
               >
                 <Circle size={22} className="text-white fill-white" />
               </button>
-              <div className="flex items-center gap-2">
+              {/* ปรับได้เฉพาะก่อนกดอัด — เปลี่ยนกลางเทคแล้วบทรีโฟลว์/กระโดด (กฎเดียวกับขนาดตัวอักษร) */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <Stepper label={t('speed')} value={speed} onDown={decSpeed} onUp={incSpeed} />
                 <Stepper label={t('fontSize')} value={fontSize} onDown={decFont} onUp={incFont} />
+                <Stepper label={t('bandLines')} value={bandLines} onDown={decBand} onUp={incBand} />
               </div>
             </>
           )}

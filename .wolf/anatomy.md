@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T06:03:16.818Z
-> Files: 1143 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T06:42:28.450Z
+> Files: 1144 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -460,6 +460,7 @@
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
 - `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7492 tok)
 - `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~646 tok)
+- `recorderRepro.mjs` — scripts/dev/recorderRepro.mjs — ชุดทดลอง "เครื่องอัดคลิปในเบราว์เซอร์" แบบกดซ้ำได้ (~2894 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
 ## scripts/docs/
@@ -2112,7 +2113,7 @@
 - `PostRevisions.jsx` — fmt (~1260 tok)
 - `PostsHome.jsx` — STATUS_LABELS (~9728 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13237 tok)
-- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~9252 tok)
+- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~9794 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
 ## web/components/profile/
@@ -2375,8 +2376,8 @@
 
 ## web/locales/
 
-- `en.json` (~29398 tok)
-- `th.json` (~28152 tok)
+- `en.json` (~29592 tok)
+- `th.json` (~28335 tok)
 
 ## web/public/media-temp/
 

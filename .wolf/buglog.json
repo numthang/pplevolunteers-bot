@@ -8588,6 +8588,71 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-09T00:00:00.000Z"
+    },
+    {
+      "id": "bug-495",
+      "timestamp": "2026-09-09T06:33:11.045Z",
+      "error_message": "CSS fix: min",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "min: 20, max: 96, step: 4, def: 40 → 1, max: 3, def: 2",
+      "fix": "Changed min: 20, max: 96, step: 4, def: 40 → 1, max: 3, def: 2",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T06:34:28.812Z"
+    },
+    {
+      "id": "bug-496",
+      "timestamp": "2026-09-09T06:33:47.628Z",
+      "error_message": "Significant refactor of ScriptTeleprompter.jsx",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 18→3 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T06:33:47.628Z"
+    },
+    {
+      "id": "bug-497",
+      "timestamp": "2026-09-09T06:40:54.331Z",
+      "error_message": "Missing error handling in recorderRepro.mjs",
+      "file": "scripts/dev/recorderRepro.mjs",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: // ⛔ ถ้ามี chrome ค้างจาก session ก่อนจองพอร์ตนี้อยู่ ตัวใหม; //    สคริปต์จะไปต่อกับ \"ตัวเก่า\" ที่ไม่มีกล้องปลอม → กล้องเ",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T06:42:28.484Z"
+    },
+    {
+      "id": "bug-498",
+      "timestamp": "2026-09-09T06:45:23.641Z",
+      "error_message": "NotReadableError: Could not start video source — หน้าเว็บโชว์ \"เปิดกล้องไม่ได้ ต้องอนุญาตให้ใช้กล้อง\" ทั้งที่สิทธิ์ไม่เกี่ยว",
+      "file": "scripts/dev/recorderRepro.mjs",
+      "root_cause": "มี chrome headless ค้างจาก session ก่อนจองพอร์ต 9333 อยู่ (โปรไฟล์ /tmp/h-test-* ไม่มีแฟล็ก --use-fake-device-for-media-stream) · ตัวใหม่ที่ spawn bind พอร์ตไม่ได้แล้วเงียบ สคริปต์จึงไปต่อ CDP กับตัวเก่า → กล้องปลอมไม่มี getUserMedia เลย reject · แอปจับ error ทุกชนิดแล้วโชว์ข้อความ cameraDenied ข้อความเดียว จึงหลงคิดว่าแอปพัง",
+      "fix": "ใส่ยามในสคริปต์: ถ้า http://127.0.0.1:9333/json/version ตอบอยู่แล้ว ให้ exit พร้อมบอกให้ pkill ก่อน · เพิ่ม shim ดัก getUserMedia เก็บ error name จริงลง window.__gumErr และรายงานเป็นฟิลด์ \"กล้องพังเพราะ\"",
+      "tags": [
+        "dev-tools",
+        "chrome-headless",
+        "getUserMedia",
+        "recorder",
+        "false-alarm"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T06:45:23.641Z"
     }
   ]
 }

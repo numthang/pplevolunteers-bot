@@ -67,6 +67,15 @@ async function mintToken() {
 }
 
 const port = 9333
+
+// ⛔ ถ้ามี chrome ค้างจาก session ก่อนจองพอร์ตนี้อยู่ ตัวใหม่จะ bind ไม่ได้แล้วเงียบๆ
+//    สคริปต์จะไปต่อกับ "ตัวเก่า" ที่ไม่มีกล้องปลอม → กล้องเปิดไม่ได้ (NotReadableError)
+//    แล้วหน้าจอโชว์ว่า "ต้องอนุญาตให้ใช้กล้อง" ทำให้หลงคิดว่าแอปพัง (เสียเวลาไปแล้ว 2026-09-09)
+if (await fetch(`http://127.0.0.1:${port}/json/version`).then(() => true).catch(() => false)) {
+  console.error(`มี chrome ค้างอยู่ที่พอร์ต ${port} — สั่ง  pkill -f "remote-debugging-port=${port}"  ก่อนแล้วรันใหม่`)
+  process.exit(2)
+}
+
 const child = spawn(CHROME, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'repro-'))}`,
   '--no-first-run', '--no-default-browser-check', '--disable-gpu',
@@ -107,9 +116,13 @@ const state = () => cdp.eval(`(() => {
   return {
     ปุ่ม: btns,
     กล่องบท: box ? { สูงที่เห็น: box.clientHeight, สูงเนื้อหา: box.scrollHeight, เลื่อนอยู่ที่: box.scrollTop, ตัวอักษรกี่ตัว: box.innerText.length, ตัวอย่าง: box.innerText.slice(0,40), ท้ายจอ: box.innerText.trim().slice(-45) } : null,
+    // ระยะจาก "ขอบบนจอ" (= ตำแหน่งเลนส์กล้องหน้า) ลงมาถึงบรรทัดที่กำลังอ่าน — ตัวเลขที่ตัดสินว่า
+    // คนดูจับได้ไหมว่าเรากำลังอ่านบท · เกิน ~2° ของสายตา (ที่ระยะ 50 ซม. ≈ 1.7 ซม. ≈ 60px) = เห็นตาเหลือบ
+    ตำแหน่งแถบบท: box ? (r => ({ ห่างขอบบน: Math.round(r.top), สูง: Math.round(r.height), ก้นแถบ: Math.round(r.bottom), จอสูง: window.innerHeight }))(box.getBoundingClientRect()) : null,
     มีวิดีโอตัวอย่าง: !!document.querySelector('video[controls]'),
     ข้อความบนจอ: document.body.innerText.replace(/\\s+/g,' ').slice(0, 200),
     รองรับกล้อง: !!navigator.mediaDevices?.getUserMedia,
+    กล้องพังเพราะ: window.__gumErr || null,
     มีMediaRecorder: typeof MediaRecorder !== 'undefined',
     ชนิดไฟล์ที่รองรับ: typeof MediaRecorder === 'undefined' ? [] : ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].filter(m => { try { return MediaRecorder.isTypeSupported(m) } catch { return false } }),
   }
@@ -138,6 +151,15 @@ await sleep(5000)
 
 console.log('\n=== ก่อนกดอัด ===')
 console.log(JSON.stringify(await state(), null, 1))
+
+// ดักเหตุผลจริงที่กล้องเปิดไม่ได้ — ตัวแอปจับ error แล้วโชว์ข้อความเดียวเสมอ ("ต้องอนุญาต…")
+// ซึ่งซ่อนสาเหตุจริง (NotReadableError/OverconstrainedError/…) ทำให้ debug จากหน้าจอไม่ได้เลย
+await cdp.eval(`(() => {
+  const md = navigator.mediaDevices
+  const orig = md.getUserMedia.bind(md)
+  md.getUserMedia = c => orig(c).catch(e => { window.__gumErr = e.name + ': ' + e.message; throw e })
+  return true
+})()`)
 
 const clicked = await cdp.eval(`(() => {
   const b = [...document.querySelectorAll('button')].find(x => x.textContent.includes('อัดคลิปพร้อมบท'))

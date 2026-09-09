@@ -2016,6 +2016,7 @@
       "toTop": "Back to start",
       "speed": "Speed",
       "fontSize": "Text size",
+      "bandLines": "Script lines",
       "readMode": "Read mode",
       "editMode": "Edit script",
       "keysHint": "Space = start/pause · Up/Down arrows = speed · Esc = stop",
