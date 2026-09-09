@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T11:50:13.970Z
-> Files: 1144 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T17:56:45.038Z
+> Files: 1145 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -365,6 +365,7 @@
 - `1788470000000_retire-closed-status-merge-into-resolved.sql` — Up Migration (~574 tok)
 - `1788479000000_move-remaining-closed-cases-to-rejected.sql` — Up Migration (~395 tok)
 - `1788490304371_correct-completed-at-to-created-at-for-backfilled-resolved-rejected-cases.sql` — Up Migration (~373 tok)
+- `1788800000000_calling-perf-indexes.sql` — Up Migration (~507 tok)
 
 ## org core (platformfor.org identity/
 
@@ -781,7 +782,7 @@
 
 ## web/app/api/calling/contacts/campaign/
 
-- `route.js` — Next.js API route: GET (~763 tok)
+- `route.js` — Next.js API route: GET (~838 tok)
 
 ## web/app/api/calling/dial/
 
@@ -797,7 +798,7 @@
 
 ## web/app/api/calling/members/
 
-- `route.js` — GET /api/calling/members (~1418 tok)
+- `route.js` — GET /api/calling/members (~1574 tok)
 
 ## web/app/api/calling/pending/
 
@@ -1642,7 +1643,7 @@
 ## web/app/calling/assignments/[campaignId]/
 
 - `layout.js` — Next.js layout (~73 tok)
-- `page.js` — Next.js page component (~13026 tok)
+- `page.js` — Next.js page component (~14365 tok)
 
 ## web/app/calling/campaigns/
 
@@ -2152,10 +2153,10 @@
 
 - `assignments.js` — Get assignment by ID (~1290 tok)
 - `campaigns.js` — cache_pple_event คง guild-based (Discord/ACT artifact) → scope ผ่าน dc_guilds ของ org (~1347 tok)
-- `contacts.js` — Exports getContactById, createContact, updateContact, deleteContact + 8 more (~4080 tok)
+- `contacts.js` — Exports getContactById, createContact, updateContact, deleteContact + 7 more (~4493 tok)
 - `importXlsx.js` — นำเข้าผลลัพธ์จาก parseCallingXlsx (web/lib/calling/parseXlsxImport.js) เข้า DB จริง (~1264 tok)
 - `logs.js` — Exports getLogById, getLogsByMember, getLogsByCampaignMember, getLogsByCampaign + 5 more (~1265 tok)
-- `members.js` — Exports getMemberById, getMembersByDistrict, getMembersByProvince, searchMembers + 6 more (~6122 tok)
+- `members.js` — Exports getMemberById, getMembersByDistrict, getMembersByProvince, searchMembers + 4 more (~6614 tok)
 - `starred.js` — Exports getFavorites, isFavorite, getFavoriteSet, addFavorite + 4 more (~1696 tok)
 - `tiers.js` — Exports getTier, getTiersByMembers, getMembersByTier, upsertTier + 6 more (~1222 tok)
 

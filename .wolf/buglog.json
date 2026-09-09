@@ -8736,6 +8736,70 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-09T17:31:02.135888Z"
+    },
+    {
+      "id": "bug-504",
+      "timestamp": "2026-09-09T17:49:21.287Z",
+      "error_message": "Wrong reference: filters should be starred",
+      "file": "web/db/calling/members.js",
+      "root_cause": "Used \"filters\" instead of \"starred\"",
+      "fix": "Changed filters → starred",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T17:49:21.287Z"
+    },
+    {
+      "id": "bug-505",
+      "timestamp": "2026-09-09T17:49:45.908Z",
+      "error_message": "Wrong reference: filters should be starred",
+      "file": "web/db/calling/contacts.js",
+      "root_cause": "Used \"filters\" instead of \"starred\"",
+      "fix": "Changed filters → starred",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T17:49:45.908Z"
+    },
+    {
+      "id": "bug-506",
+      "timestamp": "2026-09-09T17:50:22.212Z",
+      "error_message": "Significant refactor of contacts.js",
+      "file": "web/db/calling/contacts.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→29 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T17:50:22.212Z"
+    },
+    {
+      "id": "bug-507",
+      "timestamp": "2026-09-09T17:53:23.756Z",
+      "error_message": "Significant refactor of page.js",
+      "file": "web/app/calling/assignments/[campaignId]/page.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→3 lines (2 removed) | Also: {[tambon, amphoe, item.assigned_to ? usersMap[item; .filter(Boolean).join(' · ')}",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T17:54:55.590Z"
     }
   ]
 }

@@ -1,6 +1,44 @@
-# STATUS — 2026-09-09
+# STATUS — 2026-09-10
 
-## ➜ เควสต์ปัจจุบัน: อัดแล้วต้อง "เหมือนมองกล้อง" ไม่ใช่เหมือนอ่านบท
+## ➜ เควสต์ปัจจุบัน: /calling/assignments — ช้า + ตัวกรองดาว/สัญญาณ
+
+### 🚀 push ขึ้น master แล้ว 3 commit — **ยังไม่ deploy · migration ยังไม่รันที่ไหน**
+`a25ace1` race condition · `6459fca` migration index · `5a4d97c` ตัวกรองดาว+สัญญาณ
+
+**deploy ที่ต้องทำ (มี migration ด้วย ห้ามข้าม):**
+```bash
+sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git pull origin master && npm run migrate up"
+sudo -u www bash -c "cd /www/wwwroot/pple-volunteers/web && npm run build"
+sudo -u www bash -c "pm2 restart pple-web --update-env"
+```
+
+**1. สลับ tab แล้วข้อมูลผิด tab (`a25ace1`)** — คำตอบ query ของ tab เดิมกลับมาทีหลังแล้ว
+setMembers ทับ tab ใหม่ · แก้ด้วย `loadSeqRef` (เลขรุ่น) + `AbortController` เช็ครุ่นหลังทุก await
+รวมถึงใน `finally` (รุ่นเก่าห้ามดับสปินเนอร์รุ่นใหม่) · effect subdistricts ใช้ cancelled flag
+
+**2. ต้นเรื่องคือหน้าโหลด 2.6 วิ (`6459fca`)** — `EXPLAIN (ANALYZE, BUFFERS)` = 928,012 blocks
+ต่อการดึง 100 แถว เพราะ LATERAL 2 ตัวตกเป็น seq scan วนต่อสมาชิก 1 คน (1,233 รอบ):
+`org_members` ไม่มี index บน `serial` เลย (~1.55s) · `calling_logs` มี index แค่ `(org_id)` (~0.81s)
+→ ลง index 2 ตัว **2,646ms → 38ms** · ⚠️ **prod ไม่ได้ใหญ่กว่า dev** (calling_logs 6,737 ·
+org_members 7,704 · cache_pple_member 4,856) — เลข 169505 ใน CLAUDE.md คือ**ช่วง id ไม่ใช่จำนวนแถว**
+
+**3. ตัวกรอง "มีคนติดดาว" + ที่อยู่/ความสะดวก/ความสนใจ (`5a4d97c`)**
+- user เคาะ: ทำเป็น**ตัวกรอง ไม่ใช่ tab ที่ 3** · **ไม่ใส่ปุ่มดาวในแถว** (ติดดาวผ่าน popup เท่านั้น)
+- ⛔ **ห้ามทำ tab ที่ผสม member+contact เด็ดขาด** — ปุ่มมอบหมาย/SMS ส่ง `contact_type` ตัวเดียว
+  ตาม tab (page.js:422,449) + id สองตารางทับช่วงกัน = **ผูกงานให้คนละคนแบบเงียบๆ**
+- สัญญาณอ่านจากสายล่าสุด (LATERAL `ll` เดิม) · `'mid'` ต้องกิน **2-3** เพราะสเกลเก่า 1-4
+  ยังมีแถวค่า 3 ค้าง ถ้าจับ `=2` เป๊ะจะหายเงียบ
+- ข้อมูลสัญญาณบน prod บางมาก **381/6,737 log (5.7%)** — กรองแล้วเหลือน้อยไม่ใช่บั๊ก
+
+### 🔜 ค้างไว้ เจอระหว่างทาง ยังไม่แตะ (user ยังไม่เคาะ)
+- **mobile audit ยัง exit 1** ที่ 9px — `app/calling/layout.js:10` `-mx-3 sm:-mx-4`
+  ล้นเท่ากันเป๊ะทั้งก่อน/หลังแก้ (stash ออกไปวัดเทียบแล้ว) เป็นของทั้งโซน `/calling`
+- **query ผู้ติดต่อคืนแถวซ้ำ** — `web/db/calling/contacts.js` `GROUP BY` มี `l.called_at, l.status,
+  l.note` → คนที่ถูกโทร 3 ครั้งโผล่ 3 แถว แถวละ `total_calls = 1` (ท่าที่ถูกคือ LATERAL แบบ members)
+
+---
+
+## ⏸ เควสต์ค้าง (รอ user อัดจริง): อัดแล้วต้อง "เหมือนมองกล้อง" ไม่ใช่เหมือนอ่านบท
 
 ### 🚀 ขึ้น prod แล้ว (`23ecaad` + `cfd6370`) — **รอ user อัดจริงแล้วดูคลิปตัวเอง**
 อาการที่ user รายงาน: "ลูกตาผมมองสคริปต์ ไม่ได้มองกล้อง" (เห็นชัดในคลิปที่อัดออกมา)
