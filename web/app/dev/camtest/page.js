@@ -69,6 +69,9 @@ export default function CamTestPage() {
   const [elapsed, setElapsed] = useState(0)
   const [recording, setRecording] = useState(false)
 
+  // เฟรมจริงที่ <video> ได้รับ — ⚠️ บน iOS ไม่ตรงกับ getSettings() (อันนั้นรายงานพิกัดเซนเซอร์
+  // ที่ยังไม่หมุนตามการถือเครื่อง) ตัวนี้ต่างหากคือสิ่งที่ตาเห็นจริงและที่ MediaRecorder อัดจริง
+  const [realFrame, setRealFrame] = useState(null)
   const [variant, setVariant] = useState('p916')
   const [fit, setFit] = useState('contain')
   const [box, setBox] = useState('auto')
@@ -105,6 +108,7 @@ export default function CamTestPage() {
     setError('')
     setResult(null)
     setTrackInfo(null)
+    setRealFrame(null)
     setStatus(`กำลังขอกล้องแบบ "${v.label}"…`)
 
     // ⛔ ต้องปิดของเก่าก่อนเสมอ — ถ้ายังเปิดค้าง กล้องจะไม่เปลี่ยนสัดส่วนตาม constraint ใหม่
@@ -202,8 +206,9 @@ export default function CamTestPage() {
       ? 'bg-white text-black border-white'
       : 'bg-white/5 text-white/80 border-white/15'}`
 
+  // กรอบ "ตามภาพจริง" ต้องอิง realFrame ไม่ใช่ getSettings() — บน iOS สองค่านี้สลับด้านกัน
   const boxAspect = box === 'auto'
-    ? (trackInfo?.w ? `${trackInfo.w} / ${trackInfo.h}` : '3 / 4')
+    ? (realFrame?.w ? `${realFrame.w} / ${realFrame.h}` : '3 / 4')
     : box.replace('/', ' / ')
 
   return (
@@ -231,6 +236,8 @@ export default function CamTestPage() {
 
       <video
         ref={liveRef} autoPlay playsInline muted
+        onLoadedMetadata={e => setRealFrame({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+        onResize={e => setRealFrame({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
         className="w-full rounded-lg bg-black"
         style={{ transform: 'scaleX(-1)', aspectRatio: boxAspect, objectFit: fit }}
       />
@@ -256,8 +263,17 @@ export default function CamTestPage() {
       {trackInfo && (
         <div className="rounded-lg bg-black/40 p-3">
           <div className={row}><span>แบบที่ขอไป</span><b>{trackInfo.variant}</b></div>
-          <div className={row}><span>ความละเอียดที่ได้จริง</span><b>{trackInfo.size}</b></div>
-          <div className={row}><span>สัดส่วนที่ได้จริง</span><b className="text-right">{describeRatio(trackInfo.w, trackInfo.h)}</b></div>
+          <div className={row}><span>getSettings() บอกว่า</span><b>{trackInfo.size} · {describeRatio(trackInfo.w, trackInfo.h)}</b></div>
+          <div className={row}>
+            <span><b>เฟรมจริงที่จอได้รับ</b><span className="block text-xs opacity-60">อันนี้คือของจริง — ที่ตาเห็นและที่ไฟล์อัดได้</span></span>
+            <b className="text-right">
+              {realFrame ? `${realFrame.w}×${realFrame.h}` : '…'}
+              <span className="block text-xs font-normal opacity-70">{realFrame ? describeRatio(realFrame.w, realFrame.h) : ''}</span>
+            </b>
+          </div>
+          {realFrame && trackInfo.w && (realFrame.w !== trackInfo.w || realFrame.h !== trackInfo.h) && (
+            <div className={row}><span className="text-amber-300">⚠️ ไม่ตรงกัน</span><b className="text-amber-300 text-right">เบราว์เซอร์หมุนเฟรม — ห้ามเชื่อ getSettings()</b></div>
+          )}
           <div className={row}><span>เฟรมต่อวินาที</span><b>{trackInfo.fps}</b></div>
           <div className={row}><span>ช่องเสียง</span><b>{trackInfo.audio ? '✅ มี' : '❌ ไม่มี'}</b></div>
           <div className={row}><span>กล้องที่ได้</span><b className="text-right break-all">{trackInfo.label}</b></div>
