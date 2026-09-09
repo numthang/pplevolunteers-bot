@@ -305,6 +305,12 @@ export default function ScriptTeleprompter({ id }) {
 
   // ─── โหมดอัดคลิป ───────────────────────────────────────────────
   const openRecord = useCallback(async () => {
+    // เต็มจอก่อนอย่างอื่น — บนคอม แถบที่อยู่ + แท็บกินขอบบนไปราว 100px ซึ่งมากกว่าความสูง
+    // ของแถบบททั้งแถบเสียอีก · เลนส์เว็บแคมอยู่เหนือขอบจอ ทุก px ที่ตัดออกได้คือมุมที่ตาเหลือบน้อยลง
+    // ⚠️ ต้องเรียก "ก่อน" await ใดๆ ไม่งั้นหลุด user gesture แล้วเบราว์เซอร์ปฏิเสธ
+    // iOS Safari ไม่มี requestFullscreen ของ element (มีแต่ของ <video>) → เงียบไปเฉยๆ ไม่พัง
+    try { await document.documentElement.requestFullscreen?.() } catch { /* เจ้าของเครื่องปฏิเสธก็ไม่เป็นไร */ }
+
     setCamError('')
     setUploadError('')
     setRecordOpen(true)
@@ -336,6 +342,10 @@ export default function ScriptTeleprompter({ id }) {
   }, [t])
 
   const closeRecord = useCallback(() => {
+    // ออกจากเต็มจอด้วยเสมอ ไม่งั้นกลับมาหน้าแก้บทแล้วยังเต็มจอค้าง (ผู้ใช้ต้องกด Esc เอง = งง)
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
     stop()
     streamRef.current?.getTracks().forEach(tr => tr.stop())
     streamRef.current = null
