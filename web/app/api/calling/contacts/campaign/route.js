@@ -43,6 +43,10 @@ export async function GET(req) {
       called:     searchParams.get('called')     || null,
       sort:       searchParams.get('sort')       || null,
       sms:        searchParams.get('sms')        || null,
+      starred:    searchParams.get('starred')    || null,
+      sigLocation:     searchParams.get('sigLocation')     || null,
+      sigAvailability: searchParams.get('sigAvailability') || null,
+      sigInterest:     searchParams.get('sigInterest')     || null,
     }
 
     let rows = await getContactsInCampaign(orgId, campaignId, filters, limit, offset)

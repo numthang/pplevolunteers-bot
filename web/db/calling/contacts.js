@@ -84,7 +84,8 @@ export async function getContactsList(orgId, { province, provinces, keyword, lim
 }
 
 export async function getContactsInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphoe, tier, status, assignedTo, name, called, sort, sms } = filters
+  const { amphoe, tier, status, assignedTo, name, called, sort, sms,
+          starred, sigLocation, sigAvailability, sigInterest } = filters
 
   const params = [orgId, campaignId]
 
@@ -98,6 +99,11 @@ export async function getContactsInCampaign(orgId, campaignId, filters = {}, lim
      l.called_at AS last_called_at,
      l.status AS last_status,
      l.note AS last_note,
+     l.sig_location,
+     l.sig_availability,
+     l.sig_interest,
+     COALESCE(st.star_count, 0) AS star_count,
+     COALESCE(st.starred_by, ARRAY[]::int[]) AS starred_by,
      COUNT(DISTINCT l.id) AS total_calls,
      SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
      SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
@@ -110,6 +116,11 @@ export async function getContactsInCampaign(orgId, campaignId, filters = {}, lim
      ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
    LEFT JOIN calling_logs l
      ON l.campaign_id = cc.id AND l.member_id = c.id::text AND l.contact_type = 'contact'
+   LEFT JOIN (
+     SELECT member_id, COUNT(*) AS star_count, ARRAY_AGG(user_id ORDER BY created_at) AS starred_by
+     FROM calling_starred WHERE org_id = $1 AND contact_type = 'contact'
+     GROUP BY member_id
+   ) st ON st.member_id = c.id::text
    WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province)`
 
   if (amphoe) { params.push(amphoe); query += ` AND c.amphoe = $${params.length}` }
@@ -125,11 +136,33 @@ export async function getContactsInCampaign(orgId, campaignId, filters = {}, lim
   const calledIdx = params.length
   params.push(sms || null)
   const smsIdx = params.length
+  params.push(starred || null)
+  const starredIdx = params.length
+  params.push(sigLocation || null)
+  const sigLocIdx = params.length
+  params.push(sigAvailability || null)
+  const sigAvailIdx = params.length
+  params.push(sigInterest || null)
+  const sigInterestIdx = params.length
+
+  // สเกลเก่า 1-4 · 'mid' กิน 2-3 เพื่อไม่ให้แถวค่า 3 หายเงียบ (เหมือนฝั่ง members)
+  const sigClause = (idx, col) => `
+     AND ($${idx}::text IS NULL
+          OR ($${idx} = 'high' AND ${col} >= 4)
+          OR ($${idx} = 'mid'  AND ${col} BETWEEN 2 AND 3)
+          OR ($${idx} = 'low'  AND ${col} = 1))`
 
   query += `
    GROUP BY c.id, t.tier, t.flag, a.id, a.assigned_to, a.assigned_by, a.created_at,
-            l.called_at, l.status, l.note
-   HAVING ($${tierIdx}::text IS NULL OR COALESCE(t.tier::text, 'D') = $${tierIdx})
+            l.called_at, l.status, l.note, l.sig_location, l.sig_availability, l.sig_interest,
+            st.star_count, st.starred_by
+   HAVING ($${starredIdx}::text IS NULL
+           OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))`
+    + sigClause(sigLocIdx, 'l.sig_location')
+    + sigClause(sigAvailIdx, 'l.sig_availability')
+    + sigClause(sigInterestIdx, 'l.sig_interest')
+    + `
+     AND ($${tierIdx}::text IS NULL OR COALESCE(t.tier::text, 'D') = $${tierIdx})
      AND ($${statusIdx}::text IS NULL
           OR ($${statusIdx} = 'assigned' AND a.id IS NOT NULL)
           OR ($${statusIdx} = 'unassigned' AND a.id IS NULL))

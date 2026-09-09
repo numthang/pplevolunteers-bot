@@ -39,6 +39,10 @@ export async function GET(req) {
   const filterCalled = searchParams.get('called') || null
   const filterSort = searchParams.get('sort') || null
   const filterSms = searchParams.get('sms') || null
+  const filterStarred = searchParams.get('starred') || null
+  const filterSigLocation = searchParams.get('sigLocation') || null
+  const filterSigAvailability = searchParams.get('sigAvailability') || null
+  const filterSigInterest = searchParams.get('sigInterest') || null
 
   try {
     const { access } = await getEffectiveOrgIdentity(session)
@@ -56,7 +60,7 @@ export async function GET(req) {
     let total = 0
 
     if (campaignId) {
-      const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms }
+      const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms, starred: filterStarred, sigLocation: filterSigLocation, sigAvailability: filterSigAvailability, sigInterest: filterSigInterest }
       rows = await memberDB.getMembersInCampaign(orgId, parseInt(campaignId), filters, limit, offset)
     } else if (province) {
       rows = await memberDB.getMembersByProvince(orgId, province, limit, offset)

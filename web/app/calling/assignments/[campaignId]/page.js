@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback, use } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo, use } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
@@ -11,7 +11,7 @@ import SmsModal from '@/components/calling/SmsModal.jsx'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 // eslint-disable-next-line no-shadow-restricted-names -- Infinity คือชื่อไอคอน lucide ไม่ได้ตั้งใจทับ global
-import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Infinity } from 'lucide-react'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Star, Infinity } from 'lucide-react'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -154,6 +154,33 @@ export default function CampaignPage({ params }) {
   const [filterSort, setFilterSort] = useState(() => searchParams.get('sort') || '')
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterSms, setFilterSms] = useState(() => searchParams.get('sms') || '')
+  const [filterStarred, setFilterStarred] = useState(() => searchParams.get('starred') || '')
+  const [filterSigLocation, setFilterSigLocation] = useState(() => searchParams.get('sigLocation') || '')
+  const [filterSigAvailability, setFilterSigAvailability] = useState(() => searchParams.get('sigAvailability') || '')
+  const [filterSigInterest, setFilterSigInterest] = useState(() => searchParams.get('sigInterest') || '')
+
+  // ตัวกรองทั้งชุดเป็นก้อนเดียว — เดิมส่งเป็น argument เรียงตำแหน่ง 12 ตัวผ่าน 6 จุด
+  // พอเพิ่มตัวกรองทีไรต้องไล่แก้ทุกจุดให้เรียงตรงกัน = ที่มาของบั๊กแบบสลับค่ากันเงียบๆ
+  const filters = useMemo(() => ({
+    amphure: filterAmphure,
+    subdistricts: filterSubdistricts,
+    tier: filterTier,
+    assignee: filterAssignee,
+    rsvp: filterRsvp,
+    name: debouncedName,
+    expiry: filterExpiry,
+    called: filterCalled,
+    sort: filterSort,
+    status: filterStatus,
+    sms: filterSms,
+    starred: filterStarred,
+    sigLocation: filterSigLocation,
+    sigAvailability: filterSigAvailability,
+    sigInterest: filterSigInterest,
+  }), [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName,
+       filterExpiry, filterCalled, filterSort, filterStatus, filterSms, filterStarred,
+       filterSigLocation, filterSigAvailability, filterSigInterest])
+
   const { data: session } = useSession()
   const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
   const isModerator = can('deleteLog', access?.permissions || [])
@@ -225,22 +252,26 @@ export default function CampaignPage({ params }) {
   useEffect(() => {
     const p = new URLSearchParams()
     if (activeTab === 'contact') p.set('tab', 'contact')
-    if (debouncedName)  p.set('name', debouncedName)
-    if (filterAmphure)  p.set('amphure', filterAmphure)
+    if (filters.name)     p.set('name', filters.name)
+    if (filters.amphure)  p.set('amphure', filters.amphure)
     if (activeTab === 'member') {
-      if (filterSubdistricts.size > 0) p.set('subdistricts', Array.from(filterSubdistricts).join(','))
-      if (filterRsvp)   p.set('rsvp', filterRsvp)
-      if (filterExpiry) p.set('expiry', filterExpiry)
-      if (filterSort)   p.set('sort', filterSort)
+      if (filters.subdistricts.size > 0) p.set('subdistricts', Array.from(filters.subdistricts).join(','))
+      if (filters.rsvp)   p.set('rsvp', filters.rsvp)
+      if (filters.expiry) p.set('expiry', filters.expiry)
+      if (filters.sort)   p.set('sort', filters.sort)
     }
-    if (filterTier)     p.set('tier', filterTier)
-    if (filterAssignee) p.set('assignee', filterAssignee)
-    if (filterCalled)   p.set('called', filterCalled)
-    if (filterStatus)   p.set('status', filterStatus)
-    if (filterSms)      p.set('sms', filterSms)
+    if (filters.tier)     p.set('tier', filters.tier)
+    if (filters.assignee) p.set('assignee', filters.assignee)
+    if (filters.called)   p.set('called', filters.called)
+    if (filters.status)   p.set('status', filters.status)
+    if (filters.sms)      p.set('sms', filters.sms)
+    if (filters.starred)  p.set('starred', filters.starred)
+    if (filters.sigLocation)     p.set('sigLocation', filters.sigLocation)
+    if (filters.sigAvailability) p.set('sigAvailability', filters.sigAvailability)
+    if (filters.sigInterest)     p.set('sigInterest', filters.sigInterest)
     const qs = p.toString()
     router.replace(qs ? `/calling/assignments/${campaignId}?${qs}` : `/calling/assignments/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, filterStatus, filterSms, activeTab])
+  }, [filters, activeTab, campaignId, router])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -255,36 +286,40 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms) => {
-    const limit = amphure ? 9999 : PAGE_SIZE
+  // ตัวกรองที่ใช้ได้ทั้ง 2 tab (สัญญาณมาจาก calling_logs ซึ่งมีทั้ง member และ contact)
+  const appendSharedParams = (p, f) => {
+    if (f.tier)     p.set('tier', f.tier)
+    if (f.assignee) p.set('assignedTo', f.assignee)
+    if (f.name)     p.set('name', f.name)
+    if (f.called)   p.set('called', f.called)
+    if (f.status)   p.set('status', f.status)
+    if (f.sms)      p.set('sms', f.sms)
+    if (f.starred)  p.set('starred', f.starred)
+    if (f.sigLocation)     p.set('sigLocation', f.sigLocation)
+    if (f.sigAvailability) p.set('sigAvailability', f.sigAvailability)
+    if (f.sigInterest)     p.set('sigInterest', f.sigInterest)
+  }
+
+  const buildMembersUrl = (offset, f) => {
+    const limit = f.amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
-    if (amphure) p.set('amphure', amphure)
-    if (subdistricts && subdistricts.size > 0) p.set('subdistricts', Array.from(subdistricts).join(','))
-    if (tier)     p.set('tier', tier)
-    if (assignee) p.set('assignedTo', assignee)
-    if (rsvp)     p.set('rsvp', rsvp)
-    if (name)     p.set('name', name)
-    if (expiry)   p.set('expiry', expiry)
-    if (called)   p.set('called', called)
-    if (sort)     p.set('sort', sort)
-    if (status)   p.set('status', status)
-    if (sms)      p.set('sms', sms)
+    if (f.amphure) p.set('amphure', f.amphure)
+    if (f.subdistricts && f.subdistricts.size > 0) p.set('subdistricts', Array.from(f.subdistricts).join(','))
+    if (f.rsvp)   p.set('rsvp', f.rsvp)
+    if (f.expiry) p.set('expiry', f.expiry)
+    if (f.sort)   p.set('sort', f.sort)
+    appendSharedParams(p, f)
     return `/api/calling/members?${p}`
   }
 
-  const buildContactsUrl = (offset, amphure, tier, assignee, name, called, status, sms) => {
+  const buildContactsUrl = (offset, f) => {
     const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
-    if (amphure)  p.set('amphoe', amphure)
-    if (tier)     p.set('tier', tier)
-    if (assignee) p.set('assignedTo', assignee)
-    if (name)     p.set('name', name)
-    if (called)   p.set('called', called)
-    if (status)   p.set('status', status)
-    if (sms)      p.set('sms', sms)
+    if (f.amphure) p.set('amphoe', f.amphure)
+    appendSharedParams(p, f)
     return `/api/calling/contacts/campaign?${p}`
   }
 
-  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms) => {
+  const loadFirst = useCallback(async (tab, f) => {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
@@ -294,9 +329,7 @@ export default function CampaignPage({ params }) {
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
-      const dataUrl = tab === 'contact'
-        ? buildContactsUrl(0, amphure, tier, assignee, name, called, status, sms)
-        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms)
+      const dataUrl = tab === 'contact' ? buildContactsUrl(0, f) : buildMembersUrl(0, f)
       const statsUrl = tab === 'contact'
         ? `/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`
         : `/api/calling/members?campaignId=${campaignId}&stats=true`
@@ -335,8 +368,8 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const url = activeTab === 'contact'
-        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled, filterStatus, filterSms)
-        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+        ? buildContactsUrl(offsetRef.current, filters)
+        : buildMembersUrl(offsetRef.current, filters)
       const res = await fetch(url, { signal: abortRef.current?.signal })
       const data = await res.json()
       if (seq !== loadSeqRef.current) return
@@ -352,7 +385,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms])
+  }, [activeTab, filters])
 
   const handleRecordSave = useCallback(async (payload) => {
     await fetch('/api/calling/logs', {
@@ -361,8 +394,8 @@ export default function CampaignPage({ params }) {
       body: JSON.stringify(payload),
     })
     setRecordModalMember(null)
-    await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
-  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms, loadFirst])
+    await loadFirst(activeTab, filters)
+  }, [activeTab, filters, loadFirst])
 
   useEffect(() => {
     ;(async () => {
@@ -396,8 +429,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
-  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms])
+    loadFirst(activeTab, filters)
+  }, [campaignId, activeTab, filters, loadFirst])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -456,7 +489,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+      await loadFirst(activeTab, filters)
     } catch (err) {
       alert(t('assignment.errorWithMessage', { message: err.message }))
     }
@@ -481,7 +514,7 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+      await loadFirst(activeTab, filters)
     } catch (err) {
       alert(t('assignment.errorWithMessage', { message: err.message }))
     }
@@ -503,6 +536,10 @@ export default function CampaignPage({ params }) {
     setFilterSort('')
     setFilterStatus('')
     setFilterSms('')
+    setFilterStarred('')
+    setFilterSigLocation('')
+    setFilterSigAvailability('')
+    setFilterSigInterest('')
     setSelectedMembers(new Set())
   }
 
@@ -678,6 +715,40 @@ export default function CampaignPage({ params }) {
           {t('assignment.statusUnassigned')}
         </button>
 
+        <button
+          onClick={() => setFilterStarred(filterStarred === 'starred' ? '' : 'starred')}
+          className={`h-11 px-3 text-base border rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            filterStarred === 'starred'
+              ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium'
+              : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+          }`}
+        >
+          <Star className={`w-4 h-4 shrink-0 ${filterStarred === 'starred' ? 'fill-current' : ''}`} />
+          {t('assignment.starredFilterLabel')}
+        </button>
+
+        {/* สัญญาณจากสายล่าสุด — มีทั้ง 2 tab เพราะเก็บที่ calling_logs ร่วมกัน */}
+        <select value={filterSigLocation} onChange={e => setFilterSigLocation(e.target.value)} className={filterCls(filterSigLocation)}>
+          <option value="">{t('assignment.sigLocationOption')}</option>
+          <option value="high">{t('assignment.sigLocationHigh')}</option>
+          <option value="mid">{t('assignment.sigLocationMid')}</option>
+          <option value="low">{t('assignment.sigLocationLow')}</option>
+        </select>
+
+        <select value={filterSigAvailability} onChange={e => setFilterSigAvailability(e.target.value)} className={filterCls(filterSigAvailability)}>
+          <option value="">{t('assignment.sigAvailabilityOption')}</option>
+          <option value="high">{t('assignment.sigAvailabilityHigh')}</option>
+          <option value="mid">{t('assignment.sigAvailabilityMid')}</option>
+          <option value="low">{t('assignment.sigAvailabilityLow')}</option>
+        </select>
+
+        <select value={filterSigInterest} onChange={e => setFilterSigInterest(e.target.value)} className={filterCls(filterSigInterest)}>
+          <option value="">{t('assignment.sigInterestOption')}</option>
+          <option value="high">{t('assignment.sigInterestHigh')}</option>
+          <option value="mid">{t('assignment.sigInterestMid')}</option>
+          <option value="low">{t('assignment.sigInterestLow')}</option>
+        </select>
+
         {/* member-only filters */}
         {activeTab === 'member' && <>
           <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={filterCls(filterRsvp)}>
@@ -759,6 +830,8 @@ export default function CampaignPage({ params }) {
               const badge   = getStatusBadge(status, t)
               // member-specific
               const isMember  = activeTab === 'member'
+              // starred_by = user_id ของทุกคนที่ติดดาว · usersMap โหลดมาแล้วตอนเปิดหน้า ไม่ต้องยิงเพิ่ม
+              const starredByNames = (item.starred_by || []).map(uid => usersMap[uid] || uid).join(', ')
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
               const dimmed    = !hasPhone ? 'opacity-50' : ''
               const expiryIcon = isMember ? getExpiryIcon(item.expired_at, t) : null
@@ -806,9 +879,19 @@ export default function CampaignPage({ params }) {
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
                         <span className="truncate">
-                          {[tambon, amphoe, item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null]
-                            .filter(Boolean).join(' · ')}
+                          {[
+                            tambon,
+                            amphoe,
+                            item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null,
+                            starredByNames ? t('assignment.starredByLabel', { names: starredByNames }) : null,
+                          ].filter(Boolean).join(' · ')}
                         </span>
+                        {item.star_count > 0 && (
+                          <span className="shrink-0 inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                            <Star className="w-3.5 h-3.5 fill-current" />
+                            <span className="text-sm font-medium tabular-nums">{item.star_count}</span>
+                          </span>
+                        )}
                         {isMember && item.rsvp && (
                           <span className="shrink-0 font-bold" style={{ color: RSVP_ICONS[item.rsvp]?.color || '#666' }}>
                             {RSVP_ICONS[item.rsvp]?.icon}
@@ -920,7 +1003,7 @@ export default function CampaignPage({ params }) {
         onDone={() => {
           setSmsModalOpen(false)
           setSelectedMembers(new Set())
-          loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+          loadFirst(activeTab, filters)
         }}
       />
 

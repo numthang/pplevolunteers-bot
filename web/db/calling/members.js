@@ -70,7 +70,8 @@ export async function getMembersCount(orgId) {
 }
 
 export async function getMembersInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms } = filters
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms,
+          starred, sigLocation, sigAvailability, sigInterest } = filters
 
   const needAllTimeCalls = sort === 'least_called'
 
@@ -92,6 +93,11 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
        ll.called_at AS last_called_at,
        ll.status AS last_status,
        ll.note AS last_note,
+       ll.sig_location,
+       ll.sig_availability,
+       ll.sig_interest,
+       COALESCE(st.star_count, 0) AS star_count,
+       COALESCE(st.starred_by, ARRAY[]::int[]) AS starred_by,
        COALESCE(ls.total_calls, 0) AS total_calls,
        COALESCE(ls.answered_count, 0) AS answered_count,
        COALESCE(ls.sms_count, 0) AS sms_count,
@@ -107,11 +113,16 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
      LEFT JOIN LATERAL (
-       SELECT called_at, status, note
+       SELECT called_at, status, note, sig_location, sig_availability, sig_interest
        FROM calling_logs
        WHERE campaign_id = cc.id AND member_id = m.source_id::text AND contact_type = 'member'
        ORDER BY called_at DESC LIMIT 1
      ) ll ON TRUE
+     LEFT JOIN (
+       SELECT member_id, COUNT(*) AS star_count, ARRAY_AGG(user_id ORDER BY created_at) AS starred_by
+       FROM calling_starred WHERE org_id = $1 AND contact_type = 'member'
+       GROUP BY member_id
+     ) st ON st.member_id = m.source_id::text
      LEFT JOIN (
        SELECT campaign_id, member_id,
          COUNT(*) AS total_calls,
@@ -164,6 +175,29 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
   const calledIdx = params.length
   params.push(sms || null)
   const smsIdx = params.length
+  params.push(starred || null)
+  const starredIdx = params.length
+  params.push(sigLocation || null)
+  const sigLocIdx = params.length
+  params.push(sigAvailability || null)
+  const sigAvailIdx = params.length
+  params.push(sigInterest || null)
+  const sigInterestIdx = params.length
+
+  // สัญญาณ = ค่าจากสายล่าสุด · เก็บเป็นสเกลเก่า 1-4 (UI ยิงแค่ 4/2/1 แต่ของเก่ามีค่า 3 ค้างอยู่)
+  //   → 'mid' ต้องกิน 2-3 ไม่งั้นแถวค่า 3 หายเงียบ
+  const sigClause = (idx, col) => `
+       AND ($${idx}::text IS NULL
+             OR ($${idx} = 'high' AND ${col} >= 4)
+             OR ($${idx} = 'mid'  AND ${col} BETWEEN 2 AND 3)
+             OR ($${idx} = 'low'  AND ${col} = 1))`
+
+  query += `
+       AND ($${starredIdx}::text IS NULL
+             OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))`
+    + sigClause(sigLocIdx, 'll.sig_location')
+    + sigClause(sigAvailIdx, 'll.sig_availability')
+    + sigClause(sigInterestIdx, 'll.sig_interest')
 
   query += `
        AND ($${statusIdx}::text IS NULL
