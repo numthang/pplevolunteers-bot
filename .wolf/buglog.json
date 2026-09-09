@@ -8653,6 +8653,22 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-09T06:45:23.641Z"
+    },
+    {
+      "id": "bug-499",
+      "timestamp": "2026-09-09T11:50:00.496Z",
+      "error_message": "Missing error handling in ScriptTeleprompter.jsx",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: // ออกจากเต็มจอด้วยเสมอ ไม่งั้นกลับมาหน้าแก้บทแล้วยังเต็มจอค; if (typeof document !== 'undefined' && document.fullscreenEl",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T11:50:14.016Z"
     }
   ]
 }
