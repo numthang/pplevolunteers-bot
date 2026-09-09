@@ -8669,6 +8669,73 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-09-09T11:50:14.016Z"
+    },
+    {
+      "id": "bug-500",
+      "timestamp": "2026-09-09T17:28:45.758Z",
+      "error_message": "Missing guard clause",
+      "file": "web/app/calling/assignments/[campaignId]/page.js",
+      "root_cause": "No early return/throw for edge case: cancelled",
+      "fix": "Added guard clause: if (cancelled)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T17:29:28.360Z"
+    },
+    {
+      "id": "bug-501",
+      "timestamp": "2026-09-09T17:29:12.511Z",
+      "error_message": "Null/undefined access in page.js",
+      "file": "web/app/calling/assignments/[campaignId]/page.js",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: const res = await fetch(url, { signal: abortRef.current?.sig; if (seq !== loadSeqRef.current) return",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-09T17:29:51.353Z"
+    },
+    {
+      "id": "bug-502",
+      "timestamp": "2026-09-09T17:29:40.251Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/calling/assignments/[campaignId]/page.js",
+      "root_cause": "Was returning: setLoadingMore(true)",
+      "fix": "Now returns: // ผูกกับรุ่นปัจจุบัน — สลับ tab กลางคัน แถวชุดนี้",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T17:29:40.251Z"
+    },
+    {
+      "id": "bug-20260904013501",
+      "timestamp": "2026-09-09T17:31:02.135888Z",
+      "error_message": "tab contact แสดงรายชื่อ member — สลับ tab ระหว่างที่ query เก่ายังโหลดไม่เสร็จ",
+      "file": "web/app/calling/assignments/[campaignId]/page.js",
+      "root_cause": "loadFirst() ไม่มี guard คำตอบเก่า: effect ยิงใหม่ทุกครั้งที่ activeTab/filter เปลี่ยน แต่ response ที่ค้างอยู่ของ tab เดิม (member query ช้า) กลับมาทีหลังแล้ว setMembers/setStats/setHasMore/offsetRef ทับของ tab ใหม่ + finally ของคำขอเก่าดับ setLoadingInitial ของคำขอใหม่ ผลพวง: loadMore append ผิด tab ที่ offset ผิด",
+      "fix": "เพิ่ม loadSeqRef (generation counter) + abortRef (AbortController) — loadFirst abort ของเดิมแล้วบวกเลขรุ่น, เช็ค seq !== loadSeqRef.current หลังทุก await ก่อน setState ทุกตัวรวมถึงใน finally; loadMore จับ seq ตอนเริ่มและใช้ signal เดียวกัน; effect subdistricts ใช้ cancelled flag + abort ใน cleanup",
+      "tags": [
+        "race-condition",
+        "react",
+        "stale-response",
+        "calling",
+        "tabs",
+        "abortcontroller"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T17:31:02.135888Z"
     }
   ]
 }

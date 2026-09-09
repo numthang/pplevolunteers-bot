@@ -204,14 +204,22 @@ export default function CampaignPage({ params }) {
       return
     }
     setLoadingSubdistricts(true)
-    fetch(`/api/calling/districts?campaignId=${campaignId}&amphure=${encodeURIComponent(filterAmphure)}`)
+    // เปลี่ยนอำเภอเร็วๆ = คำขอเก่ายังค้าง — ต้องทิ้งคำตอบเก่า ไม่งั้นรายการตำบลสลับกัน
+    let cancelled = false
+    const controller = new AbortController()
+    fetch(`/api/calling/districts?campaignId=${campaignId}&amphure=${encodeURIComponent(filterAmphure)}`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
+        if (cancelled) return
         setAvailableSubdistricts(data.data || [])
         setFilterSubdistricts(new Set())
       })
-      .catch(err => console.error('Error fetching subdistricts:', err))
-      .finally(() => setLoadingSubdistricts(false))
+      .catch(err => {
+        if (cancelled || err.name === 'AbortError') return
+        console.error('Error fetching subdistricts:', err)
+      })
+      .finally(() => { if (!cancelled) setLoadingSubdistricts(false) })
+    return () => { cancelled = true; controller.abort() }
   }, [campaignId, filterAmphure, activeTab])
 
   useEffect(() => {
@@ -238,6 +246,11 @@ export default function CampaignPage({ params }) {
   const sentinelRef = useRef(null)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(false)
+  // กันคำตอบเก่ามาทับ: สลับ tab/เปลี่ยนฟิลเตอร์ระหว่างที่ query เก่ายังไม่กลับ
+  // = query เก่ากลับมาทีหลังแล้ว setMembers ทับข้อมูล tab ใหม่ (เจอจริงบน /calling/assignments/70)
+  // ทุกครั้งที่โหลดชุดใหม่จะบวกเลขรุ่น + abort ของเดิม — คำตอบที่รุ่นไม่ตรงถูกทิ้งทั้งหมด
+  const loadSeqRef = useRef(0)
+  const abortRef = useRef(null)
 
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
@@ -272,6 +285,10 @@ export default function CampaignPage({ params }) {
   }
 
   const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms) => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const seq = ++loadSeqRef.current
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
@@ -284,8 +301,12 @@ export default function CampaignPage({ params }) {
         ? `/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`
         : `/api/calling/members?campaignId=${campaignId}&stats=true`
 
-      const [dataRes, statsRes] = await Promise.all([fetch(dataUrl), fetch(statsUrl)])
+      const [dataRes, statsRes] = await Promise.all([
+        fetch(dataUrl, { signal: controller.signal }),
+        fetch(statsUrl, { signal: controller.signal }),
+      ])
       const dataJson = await dataRes.json()
+      if (seq !== loadSeqRef.current) return
       if (dataJson.noAccess) { setNoAccess(true); return }
       setContactsHidden(dataJson.contacts_hidden || false)
       const newRows = dataJson.data || []
@@ -295,30 +316,37 @@ export default function CampaignPage({ params }) {
       offsetRef.current = newRows.length
       setSelectedMembers(new Set())
       const statsJson = await statsRes.json()
+      if (seq !== loadSeqRef.current) return
       if (statsJson.data) setStats(statsJson.data)
     } catch (err) {
+      if (err.name === 'AbortError') return
       console.error('loadFirst', err)
     } finally {
-      setLoadingInitial(false)
+      // รุ่นเก่าห้ามดับสปินเนอร์ของรุ่นใหม่ที่ยังโหลดอยู่
+      if (seq === loadSeqRef.current) setLoadingInitial(false)
     }
   }, [campaignId])
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || !hasMoreRef.current) return
+    // ผูกกับรุ่นปัจจุบัน — สลับ tab กลางคัน แถวชุดนี้ต้องไม่ถูก append ต่อท้าย tab ใหม่
+    const seq = loadSeqRef.current
     setLoadingMore(true)
     loadingMoreRef.current = true
     try {
       const url = activeTab === 'contact'
         ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled, filterStatus, filterSms)
         : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
-      const res = await fetch(url)
+      const res = await fetch(url, { signal: abortRef.current?.signal })
       const data = await res.json()
+      if (seq !== loadSeqRef.current) return
       const newRows = data.data || []
       setMembers(prev => [...prev, ...newRows])
       setHasMore(data.hasMore || false)
       hasMoreRef.current = data.hasMore || false
       offsetRef.current += newRows.length
     } catch (err) {
+      if (err.name === 'AbortError') return
       console.error('loadMore', err)
     } finally {
       setLoadingMore(false)
