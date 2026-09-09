@@ -8535,6 +8535,59 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-08T09:26:30.218Z"
+    },
+    {
+      "id": "bug-492",
+      "timestamp": "2026-09-09T02:15:33.151Z",
+      "error_message": "Null/undefined access in ScriptTeleprompter.jsx",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T02:15:33.151Z"
+    },
+    {
+      "id": "bug-493",
+      "timestamp": "2026-09-09T02:15:52.699Z",
+      "error_message": "CSS fix: transform",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "transform: 'scaleX(-1)' → 'scaleX(-1)',",
+      "fix": "Changed transform: 'scaleX(-1)' → 'scaleX(-1)',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T02:15:52.699Z"
+    },
+    {
+      "id": "bug-492",
+      "timestamp": "2026-09-09T00:00:00.000Z",
+      "error_message": "เครื่องอัดคลิปในเบราว์เซอร์: ภาพกล้องซูมเข้าหน้ามาก เห็นแค่หน้าผากถึงจมูก ทั้งบนมือถือและเว็บแคมคอม",
+      "file": "web/components/posts/ScriptTeleprompter.jsx",
+      "root_cause": "ขอกล้องด้วย width:{ideal:1080},height:{ideal:1920} เพราะเข้าใจว่าเป็นการขอแนวตั้ง แต่กล้องหน้าไอโฟนติดตั้งตะแคง เลขนี้ถูกตีความในพิกัดเซนเซอร์ที่ยังไม่หมุน พอเบราว์เซอร์หมุนภาพตามการถือเครื่อง ผลคือได้เฟรมจริงเป็นแนวนอน แล้วโดน object-cover ยัดใส่กรอบเต็มจอแนวตั้ง (~9:19.5) จึงครอปทิ้งมหาศาล · ซ้ำร้าย track.getSettings() รายงาน 1080x1920 (แนวตั้ง) ตามที่ขอ ทำให้ debug หลงทางว่ากล้องให้แนวตั้งมาแล้ว ทั้งที่ภาพจริงเป็นแนวนอน",
+      "fix": "1) เปลี่ยน constraint เป็น width:{ideal:1280},height:{ideal:720} — บนไอโฟนให้เฟรมจริง 720x1280 แนวตั้งตามต้องการ (กลับด้านกับสัญชาตญาณ ต้องมีคอมเมนต์กำกับห้ามแก้กลับ) 2) วัดเฟรมจริงจาก video.videoWidth/videoHeight ผ่าน onLoadedMetadata+onResize ห้ามเชื่อ getSettings() 3) ตั้ง aspectRatio ของ <video> เท่าเฟรมจริง + object-contain แทน w-full h-full object-cover 4) ปิด track เก่าก่อนขอ stream ใหม่ ไม่งั้นกล้องไม่ต่อรองสัดส่วนใหม่ (กดครั้งแรกได้ค่าหนึ่ง กดซ้ำได้อีกค่า)",
+      "tags": [
+        "getusermedia",
+        "ios",
+        "safari",
+        "webcam",
+        "aspect-ratio",
+        "object-fit",
+        "posts",
+        "teleprompter",
+        "mediarecorder"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-09T00:00:00.000Z"
     }
   ]
 }

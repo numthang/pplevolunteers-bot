@@ -107,6 +107,10 @@ export default function ScriptTeleprompter({ id }) {
   const [previewUrl, setPreviewUrl] = useState('')
   const [uploadPct, setUploadPct] = useState(0)
   const [uploadError, setUploadError] = useState('')
+  // ขนาดเฟรมจริงที่ <video> ได้รับ — ⛔ ห้ามใช้ track.getSettings() แทน: บน iOS มันรายงาน
+  // พิกัดเซนเซอร์ที่ยังไม่หมุนตามการถือเครื่อง (อ้างแนวตั้งแต่ภาพจริงเป็นแนวนอน = คนละด้านกัน)
+  // ค่านี้ต่างหากคือสิ่งที่ตาเห็นจริงและที่ MediaRecorder อัดจริง
+  const [realFrame, setRealFrame] = useState(null)
 
   const camVideoRef = useRef(null)
   const streamRef = useRef(null)
@@ -297,9 +301,21 @@ export default function ScriptTeleprompter({ id }) {
     setRecordOpen(true)
     setRecordPhase('camera')
     setCamReady(false)
+    setRealFrame(null)
+
+    // ปิดสตรีมเก่าก่อนเสมอ — ถ้ายังเปิดค้าง กล้องจะไม่ต่อรองสัดส่วนใหม่ตาม constraint
+    // (อาการที่เจอจริง: กดเปิดครั้งแรกได้ 1280×720 กดซ้ำได้ 720×1280 ทั้งที่ขอเหมือนเดิม)
+    streamRef.current?.getTracks().forEach(tr => tr.stop())
+    streamRef.current = null
+
     try {
+      // ⛔ ห้ามเปลี่ยนกลับเป็น 1080×1920 เพราะเห็นว่า "จะอัดแนวตั้งต้องขอแนวตั้ง" — มันกลับกัน
+      //    กล้องหน้าไอโฟนติดตั้งตะแคง เลขนี้ถูกตีความในพิกัดเซนเซอร์ที่ยังไม่หมุน
+      //    ขอ 1080×1920 → ได้เฟรมจริงเป็น "แนวนอน" → โดนกรอบแนวตั้งครอปจนซูมเห็นแค่หน้า (บั๊กเดิม)
+      //    ขอ 1280×720  → ได้เฟรมจริงเป็น "แนวตั้ง" 720×1280 ตามต้องการ (ยืนยันบนไอโฟนจริง 2026-09-09)
+      //    ส่วนเว็บแคมคอมติดตั้งตรง ไม่มีการหมุน จะได้ 1280×720 แนวนอนตามที่ขอ — กรอบพรีวิวปรับตามเอง
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } },
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       })
       streamRef.current = stream
@@ -443,10 +459,19 @@ export default function ScriptTeleprompter({ id }) {
   if (recordOpen) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        {/* กรอบวิดีโอเท่าสัดส่วน "เฟรมจริง" ที่กล้องส่งมา ไม่ใช่ยืดเต็มจอแล้วครอป
+            → มือถือได้แนวตั้งเกือบเต็มจอ · เว็บแคมคอมได้แนวนอนกลางจอ ทั้งคู่ไม่ซูมเกิน
+            ⛔ ห้ามกลับไปใช้ `w-full h-full object-cover`: จอมือถือ (~9:19.5) แคบกว่าเฟรมกล้อง
+               พอสั่ง cover มันจะครอปจนเห็นแค่หน้า — เป็นบั๊กที่เพิ่งแก้ไป (2026-09-09) */}
         <video
           ref={camVideoRef} autoPlay playsInline muted
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ transform: 'scaleX(-1)' }}
+          onLoadedMetadata={e => setRealFrame({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+          onResize={e => setRealFrame({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+          className="absolute inset-0 m-auto max-w-full max-h-full object-contain"
+          style={{
+            transform: 'scaleX(-1)',
+            aspectRatio: realFrame ? `${realFrame.w} / ${realFrame.h}` : '9 / 16',
+          }}
         />
 
         <div className="relative z-10 flex items-center justify-between p-3">
