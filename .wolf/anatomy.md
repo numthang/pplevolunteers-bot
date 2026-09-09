@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T02:15:52.657Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T06:03:16.818Z
 > Files: 1143 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2112,7 +2112,7 @@
 - `PostRevisions.jsx` — fmt (~1260 tok)
 - `PostsHome.jsx` — STATUS_LABELS (~9728 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13237 tok)
-- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~9095 tok)
+- `ScriptTeleprompter.jsx` — ยืดกล่องข้อความตามเนื้อหา (ลอกจาก PostEditor.jsx) (~9252 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
 
 ## web/components/profile/

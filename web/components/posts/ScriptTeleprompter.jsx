@@ -493,12 +493,17 @@ export default function ScriptTeleprompter({ id }) {
           <div className="relative z-10 mx-4 p-4 rounded-lg bg-red-950/80 text-white text-base">{camError}</div>
         )}
 
-        {/* บทซ้อนติดขอบบนสุด ใกล้เลนส์กล้องหน้าที่สุดเท่าที่ทำได้บนจอเดียว — แก้ปัญหาตาเหลือบ */}
+        {/* บทซ้อนติดขอบบนสุด ใกล้เลนส์กล้องหน้าที่สุดเท่าที่ทำได้บนจอเดียว — แก้ปัญหาตาเหลือบ
+            · `max-w-[46ch]` จำกัดความยาวบรรทัดราว 46 ตัวอักษรไม่ว่าจอกว้างแค่ไหน — ของเดิมกว้างเต็มจอ
+              พอเป็นจอคอมต้องกวาดตาซ้าย-ขวาทั้งบรรทัด อ่านตามไม่ทัน (user เจอเอง 2026-09-09)
+              ใช้หน่วย `ch` เพราะโตตาม `fontSize` ที่ user ปรับได้ → ตัวอักษรต่อบรรทัดคงที่เสมอ
+            · `bg-black/40` (เดิม `/70`) + text-shadow — user อยากเห็นหน้าตัวเองระหว่างอัด
+              ⛔ ถ้าอ่านไม่ออกบนพื้นสว่าง ให้เพิ่มเงาตัวอักษร อย่าเพิ่มความทึบพื้นกลับ */}
         {(recordPhase === 'camera' || recordPhase === 'recording') && !camError && (
           <div
             ref={scrollRef}
-            className="relative z-10 mx-3 mt-1 h-[38vh] overflow-y-auto rounded-lg bg-black/70 text-[#f2f5f8] p-4 leading-relaxed whitespace-pre-wrap break-words"
-            style={{ fontSize: `${fontSize}px` }}
+            className="relative z-10 mt-1 mx-auto w-[calc(100%-1.5rem)] max-w-[46ch] h-[38vh] overflow-y-auto rounded-lg bg-black/40 text-[#f2f5f8] p-4 leading-relaxed whitespace-pre-wrap break-words"
+            style={{ fontSize: `${fontSize}px`, textShadow: '0 1px 3px rgba(0,0,0,.9)' }}
           >
             {script}
             {/* หางว่างท้ายบท — ต้องเกือบเท่าความสูงกล่อง (38vh) ไม่งั้นบรรทัดสุดท้ายค้างอยู่ก้นกล่อง
