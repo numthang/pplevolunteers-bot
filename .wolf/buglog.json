@@ -8880,6 +8880,22 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-09-10T06:41:52.235Z"
+    },
+    {
+      "id": "bug-513",
+      "timestamp": "2026-09-10T17:28:23.333Z",
+      "error_message": "ดาวไม่แสดงในแถวแท็บสมาชิก /calling/assignments (ไม่มี error ใดๆ)",
+      "file": "web/lib/callingFields.js",
+      "root_cause": "API สมาชิกกรอง payload ผ่าน allowlist pickMemberFieldsAll() (commit 0ed3fbe กันเลขบัตร ปชช. หลุด) แต่ allowlist ไม่มี star_count/starred_by/sig_* ที่ query เพิ่งเริ่มคืนตอน 5a4d97c → page.js เช็ค item.star_count > 0 เป็น false ตลอด · แท็บผู้ติดต่อไม่โดนเพราะ route นั้นส่งแถวดิบ ไม่ผ่าน allowlist จึงดูเหมือนบั๊กเฉพาะบางที่",
+      "fix": "เติม 'star_count','starred_by','sig_location','sig_availability','sig_interest' เข้า FROM_QUERY ใน web/lib/callingFields.js",
+      "tags": [
+        "calling",
+        "allowlist",
+        "api",
+        "silent-data-loss"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-10T17:28:23.334Z"
     }
   ]
 }

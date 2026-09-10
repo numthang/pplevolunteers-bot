@@ -25,6 +25,9 @@ const FROM_QUERY = [
   'tier', 'flag', 'member_status', 'contact_type', 'member_id', 'phone_hidden',
   'assigned_to', 'assigned_by', 'assignment_date', 'assigned_at', 'rsvp',
   'last_called_at', 'last_status', 'last_note',
+  // ⚠️ ฟิลด์ที่ UI แถวใช้วาดจริง — เคยลืมเติมแล้วดาวหายทั้งแท็บสมาชิกโดยไม่มี error (bug-513)
+  'star_count', 'starred_by',
+  'sig_location', 'sig_availability', 'sig_interest',
   'latest_called_at', 'latest_log_status', 'latest_note',
   'total_calls', 'answered_count', 'sms_count', 'all_time_calls', 'camp_calls', 'call_status',
   'campaign_id', 'campaign_name', 'campaign_description', 'event_date',
