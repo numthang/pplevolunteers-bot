@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:42:21.594Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:43:37.066Z
 > Files: 1146 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2002,7 +2002,7 @@
 - `ImportCampaignForm.jsx` — PROVINCES — renders table (~2762 tok)
 - `InteractionLogForm.jsx` — InteractionLogForm (~1180 tok)
 - `PdpaAgreementModal.jsx` — PdpaAgreementModal (~724 tok)
-- `RecordCallModal.jsx` — STATUS_ICONS (~11386 tok)
+- `RecordCallModal.jsx` — STATUS_ICONS (~11446 tok)
 - `SmsModal.jsx` — MAX_THAI_PER_SMS (~2427 tok)
 - `SplitModal.jsx` — SplitModal (~1178 tok)
 - `StarredStar.jsx` — STAR_PATH (~842 tok)
