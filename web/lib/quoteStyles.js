@@ -7,7 +7,7 @@
 
 export const FINISHES = [
   { value: 'shade', label: 'เงา',     description: 'เงาสีแบรนด์ทับบนรูป — รูปยังเห็นสีจริง' },
-  { value: 'solid', label: 'ทึบ',     description: 'แถบสีแบรนด์ วางคำคมในแถบ' },
+  { value: 'solid', label: 'ทึบ',     description: 'แถบสีแบรนด์ วางโควตในแถบ' },
   { value: 'duo',   label: 'ดูโอโทน', description: 'ย้อมรูปทั้งใบเป็นสีแบรนด์ — ปุ่มสีภาพไม่มีผล' },
 ]
 
