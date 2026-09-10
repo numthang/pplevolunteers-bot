@@ -8864,6 +8864,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-10T06:29:38.438Z"
+    },
+    {
+      "id": "bug-512",
+      "timestamp": "2026-09-10T06:38:52.430Z",
+      "error_message": "CSS fix: dark, backgroundColor",
+      "file": "web/components/calling/RecordCallModal.jsx",
+      "root_cause": "dark: ring-disc-muted dark:ring-offset-disc-header' : 'opacity-30 hover:opacity-70' → text-disc-muted\">{t('recordCall.flagRatingLabel'); backgroundColor: f.color → f.color, '--flag': f.color",
+      "fix": "Changed dark: ring-disc-muted dark:ring-offset-disc-header' : 'opacity-30 hover:opacity-70' → text-disc-muted\">{t('recordCall.flagRatingLabel'); backgroundColor: f.color → f.color, '--flag': f.color",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-10T06:41:52.235Z"
     }
   ]
 }

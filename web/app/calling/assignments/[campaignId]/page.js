@@ -880,15 +880,13 @@ export default function CampaignPage({ params }) {
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
                         <span className="truncate">
-                          {[
-                            tambon,
-                            amphoe,
-                            item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null,
-                            starredByNames ? t('assignment.starredByLabel', { names: starredByNames }) : null,
-                          ].filter(Boolean).join(' · ')}
+                          {[tambon, amphoe, item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null]
+                            .filter(Boolean).join(' · ')}
                         </span>
                         {item.star_count > 0 && (
-                          <span className="shrink-0 inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                          // ชื่อคนติดดาวอยู่ใน tooltip เท่านั้น — เคยพิมพ์ต่อท้ายบรรทัดแล้ว user บอกว่ารก
+                          <span className="shrink-0 inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400"
+                            title={starredByNames ? t('assignment.starredByLabel', { names: starredByNames }) : undefined}>
                             <Star className="w-3.5 h-3.5 fill-current" />
                             <span className="text-sm font-medium tabular-nums">{item.star_count}</span>
                           </span>

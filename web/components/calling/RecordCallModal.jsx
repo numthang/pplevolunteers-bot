@@ -230,6 +230,9 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, onClose])
 
+  // normalize ครั้งเดียว ใช้ร่วมกันทั้งเม็ดสีและป้ายชื่อระดับ
+  const activeFlag = getFlagOption(memberFlag)
+
   const saveFlag = async (val) => {
     // เทียบผ่าน getFlagOption ไม่ใช่ === ตรงๆ — ไม่งั้นแถวที่ยังเก็บค่าเก่า ('green')
     // กดเม็ดเดิม ('good') จะไม่ถูกมองว่าซ้ำ = ยกเลิกไม่ได้
@@ -390,19 +393,21 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-warm-400 dark:text-disc-muted">{t('recordCall.flagRatingLabel')}</span>
-                  {/* เม็ดสีชิดกัน (gap-1) — กดซ้ำที่เม็ดเดิม = ยกเลิกการประเมิน */}
+                  {/* สไตล์เดิมตอนเป็น emoji 3 วง: ไม่ได้เลือก = จาง · เลือกแล้ว = สีเต็ม (user เคาะ 2026-09-10)
+                      ⛔ อย่าใส่วงแหวน/ติ๊ก/ป้ายข้อความกลับมา — ลองแล้ว user ให้ถอดออก
+                      เม็ดชิดกัน gap-1 · กดซ้ำที่เม็ดเดิม = ยกเลิกการประเมิน */}
                   <div className="flex items-center gap-1">
                     {FLAG_OPTIONS.map(f => {
                       // เทียบแบบ normalize — แถวเก่าอาจเก็บ 'green'/'yellow'/'red' ไว้
-                      const active = getFlagOption(memberFlag)?.value === f.value
+                      const active = activeFlag?.value === f.value
                       return (
                         <button key={f.value} type="button" title={t(f.labelKey)}
                           aria-label={t(f.labelKey)} aria-pressed={active}
                           onClick={() => saveFlag(f.value)}
                           className={`w-5 h-5 flex items-center justify-center rounded-full transition ${
-                            active ? 'ring-2 ring-offset-1 ring-warm-400 dark:ring-disc-muted dark:ring-offset-disc-header' : 'opacity-30 hover:opacity-70'
+                            active ? 'opacity-100' : 'opacity-25 hover:opacity-60'
                           }`}>
-                          <span className="w-3.5 h-3.5 rounded-full block" style={{ backgroundColor: f.color }} />
+                          <span className="w-4 h-4 rounded-full block" style={{ backgroundColor: f.color }} />
                         </button>
                       )
                     })}
