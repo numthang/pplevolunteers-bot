@@ -47,3 +47,14 @@ export function getFlagOption(flag) {
   const value = LEGACY[flag] || flag
   return FLAG_OPTIONS.find(f => f.value === value) || null
 }
+
+/**
+ * ค่าที่ต้องใช้ค้นใน DB สำหรับ 1 ระดับ — รวมค่าเก่าที่ map มาเป็นระดับนี้ด้วย
+ * (เช่น 'good' ต้องกิน 'green' ที่ยังค้างอยู่บางแถว ไม่งั้นกรองแล้วแถวเก่าหายเงียบ)
+ * ⛔ ห้ามเขียน `t.flag = 'good'` ตรงๆ ใน query — ใช้ `t.flag = ANY(...)` กับค่าที่คืนจากที่นี่
+ * คืน null ถ้าไม่ได้เลือก/ค่าไม่รู้จัก = ไม่ต้องกรอง
+ */
+export function flagQueryValues(value) {
+  if (!value || !FLAG_VALUES.includes(value)) return null
+  return [value, ...Object.keys(LEGACY).filter(k => LEGACY[k] === value)]
+}

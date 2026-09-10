@@ -1,4 +1,5 @@
 import pool from '../index.js'
+import { flagQueryValues } from '../../lib/callingFlags.js'
 
 export async function getMemberById(orgId, sourceId) {
   const { rows } = await pool.query(
@@ -71,7 +72,7 @@ export async function getMembersCount(orgId) {
 
 export async function getMembersInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms,
-          starred, sigLocation, sigAvailability, sigInterest } = filters
+          starred, sigLocation, sigAvailability, sigInterest, flag } = filters
 
   const needAllTimeCalls = sort === 'least_called'
 
@@ -183,6 +184,9 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
   const sigAvailIdx = params.length
   params.push(sigInterest || null)
   const sigInterestIdx = params.length
+  // ประเมินสมาชิก — ส่งเป็นอาร์เรย์เพราะ 1 ระดับกินได้หลายค่าใน DB (ค่าเก่า green/yellow/red)
+  params.push(flagQueryValues(flag))
+  const flagIdx = params.length
 
   // สัญญาณ = ค่าจากสายล่าสุด · เก็บเป็นสเกลเก่า 1-4 (UI ยิงแค่ 4/2/1 แต่ของเก่ามีค่า 3 ค้างอยู่)
   //   → 'mid' ต้องกิน 2-3 ไม่งั้นแถวค่า 3 หายเงียบ
@@ -194,7 +198,8 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
 
   query += `
        AND ($${starredIdx}::text IS NULL
-             OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))`
+             OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))
+       AND ($${flagIdx}::text[] IS NULL OR t.flag = ANY($${flagIdx}::text[]))`
     + sigClause(sigLocIdx, 'll.sig_location')
     + sigClause(sigAvailIdx, 'll.sig_availability')
     + sigClause(sigInterestIdx, 'll.sig_interest')

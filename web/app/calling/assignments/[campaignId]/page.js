@@ -26,7 +26,7 @@ const STATUS_ICONS = {
 }
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
-import { getFlagOption, flagDotStyle } from '@/lib/callingFlags.js'
+import { getFlagOption, flagDotStyle, FLAG_OPTIONS } from '@/lib/callingFlags.js'
 
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
@@ -159,6 +159,7 @@ export default function CampaignPage({ params }) {
   const [filterSigLocation, setFilterSigLocation] = useState(() => searchParams.get('sigLocation') || '')
   const [filterSigAvailability, setFilterSigAvailability] = useState(() => searchParams.get('sigAvailability') || '')
   const [filterSigInterest, setFilterSigInterest] = useState(() => searchParams.get('sigInterest') || '')
+  const [filterFlag, setFilterFlag] = useState(() => searchParams.get('flag') || '')
 
   // ตัวกรองทั้งชุดเป็นก้อนเดียว — เดิมส่งเป็น argument เรียงตำแหน่ง 12 ตัวผ่าน 6 จุด
   // พอเพิ่มตัวกรองทีไรต้องไล่แก้ทุกจุดให้เรียงตรงกัน = ที่มาของบั๊กแบบสลับค่ากันเงียบๆ
@@ -178,9 +179,10 @@ export default function CampaignPage({ params }) {
     sigLocation: filterSigLocation,
     sigAvailability: filterSigAvailability,
     sigInterest: filterSigInterest,
+    flag: filterFlag,
   }), [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName,
        filterExpiry, filterCalled, filterSort, filterStatus, filterSms, filterStarred,
-       filterSigLocation, filterSigAvailability, filterSigInterest])
+       filterSigLocation, filterSigAvailability, filterSigInterest, filterFlag])
 
   const { data: session } = useSession()
   const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
@@ -270,6 +272,7 @@ export default function CampaignPage({ params }) {
     if (filters.sigLocation)     p.set('sigLocation', filters.sigLocation)
     if (filters.sigAvailability) p.set('sigAvailability', filters.sigAvailability)
     if (filters.sigInterest)     p.set('sigInterest', filters.sigInterest)
+    if (filters.flag)            p.set('flag', filters.flag)
     const qs = p.toString()
     router.replace(qs ? `/calling/assignments/${campaignId}?${qs}` : `/calling/assignments/${campaignId}`, { scroll: false })
   }, [filters, activeTab, campaignId, router])
@@ -299,6 +302,7 @@ export default function CampaignPage({ params }) {
     if (f.sigLocation)     p.set('sigLocation', f.sigLocation)
     if (f.sigAvailability) p.set('sigAvailability', f.sigAvailability)
     if (f.sigInterest)     p.set('sigInterest', f.sigInterest)
+    if (f.flag)            p.set('flag', f.flag)
   }
 
   const buildMembersUrl = (offset, f) => {
@@ -541,6 +545,7 @@ export default function CampaignPage({ params }) {
     setFilterSigLocation('')
     setFilterSigAvailability('')
     setFilterSigInterest('')
+    setFilterFlag('')
     setSelectedMembers(new Set())
   }
 
@@ -748,6 +753,14 @@ export default function CampaignPage({ params }) {
           <option value="high">{t('assignment.sigInterestHigh')}</option>
           <option value="mid">{t('assignment.sigInterestMid')}</option>
           <option value="low">{t('assignment.sigInterestLow')}</option>
+        </select>
+
+        {/* ประเมินสมาชิก — เก็บที่ calling_member_tiers.flag จึงใช้ได้ทั้ง 2 tab */}
+        <select value={filterFlag} onChange={e => setFilterFlag(e.target.value)} className={filterCls(filterFlag)}>
+          <option value="">{t('assignment.flagOption')}</option>
+          {FLAG_OPTIONS.map(f => (
+            <option key={f.value} value={f.value}>{t(f.labelKey)}</option>
+          ))}
         </select>
 
         {/* member-only filters */}

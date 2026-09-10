@@ -1,4 +1,5 @@
 import pool from '../index.js'
+import { flagQueryValues } from '../../lib/callingFlags.js'
 
 export async function getContactById(orgId, id) {
   const { rows } = await pool.query(
@@ -85,7 +86,7 @@ export async function getContactsList(orgId, { province, provinces, keyword, lim
 
 export async function getContactsInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphoe, tier, status, assignedTo, name, called, sort, sms,
-          starred, sigLocation, sigAvailability, sigInterest } = filters
+          starred, sigLocation, sigAvailability, sigInterest, flag } = filters
 
   const params = [orgId, campaignId]
 
@@ -144,6 +145,9 @@ export async function getContactsInCampaign(orgId, campaignId, filters = {}, lim
   const sigAvailIdx = params.length
   params.push(sigInterest || null)
   const sigInterestIdx = params.length
+  // ประเมินสมาชิก — อาร์เรย์เพราะ 1 ระดับกินได้หลายค่าใน DB (ค่าเก่า green/yellow/red)
+  params.push(flagQueryValues(flag))
+  const flagIdx = params.length
 
   // สเกลเก่า 1-4 · 'mid' กิน 2-3 เพื่อไม่ให้แถวค่า 3 หายเงียบ (เหมือนฝั่ง members)
   const sigClause = (idx, col) => `
@@ -157,7 +161,8 @@ export async function getContactsInCampaign(orgId, campaignId, filters = {}, lim
             l.called_at, l.status, l.note, l.sig_location, l.sig_availability, l.sig_interest,
             st.star_count, st.starred_by
    HAVING ($${starredIdx}::text IS NULL
-           OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))`
+           OR ($${starredIdx} = 'starred' AND COALESCE(st.star_count, 0) > 0))
+     AND ($${flagIdx}::text[] IS NULL OR t.flag = ANY($${flagIdx}::text[]))`
     + sigClause(sigLocIdx, 'l.sig_location')
     + sigClause(sigAvailIdx, 'l.sig_availability')
     + sigClause(sigInterestIdx, 'l.sig_interest')

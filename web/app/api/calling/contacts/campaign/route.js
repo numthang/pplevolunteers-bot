@@ -47,6 +47,7 @@ export async function GET(req) {
       sigLocation:     searchParams.get('sigLocation')     || null,
       sigAvailability: searchParams.get('sigAvailability') || null,
       sigInterest:     searchParams.get('sigInterest')     || null,
+      flag:            searchParams.get('flag')            || null,
     }
 
     let rows = await getContactsInCampaign(orgId, campaignId, filters, limit, offset)
