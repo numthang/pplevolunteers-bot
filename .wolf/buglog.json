@@ -8800,6 +8800,22 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-09-09T17:54:55.590Z"
+    },
+    {
+      "id": "bug-508",
+      "timestamp": "2026-09-10T05:54:24.710Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/calling/RecordCallModal.jsx",
+      "root_cause": "dark: text-disc-text\">{t('recordCall.title') → text-disc-muted flex-shrink-0\">#{member.source_id",
+      "fix": "Changed dark: text-disc-text\">{t('recordCall.title') → text-disc-muted flex-shrink-0\">#{member.source_id",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-10T05:54:24.710Z"
     }
   ]
 }

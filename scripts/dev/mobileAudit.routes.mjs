@@ -27,6 +27,14 @@ export const ROUTES = [
   { path: '/dashboard' },
   { path: '/cases' },   // ⚠️ '/case' เป็น 404 — audit เดินผ่านหน้า 404 แล้วรายงาน "ผ่าน" (แก้ 2026-09-03)
   { path: '/calling' },
+  {
+    // query หนัก — ต้องรอให้ตารางขึ้นก่อน ไม่งั้น probe เจอแค่ "กำลังโหลด…" แล้วรายงานผ่าน
+    path: '/calling/assignments/70',
+    steps: [
+      { wait: 1500 },
+      { click: 'div.cursor-pointer.min-w-0', label: 'เปิด modal บันทึกการโทร' },
+    ],
+  },
   { path: '/finance' },
   { path: '/posts' },
   {

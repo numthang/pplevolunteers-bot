@@ -338,7 +338,13 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-warm-200 dark:border-disc-border">
-          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('recordCall.title')}</h2>
+          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text flex items-baseline gap-2 min-w-0">
+            <span className="truncate">{t('recordCall.title')}</span>
+            {/* id ไว้ตรงนี้จางๆ — ข้างชื่อสมาชิกมันแย่งสายตากับชื่อจริง (user สั่ง 2026-09-10) */}
+            {member.source_id && (
+              <span className="text-sm font-normal tabular-nums text-warm-300 dark:text-disc-muted flex-shrink-0">#{member.source_id}</span>
+            )}
+          </h2>
           <button
             onClick={onClose}
             className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition"
@@ -371,7 +377,6 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   <span className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
-                  {member.source_id && <span className="text-base text-warm-300 dark:text-disc-muted flex-shrink-0">#{member.source_id}</span>}
                   {memberId && isFavLoaded && (
                     <StarredStar
                       key={`${memberId}-${isContact}`}

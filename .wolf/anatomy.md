@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-09T17:56:45.038Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T05:55:14.458Z
 > Files: 1145 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -460,7 +460,7 @@
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
 - `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7492 tok)
-- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~646 tok)
+- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~716 tok)
 - `recorderRepro.mjs` — scripts/dev/recorderRepro.mjs — ชุดทดลอง "เครื่องอัดคลิปในเบราว์เซอร์" แบบกดซ้ำได้ (~2894 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
@@ -2002,7 +2002,7 @@
 - `ImportCampaignForm.jsx` — PROVINCES — renders table (~2762 tok)
 - `InteractionLogForm.jsx` — InteractionLogForm (~1180 tok)
 - `PdpaAgreementModal.jsx` — PdpaAgreementModal (~724 tok)
-- `RecordCallModal.jsx` — STATUS_ICONS (~10930 tok)
+- `RecordCallModal.jsx` — STATUS_ICONS (~11108 tok)
 - `SmsModal.jsx` — MAX_THAI_PER_SMS (~2427 tok)
 - `SplitModal.jsx` — SplitModal (~1178 tok)
 - `StarredStar.jsx` — STAR_PATH (~842 tok)

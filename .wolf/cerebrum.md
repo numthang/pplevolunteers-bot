@@ -876,6 +876,24 @@ sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git pull -q origin maste
 - **แถวผู้รับผิดชอบใน `PostMetaPanel` ต้องเป็นสองบรรทัดและอยู่ล่างสุดของบล็อก** —
   `flex justify-between` คู่ label|value แตกทันทีเมื่อมีชื่อไทยหลายคน (user เจอเอง)
 
+### calling/assignments — บทเรียนจากรอบแก้ช้า+ตัวกรอง (2026-09-10)
+- **`169505` ใน CLAUDE.md คือ "ช่วง id" ไม่ใช่จำนวนแถว** — prod จริงเล็กมาก (2026-09-10:
+  `cache_pple_member` 4,856 · `calling_logs` 6,737 · `org_members` 7,704 · `calling_starred` 9)
+  ⇒ **อย่าใช้เลขช่วง id ประเมินขนาดตาราง** เคยเผลอบอก user ว่า "prod ใหญ่กว่า dev มาก" ซึ่งผิด
+- **`org_members` ไม่เคยมี index บน `serial`** และ `calling_logs` มีแค่ `(org_id)` — LATERAL ที่ join
+  ด้วยคอลัมน์พวกนี้เลยตกเป็น seq scan วนต่อแถว (หน้า assignment 2,646ms) ลง index แล้วเหลือ 38ms
+  (`migrations/1788800000000_calling-perf-indexes.sql`) ⇒ **เจอหน้าช้า ให้ EXPLAIN (ANALYZE, BUFFERS)
+  ก่อนเดา** ตัวชี้คือ `Buffers: shared hit` ระดับแสน + `loops=` หลักพัน
+- **สัญญาณ `sig_location/sig_availability/sig_interest` เป็นสเกลเก่า 1-4** UI ยิงแค่ 4/2/1
+  แต่ DB ยังมีแถวค่า **3** ค้างอยู่ ⇒ ตัวกรอง "ปานกลาง" ต้อง `BETWEEN 2 AND 3` ห้ามจับ `= 2` เป๊ะ
+- **`calling_starred` เป็นดาวส่วนตัวรายคน** (unique key มี `user_id`) · API เดิมคืนเฉพาะของตัวเอง
+  · จะโชว์ "ดาวของทุกคน" ต้อง aggregate เอง · ติดดาวได้ที่เดียวคือใน RecordCallModal
+- **mobileAudit: `settleDom` คืนค่าเร็วเกินบนหน้าที่ query ช้า** — DOM นิ่งที่ "กำลังโหลด…" 2 sample
+  ติดกันแล้วมันเลิกรอ ⇒ probe รายงานผ่าน/ผิดจุดทั้งที่ตารางยังไม่ขึ้น · แก้ด้วย `steps: [{ wait: N }]`
+  · และ **รันครั้งแรกหลังแก้ไฟล์จะกินเวลา compile ของ Next เสมอ → ต้องรันซ้ำอีกรอบถึงจะเชื่อผลได้**
+- **modal ตรวจไม่ได้ถ้าไม่มี step กดเปิด** — เพิ่ม `/calling/assignments/70` + step เปิด RecordCallModal
+  ไว้ใน `scripts/dev/mobileAudit.routes.mjs` แล้ว
+
 ## Do-Not-Repeat
 - **ห้ามเชื่อ `track.getSettings()` ว่าคือสัดส่วนภาพจริง** (เสียเวลาไปทั้ง session · 2026-09-09)
   — บน iOS มันรายงาน**พิกัดเซนเซอร์ที่ยังไม่หมุนตามการถือเครื่อง** อ้าง 1080×1920 แนวตั้ง
@@ -1612,6 +1630,15 @@ Enter เอง · จะลงมือได้ต่อเมื่อเข�
 - **อย่าเชื่อว่า `channel_id` ของโพสต์คือเธรดต่อโพสต์** — มันคือ**ห้องต้นทางของตะกร้าสื่อ**
   (`ensureOpenEpisode` เปิดตะกร้าใหม่ในห้องเดิมได้เรื่อยๆ) · เลข distinct สูงเพราะห้องเยอะ ไม่ใช่เพราะ
   เป็นเธรดต่อใบ ➜ ping ตอนมอบหมาย = สแปมห้องรวมทีมสื่อ (เฟส C จึงตัดออก ต่างจากที่แพลนเคาะไว้)
+
+- **ห้ามทำ tab ที่ผสม member + contact ในหน้า `/calling/assignments/[id]`** (ประเมินไว้ 2026-09-10
+  ก่อนเขียนโค้ด แล้วเลือกทำเป็น "ตัวกรอง" แทน) — ปุ่มมอบหมาย/ส่ง SMS ในหน้านั้นส่ง `contact_type`
+  ตัวเดียวตาม tab ที่เปิดอยู่ (`page.js` ราวบรรทัด 422, 449) + id ของ `cache_pple_member.source_id`
+  กับ `calling_contacts.id` ทับช่วงกัน ⇒ กดมอบหมายทีเดียว **ผูกงานให้คนละคนจริงๆ โดยไม่ error
+  ไม่มี log** · `getItemId` ก็คืนคนละคอลัมน์ตามชนิด ทำให้ member 45 กับ contact 45 เป็น key เดียวกัน
+- **ห้ามเติม argument เรียงตำแหน่งเข้าฟังก์ชันโหลดข้อมูลที่มีเกิน ~10 ตัว** — `loadFirst/loadMore/
+  buildXxxUrl` เคยรับ 12 ตำแหน่งผ่าน 6 จุดเรียก การเพิ่มตัวกรองแต่ละครั้งคือโอกาสสลับค่ากันเงียบๆ
+  ⇒ ยุบเป็น object ก้อนเดียว (ทำแล้ว 2026-09-10) แล้วส่งทั้งก้อน
 
 ## Decision Log
 
