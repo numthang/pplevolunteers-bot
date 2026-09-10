@@ -1,19 +1,22 @@
 // ประเมินสมาชิกโดยคน — 5 ระดับ (user เคาะ 2026-09-10 · เดิมมี 3 คือ green/yellow/red)
 //
 // ⚠️ ใช้จุดสี CSS ไม่ใช่ emoji: emoji วงกลมมีให้เลือกไม่ครบเฉด (ไม่มี "เทากลางๆ" สำหรับ "เฉยๆ")
-//    และหน้าตาเพี้ยนข้ามเครื่อง · hex ทุกตัวหยิบจากที่ใช้อยู่แล้วในโปรเจกต์ (STATUS_ICONS/TIER_COLORS)
-//    ไม่ได้ตั้งสีใหม่
+//    และหน้าตาเพี้ยนข้ามเครื่อง · แต่ยืม "ค่าสี" ของ emoji มาใช้ เพื่อให้สดเท่ากัน (ดูตารางล่าง)
 //
 // ⛔ ห้าม hardcode รายการนี้ซ้ำที่อื่น — ก่อนหน้านี้หน้า assignments เขียนเป็น ternary
 //    `flag === 'green' ? 🟢 : flag === 'yellow' ? 🟡 : 🔴` ซึ่งแปลว่า **ค่าอะไรก็ตามที่ไม่รู้จัก
 //    จะกลายเป็น 🔴 เงียบๆ** — เพิ่มระดับใหม่เมื่อไหร่ก็โชว์ผิดทันที
 
+// 🎨 hex ชุดนี้คือ **สีจริงของ emoji วงกลม** (Twemoji) — user บอกว่าสไตล์ตอน 3 วงสดกว่า
+//    🟢 #78b159 · 🟡 #fdcb58 · 🟠 #f4900c · 🔴 #dd2e44 · เทา #99aab5 (จาก ⚪ ของชุดเดียวกัน)
+// ⛔ อย่าเปลี่ยนกลับไปใช้โทนเข้มของ STATUS_ICONS (#1a5e2d / #a32d2d) — ลองแล้ว user ทักว่า
+//    "ไม่ค่อยสว่าง" · โทนพวกนั้นออกแบบมาเป็น "สีตัวอักษร" บนพื้นอ่อน ไม่ใช่สีเม็ดกลม
 export const FLAG_OPTIONS = [
-  { value: 'great',   color: '#1a5e2d', labelKey: 'assignment.flagGreat' },
-  { value: 'good',    color: '#0d9e94', labelKey: 'assignment.flagGood' },
-  { value: 'neutral', color: '#9ca3af', labelKey: 'assignment.flagNeutral' },
-  { value: 'caution', color: '#d97706', labelKey: 'assignment.flagCaution' },
-  { value: 'avoid',   color: '#a32d2d', labelKey: 'assignment.flagAvoid' },
+  { value: 'great',   color: '#78b159', labelKey: 'assignment.flagGreat' },
+  { value: 'good',    color: '#fdcb58', labelKey: 'assignment.flagGood' },
+  { value: 'neutral', color: '#99aab5', labelKey: 'assignment.flagNeutral' },
+  { value: 'caution', color: '#f4900c', labelKey: 'assignment.flagCaution' },
+  { value: 'avoid',   color: '#dd2e44', labelKey: 'assignment.flagAvoid' },
 ]
 
 export const FLAG_VALUES = FLAG_OPTIONS.map(f => f.value)
@@ -33,8 +36,8 @@ export function flagDotStyle(color) {
     backgroundColor: color,
     backgroundImage:
       'radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),' +
-      'radial-gradient(circle at 72% 82%, rgba(0,0,0,.28), rgba(0,0,0,0) 52%)',
-    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18), inset 0 1px 1px rgba(255,255,255,.35)',
+      'radial-gradient(circle at 72% 82%, rgba(0,0,0,.18), rgba(0,0,0,0) 52%)',
+    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12), inset 0 1px 1px rgba(255,255,255,.45)',
   }
 }
 
