@@ -5,6 +5,7 @@ import { canAccessMember, canOverrideTier } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { FLAG_VALUES } from '@/lib/callingFlags.js'
 
 /**
  * GET /api/calling/tiers
@@ -101,7 +102,7 @@ export async function PATCH(req) {
   try {
     const { member_id, flag, contact_type = 'member' } = await req.json()
     if (!member_id) return Response.json({ error: 'member_id required' }, { status: 400 })
-    if (flag && !['green', 'yellow', 'red'].includes(flag)) {
+    if (flag && !FLAG_VALUES.includes(flag)) {
       return Response.json({ error: 'Invalid flag' }, { status: 400 })
     }
     const orgId = await getOrgId(session)

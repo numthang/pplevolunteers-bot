@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T05:55:14.458Z
-> Files: 1145 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:31:50.025Z
+> Files: 1146 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -460,7 +460,7 @@
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
 - `mobileAudit.mjs` — mobileAudit — ตรวจ layout จอมือถือเองได้ ไม่ต้องรอ user ไปเจอเอง (~7492 tok)
-- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~716 tok)
+- `mobileAudit.routes.mjs` — รายชื่อหน้าที่ `mobileAudit.mjs` เดินตรวจ + ท่ากดเปิดของที่ซ่อนอยู่ (~762 tok)
 - `recorderRepro.mjs` — scripts/dev/recorderRepro.mjs — ชุดทดลอง "เครื่องอัดคลิปในเบราว์เซอร์" แบบกดซ้ำได้ (~2894 tok)
 - `resetServerTemplate.js` — scripts/dev/resetServerTemplate.js (~2132 tok)
 
@@ -1643,7 +1643,7 @@
 ## web/app/calling/assignments/[campaignId]/
 
 - `layout.js` — Next.js layout (~73 tok)
-- `page.js` — Next.js page component (~14365 tok)
+- `page.js` — Next.js page component (~14336 tok)
 
 ## web/app/calling/campaigns/
 
@@ -2002,7 +2002,7 @@
 - `ImportCampaignForm.jsx` — PROVINCES — renders table (~2762 tok)
 - `InteractionLogForm.jsx` — InteractionLogForm (~1180 tok)
 - `PdpaAgreementModal.jsx` — PdpaAgreementModal (~724 tok)
-- `RecordCallModal.jsx` — STATUS_ICONS (~11108 tok)
+- `RecordCallModal.jsx` — STATUS_ICONS (~11304 tok)
 - `SmsModal.jsx` — MAX_THAI_PER_SMS (~2427 tok)
 - `SplitModal.jsx` — SplitModal (~1178 tok)
 - `StarredStar.jsx` — STAR_PATH (~842 tok)
@@ -2222,6 +2222,7 @@
 - `buildSmsTemplate.js` — Exports buildSmsTemplate (~356 tok)
 - `callingAccess.js` — Calling System Access Control (~752 tok)
 - `callingFields.js` — ฟิลด์ที่มาจากตาราง cache_pple_member โดยตรง (~668 tok)
+- `callingFlags.js` — คืน option ของ flag (รองรับค่าเก่า) · ไม่รู้จัก = null ให้ผู้เรียกเลือกว่าจะไม่แสดงอะไร (~431 tok)
 - `callingSignals.js` — Shared signal config for calling logs and interaction logs (~260 tok)
 - `callingStatusColors.js` — Exports CALL_STATUS_COLORS (~193 tok)
 - `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~379 tok)

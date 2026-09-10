@@ -11,6 +11,7 @@ import SmsModal from '@/components/calling/SmsModal.jsx'
 import StarredStar from '@/components/calling/StarredStar.jsx'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
+import { FLAG_OPTIONS, getFlagOption } from '@/lib/callingFlags.js'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -170,12 +171,6 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     { value: 'maybe', label: t('recordCall.rsvpMaybe'), icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
   ]
 
-  const FLAG_OPTIONS = [
-    { value: 'green',  emoji: '🟢', title: t('assignment.flagGood') },
-    { value: 'yellow', emoji: '🟡', title: t('assignment.flagCaution') },
-    { value: 'red',    emoji: '🔴', title: t('assignment.flagDoNotCall') },
-  ]
-
   const [smsModalOpen, setSmsModalOpen] = useState(false)
   const [status, setStatus] = useState('')
   const [rsvp, setRsvp] = useState('')
@@ -236,7 +231,9 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   }, [isOpen, onClose])
 
   const saveFlag = async (val) => {
-    const next = val === memberFlag ? null : val
+    // เทียบผ่าน getFlagOption ไม่ใช่ === ตรงๆ — ไม่งั้นแถวที่ยังเก็บค่าเก่า ('green')
+    // กดเม็ดเดิม ('good') จะไม่ถูกมองว่าซ้ำ = ยกเลิกไม่ได้
+    const next = getFlagOption(val)?.value === getFlagOption(memberFlag)?.value ? null : val
     setMemberFlag(next)
     await fetch('/api/calling/tiers', {
       method: 'PATCH',
@@ -393,12 +390,23 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-warm-400 dark:text-disc-muted">{t('recordCall.flagRatingLabel')}</span>
-                  {FLAG_OPTIONS.map(f => (
-                    <button key={f.value} type="button" onClick={() => saveFlag(f.value)} title={f.title}
-                      className={`text-base leading-none transition ${memberFlag === f.value ? 'opacity-100' : 'opacity-25 hover:opacity-60'}`}>
-                      {f.emoji}
-                    </button>
-                  ))}
+                  {/* เม็ดสีชิดกัน (gap-1) — กดซ้ำที่เม็ดเดิม = ยกเลิกการประเมิน */}
+                  <div className="flex items-center gap-1">
+                    {FLAG_OPTIONS.map(f => {
+                      // เทียบแบบ normalize — แถวเก่าอาจเก็บ 'green'/'yellow'/'red' ไว้
+                      const active = getFlagOption(memberFlag)?.value === f.value
+                      return (
+                        <button key={f.value} type="button" title={t(f.labelKey)}
+                          aria-label={t(f.labelKey)} aria-pressed={active}
+                          onClick={() => saveFlag(f.value)}
+                          className={`w-5 h-5 flex items-center justify-center rounded-full transition ${
+                            active ? 'ring-2 ring-offset-1 ring-warm-400 dark:ring-disc-muted dark:ring-offset-disc-header' : 'opacity-30 hover:opacity-70'
+                          }`}>
+                          <span className="w-3.5 h-3.5 rounded-full block" style={{ backgroundColor: f.color }} />
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

@@ -26,6 +26,7 @@ const STATUS_ICONS = {
 }
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
+import { getFlagOption } from '@/lib/callingFlags.js'
 
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
@@ -832,6 +833,7 @@ export default function CampaignPage({ params }) {
               const isMember  = activeTab === 'member'
               // starred_by = user_id ของทุกคนที่ติดดาว · usersMap โหลดมาแล้วตอนเปิดหน้า ไม่ต้องยิงเพิ่ม
               const starredByNames = (item.starred_by || []).map(uid => usersMap[uid] || uid).join(', ')
+              const flagOption = getFlagOption(item.flag)
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
               const dimmed    = !hasPhone ? 'opacity-50' : ''
               const expiryIcon = isMember ? getExpiryIcon(item.expired_at, t) : null
@@ -864,10 +866,9 @@ export default function CampaignPage({ params }) {
                         </span>
                         <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                        {item.flag && (
-                          <span className="shrink-0 text-sm leading-none" title={item.flag === 'green' ? t('assignment.flagGood') : item.flag === 'yellow' ? t('assignment.flagCaution') : t('assignment.flagDoNotCall')}>
-                            {item.flag === 'green' ? '🟢' : item.flag === 'yellow' ? '🟡' : '🔴'}
-                          </span>
+                        {flagOption && (
+                          <span className="shrink-0 w-2.5 h-2.5 rounded-full block" title={t(flagOption.labelKey)}
+                            style={{ backgroundColor: flagOption.color }} />
                         )}
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />

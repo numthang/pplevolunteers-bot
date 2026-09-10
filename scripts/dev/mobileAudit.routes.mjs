@@ -28,10 +28,12 @@ export const ROUTES = [
   { path: '/cases' },   // ⚠️ '/case' เป็น 404 — audit เดินผ่านหน้า 404 แล้วรายงาน "ผ่าน" (แก้ 2026-09-03)
   { path: '/calling' },
   {
-    // query หนัก — ต้องรอให้ตารางขึ้นก่อน ไม่งั้น probe เจอแค่ "กำลังโหลด…" แล้วรายงานผ่าน
+    // ⚠️ ต้องรอนาน (4 วิ) — บน dev รอบแรกหลังแก้ไฟล์ Next ต้อง compile route ก่อน
+    //    `settleDom` นับ element นิ่ง แต่มันนิ่งอยู่ที่ "กำลังโหลด…" เลยเลิกรอตั้งแต่ ~1 วิ
+    //    ⇒ probe เจอแค่หน้าโหลด + step กดจะได้ "หา selector ไม่เจอ" (เจอเอง 2026-09-10)
     path: '/calling/assignments/70',
     steps: [
-      { wait: 1500 },
+      { wait: 4000 },
       { click: 'div.cursor-pointer.min-w-0', label: 'เปิด modal บันทึกการโทร' },
     ],
   },
