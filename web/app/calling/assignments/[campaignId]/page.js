@@ -866,10 +866,6 @@ export default function CampaignPage({ params }) {
                         </span>
                         <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                        {flagOption && (
-                          <span className="shrink-0 w-2.5 h-2.5 rounded-full block" title={t(flagOption.labelKey)}
-                            style={flagDotStyle(flagOption.color)} />
-                        )}
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
                         )}
@@ -890,6 +886,11 @@ export default function CampaignPage({ params }) {
                             <Star className="w-3.5 h-3.5 fill-current" />
                             <span className="text-sm font-medium tabular-nums">{item.star_count}</span>
                           </span>
+                        )}
+                        {/* เม็ดประเมินอยู่หลังดาว (user เคาะ 2026-09-10) — ไม่ใช่แถวชื่อข้างบน */}
+                        {flagOption && (
+                          <span className="shrink-0 w-2.5 h-2.5 rounded-full block" title={t(flagOption.labelKey)}
+                            style={flagDotStyle(flagOption.color)} />
                         )}
                         {isMember && item.rsvp && (
                           <span className="shrink-0 font-bold" style={{ color: RSVP_ICONS[item.rsvp]?.color || '#666' }}>

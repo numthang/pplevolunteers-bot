@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:45:43.640Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:49:35.987Z
 > Files: 1146 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -1643,7 +1643,7 @@
 ## web/app/calling/assignments/[campaignId]/
 
 - `layout.js` — Next.js layout (~73 tok)
-- `page.js` — Next.js page component (~14362 tok)
+- `page.js` — Next.js page component (~14392 tok)
 
 ## web/app/calling/campaigns/
 
