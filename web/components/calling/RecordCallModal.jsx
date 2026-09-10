@@ -391,14 +391,12 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 <div className="text-base text-warm-400 dark:text-disc-muted truncate mt-0.5">
                   {locationStr || '—'}
                 </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0 whitespace-nowrap">{t('recordCall.flagRatingLabel')}</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-warm-400 dark:text-disc-muted">{t('recordCall.flagRatingLabel')}</span>
                   {/* สไตล์เดิมตอนเป็น emoji 3 วง: ไม่ได้เลือก = จาง · เลือกแล้ว = สีเต็ม (user เคาะ 2026-09-10)
                       ⛔ อย่าใส่วงแหวน/ติ๊ก/ป้ายข้อความกลับมา — ลองแล้ว user ให้ถอดออก
-                      ⚠️ บีบ "ช่องไฟ" ไม่ใช่ "ปุ่ม": gap-0 แต่ปุ่มยังเป็น 20px เท่าเดิม
-                         (5 เม็ด = 100px พอดีแถวเดียวบนจอ 375 ไม่ตกบรรทัด) · ย่อปุ่มลงอีก = จิ้มไม่โดนบนมือถือ
-                      กดซ้ำที่เม็ดเดิม = ยกเลิกการประเมิน */}
-                  <div className="flex items-center gap-0 shrink-0">
+                      เม็ดชิดกัน gap-1 · กดซ้ำที่เม็ดเดิม = ยกเลิกการประเมิน */}
+                  <div className="flex items-center gap-1">
                     {FLAG_OPTIONS.map(f => {
                       // เทียบแบบ normalize — แถวเก่าอาจเก็บ 'green'/'yellow'/'red' ไว้
                       const active = activeFlag?.value === f.value
