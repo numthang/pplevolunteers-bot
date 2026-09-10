@@ -22,6 +22,22 @@ export const FLAG_VALUES = FLAG_OPTIONS.map(f => f.value)
 // เก็บ alias ไว้ให้แถวเก่ายังแสดงถูก ไม่ต้องทำ migration
 const LEGACY = { green: 'good', yellow: 'caution', red: 'avoid' }
 
+/**
+ * สไตล์เม็ดสีให้ดู "มีมิติ" แบบ emoji วงกลม (skeuomorphic / glossy)
+ * ─ ไฮไลต์แสงมุมบนซ้าย + เงาในมุมล่างขวา + ขอบในบางๆ = สิ่งที่ทำให้ emoji ไม่ดูแบน
+ * ─ ใช้ overlay ขาว/ดำทับสีพื้น จึงใช้ได้กับ hex อะไรก็ได้ ไม่ต้องคำนวณสีอ่อน/เข้ม
+ * ⚠️ ต้องเป็นค่า inline — สีมาจากข้อมูล ไม่ใช่คลาสคงที่ที่ Tailwind รู้ล่วงหน้า
+ */
+export function flagDotStyle(color) {
+  return {
+    backgroundColor: color,
+    backgroundImage:
+      'radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%),' +
+      'radial-gradient(circle at 72% 82%, rgba(0,0,0,.28), rgba(0,0,0,0) 52%)',
+    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18), inset 0 1px 1px rgba(255,255,255,.35)',
+  }
+}
+
 /** คืน option ของ flag (รองรับค่าเก่า) · ไม่รู้จัก = null ให้ผู้เรียกเลือกว่าจะไม่แสดงอะไร */
 export function getFlagOption(flag) {
   if (!flag) return null

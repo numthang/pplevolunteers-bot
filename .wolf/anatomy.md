@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:42:21.594Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:45:43.640Z
 > Files: 1146 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -2222,7 +2222,7 @@
 - `buildSmsTemplate.js` — Exports buildSmsTemplate (~356 tok)
 - `callingAccess.js` — Calling System Access Control (~752 tok)
 - `callingFields.js` — ฟิลด์ที่มาจากตาราง cache_pple_member โดยตรง (~668 tok)
-- `callingFlags.js` — คืน option ของ flag (รองรับค่าเก่า) · ไม่รู้จัก = null ให้ผู้เรียกเลือกว่าจะไม่แสดงอะไร (~431 tok)
+- `callingFlags.js` — สไตล์เม็ดสีให้ดู "มีมิติ" แบบ emoji วงกลม (skeuomorphic / glossy) (~629 tok)
 - `callingSignals.js` — Shared signal config for calling logs and interaction logs (~260 tok)
 - `callingStatusColors.js` — Exports CALL_STATUS_COLORS (~193 tok)
 - `caseAccess.js` — Case (เรื่องร้องเรียน) Access Control (~379 tok)

@@ -26,7 +26,7 @@ const STATUS_ICONS = {
 }
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
-import { getFlagOption } from '@/lib/callingFlags.js'
+import { getFlagOption, flagDotStyle } from '@/lib/callingFlags.js'
 
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
@@ -868,7 +868,7 @@ export default function CampaignPage({ params }) {
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         {flagOption && (
                           <span className="shrink-0 w-2.5 h-2.5 rounded-full block" title={t(flagOption.labelKey)}
-                            style={{ backgroundColor: flagOption.color }} />
+                            style={flagDotStyle(flagOption.color)} />
                         )}
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />

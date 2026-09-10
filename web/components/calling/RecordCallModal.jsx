@@ -11,7 +11,7 @@ import SmsModal from '@/components/calling/SmsModal.jsx'
 import StarredStar from '@/components/calling/StarredStar.jsx'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
-import { FLAG_OPTIONS, getFlagOption } from '@/lib/callingFlags.js'
+import { FLAG_OPTIONS, getFlagOption, flagDotStyle } from '@/lib/callingFlags.js'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -407,7 +407,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                           className={`w-5 h-5 flex items-center justify-center rounded-full transition ${
                             active ? 'opacity-100' : 'opacity-25 hover:opacity-60'
                           }`}>
-                          <span className="w-4 h-4 rounded-full block" style={{ backgroundColor: f.color }} />
+                          <span className="w-4 h-4 rounded-full block" style={flagDotStyle(f.color)} />
                         </button>
                       )
                     })}
