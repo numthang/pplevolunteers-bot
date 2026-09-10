@@ -1,43 +1,34 @@
 # STATUS — 2026-09-10
 
-## ➜ เควสต์ถัดไป: เพิ่ม **ตัวกรอง "ประเมินสมาชิก"** ในหน้า /calling/assignments
+## ✅ เพิ่งเสร็จ: ตัวกรอง "ประเมินสมาชิก" หน้า /calling/assignments (`70d239b` · ยังไม่ push)
 
-ตอนนี้ประเมินสมาชิก 5 ระดับใช้ได้แล้ว (กดในโมดัลบันทึกการโทร + เห็นเม็ดสีในแถว)
-แต่ **ยังกรองไม่ได้** — เควสต์นี้คือเติม dropdown "ประเมินสมาชิก" ในแถบกรอง
-ทำตามรอยเดียวกับตัวกรอง `starred` / `sigInterest` ที่เพิ่งทำเสร็จ (ดู commit 5a4d97c เป็นแม่แบบ)
+dropdown 5 ระดับในแถบกรอง ใช้ได้ทั้งแท็บสมาชิกและผู้ติดต่อ (flag อยู่ `calling_member_tiers`
+ร่วมกัน) · sync ลง URL `?flag=` · รีเซ็ตตอนสลับแท็บ · แตะ 8 ไฟล์ตามแผนเดิมเป๊ะ
 
-**ไฟล์ที่ต้องแตะ (5 จุด · ก๊อป pattern จาก `starred` ได้ทั้งหมด):**
-1. `web/db/calling/members.js` → `getMembersInCampaign` — รับ `flag` ใน filters แล้วเติมเงื่อนไขบน `t.flag`
-2. `web/db/calling/contacts.js` → `getContactsInCampaign` — เงื่อนไขเดียวกัน แต่ใส่ใน `HAVING`
-   (ฝั่งนี้ `GROUP BY` อยู่ ต้องเติม `t.flag` เข้า GROUP BY ด้วยถ้ายังไม่มี)
-3. `web/app/api/calling/members/route.js` + `web/app/api/calling/contacts/campaign/route.js` — ส่ง `flag` ต่อ
-4. `web/app/calling/assignments/[campaignId]/page.js` — เพิ่ม `filterFlag` state, ใส่ในก้อน `filters`
-   (useMemo), เพิ่ม `<select>` วนจาก `FLAG_OPTIONS`, sync URL, reset ใน `switchTab`
-5. i18n: key ป้าย dropdown ลง `web/locales/th.json` + `en.json` (ตัวเลือกใช้ `labelKey` ที่มีอยู่แล้ว)
+**กับดักค่าเก่าแก้แล้ว:** เพิ่ม `flagQueryValues()` ใน `web/lib/callingFlags.js` คืนอาร์เรย์
+(`'good'` → `['good','green']`) แล้ว query ใช้ `t.flag = ANY($n::text[])` ทั้ง members/contacts
+⛔ ห้ามเขียน `t.flag = 'good'` ตรงๆ ที่ไหนอีก — แถวค่าเก่าจะหายเงียบ
 
-**⛔ กับดักที่ต้องระวัง — ค่าเก่าใน DB:**
-`web/lib/callingFlags.js` มี `LEGACY = { green: 'good', yellow: 'caution', red: 'avoid' }`
-แต่มัน **map ฝั่ง client เท่านั้น** — ถ้า query เขียน `t.flag = 'good'` เฉยๆ **แถวที่ยังเก็บ `'green'`
-จะไม่ติดเลย** (dev มี 3 แถวแบบนั้นอยู่จริง · prod ยังไม่มี)
-→ ต้องแปลงในเงื่อนไข SQL เช่น `t.flag = ANY($n)` แล้วส่งอาร์เรย์ `['good','green']` มาจากฝั่ง JS
-   (ทำเป็น helper `flagQueryValues(value)` ใน callingFlags.js ให้ที่เดียวจบ)
+**verify แล้ว:** query จริงบน dev ทั้ง 2 ฝั่ง (flag=good ดึงแถวที่เก็บ `'green'` ติด · ค่ามั่ว = ไม่กรอง)
+· e2e เปิดหน้าจริงผ่าน CDP เลือก "ดี" แล้ว URL เป็น `?flag=good`
+· mobile audit: ยัง 9px เท่าเดิม (ของเดิมทั้งโซน ไม่ใช่ของใหม่)
+**ยังไม่ได้ให้ user กดจริง** — ของกดได้ต้องให้ user ลอง
+
+## ➜ เควสต์ถัดไป (ยังไม่เคาะ เลือกเอง 1 อย่าง)
+1. **query ผู้ติดต่อคืนแถวซ้ำ** — `web/db/calling/contacts.js` `GROUP BY` มี `l.called_at, l.status, l.note`
+   → คนที่ถูกโทร 3 ครั้งโผล่ 3 แถว แถวละ `total_calls = 1` (ท่าที่ถูกคือ LATERAL แบบฝั่ง members)
+   ⚠️ ถ้าแก้ ต้องขยับตัวกรอง flag/starred/sig ที่อยู่ใน HAVING ตามไปด้วย
+2. **mobile audit ยัง exit 1** ที่ 9px — `app/calling/layout.js:10` `-mx-3 sm:-mx-4` ล้นทั้งโซน `/calling`
+3. คิวสาย faceless (ดูท้ายไฟล์) — ข้อ 1 ต้องให้ user ลองเอง
 
 ### ✅ เสร็จแล้วรอบนี้ — ขึ้น prod แล้วบางส่วน
 **ขึ้น prod แล้ว (deploy 2026-09-10):** `a25ace1` race condition · `6459fca` index · `5a4d97c` ตัวกรองดาว/สัญญาณ
 วัดหลัง deploy: `getMembersInCampaign` **106ms** (เดิม 2,646ms) · index ทั้ง 2 ตัวยืนยันว่ามีจริงใน pg_indexes
 
-**⚠️ ยังไม่ push / ยังไม่ deploy — ค้างบนเครื่อง dev 8 commit:**
-```
-e70c640  ย้ายเม็ดประเมินไปหลังดาว
-9f61e66  ใช้ค่าสี emoji (Twemoji) ให้สด
-368095d  เม็ดมีมิติ skeuomorphic
-b5e3d15  revert ตัวบีบช่องไฟ  ←┐ คู่นี้หักล้างกัน
-7d8521e  บีบช่องไฟ gap-0      ←┘
-ece0ba9  เม็ดจาง/เข้ม + เอา "ติดดาวโดย" ออกจากแถว
-552d929  ประเมินสมาชิก 5 ระดับ
-54d0937  ย้าย id สมาชิกใน modal ไปข้างหัวข้อ
-```
-ทั้งชุดนี้เป็น UI ล้วน **ไม่มี migration** → deploy ได้ด้วย pull + build + restart ตามปกติ
+**ชุดเม็ดประเมิน 8 commit (`54d0937`…`e70c640`) — user deploy เองแล้ว 2026-09-10**
+
+**⚠️ ค้างบนเครื่อง dev ตอนนี้: `70d239b` ตัวกรองประเมินสมาชิก** (UI + query ล้วน ไม่มี migration
+→ deploy ด้วย pull + build + restart ตามปกติ)
 
 ### 🎨 ที่เคาะไปแล้วเรื่องเม็ดสี — อย่ารื้อ
 - **สี = hex ของ emoji วงกลม (Twemoji)** 🟢`#78b159` 🟡`#fdcb58` เทา`#99aab5` 🟠`#f4900c` 🔴`#dd2e44`
