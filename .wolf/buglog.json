@@ -8896,6 +8896,55 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-10T17:28:23.334Z"
+    },
+    {
+      "id": "bug-514",
+      "timestamp": "2026-09-11T05:34:22.853Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/db/kanban/cards.js",
+      "root_cause": "Had ' && col === '",
+      "fix": "Changed to ' && (col === '",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-11T05:34:22.853Z"
+    },
+    {
+      "id": "bug-515",
+      "timestamp": "2026-09-11T05:35:41.419Z",
+      "error_message": "Null/undefined access in CardModal.jsx",
+      "file": "web/components/kanban/CardModal.jsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-11T05:35:41.419Z"
+    },
+    {
+      "id": "bug-517",
+      "timestamp": "2026-09-11T05:52:06.868Z",
+      "error_message": "PATCH /api/kanban/cards/[id] คืน 400 'ชื่อKANBANใบนี้มาจาก…' ทุกครั้งที่ autosave การ์ดที่ผูกเคส/โพสต์",
+      "file": "web/app/api/kanban/cards/[id]/route.js",
+      "root_cause": "CardModal.save() ส่ง title ติดไปใน PATCH body ทุกครั้งแม้ผู้ใช้ไม่ได้แตะชื่อ ฝั่ง route เช็คแค่ body.title !== undefined ซึ่งเป็นจริงเสมอ แล้วเด้ง isLinkedCard ทันที → การ์ดที่ผูกของจริงเซฟ detail/dueAt/sourceUrl ไม่ได้เลยสักฟิลด์ (บั๊กเงียบ: UI ไม่ขึ้น error ให้เห็นด้วย)",
+      "fix": "เทียบ title ที่ส่งมากับ card.title ก่อน — เข้าด่าน isLinkedCard และ validate ความยาว/ว่าง เฉพาะตอนชื่อเปลี่ยนจริงเท่านั้น",
+      "tags": [
+        "kanban",
+        "autosave",
+        "linked-card",
+        "silent-failure"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-11T05:52:06.868Z"
     }
   ]
 }

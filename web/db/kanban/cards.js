@@ -369,6 +369,7 @@ const EDITABLE = {
   start_at:       'start_at',      // ⚠️ ส่งดิบ ห้ามแปลง timezone
   due_at:         'due_at',        // ⚠️ ส่งดิบ ห้ามแปลง timezone
   priority:       'priority',
+  source_url:     'source_url',
 }
 
 /**
@@ -396,7 +397,7 @@ export async function updateCard(orgId, id, fields, { lockToken }) {
     const params = [orgId, id]
     for (const [key, col] of Object.entries(EDITABLE)) {
       if (fields[key] === undefined) continue
-      params.push(fields[key] === '' && col === 'due_at' ? null : fields[key])
+      params.push(fields[key] === '' && (col === 'due_at' || col === 'source_url') ? null : fields[key])
       sets.push(`${col} = $${params.length}`)
     }
     if (sets.length) {

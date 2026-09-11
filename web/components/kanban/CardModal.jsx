@@ -79,6 +79,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [title, setTitle] = useState('')
   const [detail, setDetail] = useState('')
   const [dueAt, setDueAt] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
 
   const [saveState, setSaveState] = useState('idle')   // idle | saving | saved
   const [pendingSave, setPendingSave] = useState(false)
@@ -133,11 +134,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
         title: json.card.title || '',
         detail: json.card.detail || '',
         dueAt: toLocalInput(json.card.due_at),
+        sourceUrl: json.card.source_url || '',
       }
       baseline.current = fresh
       setTitle(fresh.title)
       setDetail(fresh.detail)
       setDueAt(fresh.dueAt)
+      setSourceUrl(fresh.sourceUrl)
       setConflict(false)
     } catch {
       setLoadError(t('loadFailed'))
@@ -184,6 +187,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
           title,
           detail,
           dueAt: dueAt || null,        // ⚠️ ส่งดิบ ห้ามแปลงผ่าน toISOString()
+          sourceUrl,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -191,7 +195,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       if (!res.ok) { setActionError(json.error || t('saveFailed')); setSaveState('idle'); return }
       lockToken.current = json.card.lock_token
       // ค่าที่เพิ่งเซฟสำเร็จ = baseline ใหม่ ไม่งั้น effect เห็นว่ายัง dirty แล้ววนเซฟไม่จบ
-      baseline.current = { title, detail, dueAt }
+      baseline.current = { title, detail, dueAt, sourceUrl }
       setCard(json.card)
       setSaveState('saved')
       setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500)
@@ -199,14 +203,14 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     } catch {
       setSaveState('idle')
     }
-  }, [card, can.edit, cardId, title, detail, dueAt, t, onChanged])
+  }, [card, can.edit, cardId, title, detail, dueAt, sourceUrl, t, onChanged])
 
   // autosave — ยิงต่อเมื่อค่าต่างจากที่โหลดมาจริงๆ
   // (เปิดกล่องเฉยๆ / กดโหลดใหม่ / พิมพ์แล้วลบกลับเป็นค่าเดิม = ไม่ยิง)
   useEffect(() => {
     if (!can.edit || !baseline.current) return
     const b = baseline.current
-    const dirty = title !== b.title || detail !== b.detail || dueAt !== b.dueAt
+    const dirty = title !== b.title || detail !== b.detail || dueAt !== b.dueAt || sourceUrl !== b.sourceUrl
     if (!dirty) { setPendingSave(false); return }
 
     clearTimeout(saveTimer.current)
@@ -214,7 +218,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     saveTimer.current = setTimeout(save, AUTOSAVE_MS)
     return () => clearTimeout(saveTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, detail, dueAt, can.edit])
+  }, [title, detail, dueAt, sourceUrl, can.edit])
 
   // ไม่มีปุ่มบันทึก → ด่านเดียวที่กันงานหายคือตรงนี้ (กฎ CLAUDE.md §กฎการบันทึก)
   useEffect(() => {
@@ -507,16 +511,38 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                 </div>
               )}
 
-              {card.source_url && (
-                <a
-                  href={card.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 w-fit text-sm text-warm-400 dark:text-disc-muted hover:text-teal hover:underline"
-                >
-                  <ExternalLink size={14} /> {t('modal.sourceLink')}
-                </a>
-              )}
+              {/* ลิงก์ต้นทาง (มาจากข้อความในดิสฯ) — แก้ไขได้เพื่อรองรับเคสสร้างการ์ดจากหน้าเว็บ
+                  แล้วมาคุยกันต่อในดิสฯ ทีหลัง (user สั่ง 2026-09-11) · autosave ตัวเดียวกับ title/detail/dueAt */}
+              <div className="flex items-center gap-1.5 w-full text-sm text-warm-400 dark:text-disc-muted">
+                <LinkIcon size={14} className="shrink-0" />
+                <input
+                  type="url"
+                  value={sourceUrl}
+                  disabled={readOnly}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) */
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Escape') return
+                    e.stopPropagation()
+                    setSourceUrl(baseline.current?.sourceUrl ?? '')
+                    e.currentTarget.blur()
+                  }}
+                  placeholder={t('modal.sourceLinkPlaceholder')}
+                  className="min-w-0 flex-1 px-2 -mx-2 py-1 text-sm rounded-lg border border-transparent bg-transparent hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal placeholder-warm-300 dark:placeholder-disc-muted disabled:opacity-60 transition"
+                />
+                {card.source_url && (
+                  <a
+                    href={card.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t('modal.openLink')}
+                    aria-label={t('modal.openLink')}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover hover:text-teal"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                )}
+              </div>
 
               {/* ชื่อการบ้าน = หัวเรื่อง ไม่ใช่แถว label|ค่า (แนวเดียวกับ Notion ที่ title อยู่บนสุดตัวใหญ่) */}
               <input

@@ -1,7 +1,7 @@
 // /api/kanban/cards/[id] — อ่าน / แก้ (autosave) / เก็บเข้ากรุ / ลบถาวร
 //
 // PATCH รับ 4 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
-//   { lockToken, title?, detail?, dueAt?, priority? }                           ← autosave (ต้องมี token)
+//   { lockToken, title?, detail?, dueAt?, priority?, sourceUrl? }               ← autosave (ต้องมี token)
 //   { statusType }                                                              ← ปุ่มเปลี่ยนสถานะ
 //   { claim: true }                                                             ← อาสารับงานเอง
 //   { boardId }                                                                 ← ย้ายไปกระดานอื่น (2026-09-07)
@@ -147,20 +147,30 @@ export async function PATCH(req, { params }) {
 
   const fields = {}
   if (body.title !== undefined) {
-    // ⛔ ชื่อการ์ดที่ผูกของจริงอ่านสดจากต้นทาง — เขียนทับได้ก็ไม่มีผล (ตอนแสดงถูกทับอยู่ดี)
-    //    ตอบเหตุผลกลับไปเลย ดีกว่าเงียบแล้วให้ผู้ใช้พิมพ์ทิ้งแล้วเห็นชื่อเดิมเด้งกลับ
-    if (isLinkedCard(card)) {
-      const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
-      return err(400, `ชื่อKANBANใบนี้มาจาก${kind} — แก้ชื่อที่หน้า${kind} แล้วการ์ดจะเปลี่ยนตามเอง`)
-    }
     const t = String(body.title).trim()
-    if (!t) return err(400, 'ต้องมีชื่อKANBAN')
-    if (t.length > 200) return err(400, 'ชื่อKANBANยาวเกิน 200 ตัวอักษร')
-    fields.title = t
+    // ⚠️ autosave ส่ง title ติดมาทุกครั้งแม้ไม่ได้แตะชื่อ — "ค่าเท่าเดิม" ไม่ใช่การเปลี่ยนชื่อ
+    //    ข้ามตรงนี้ไม่ได้: การ์ดที่ผูกเคส/โพสต์จะเซฟ รายละเอียด/กำหนดส่ง/ลิงก์ต้นทาง ไม่ได้เลย
+    //    เพราะติดด่านล่างทุกครั้ง (400) ทั้งที่คนกรอกไม่ได้ยุ่งกับชื่อ (เจอ 2026-09-11)
+    if (t !== String(card.title || '').trim()) {
+      // ⛔ ชื่อการ์ดที่ผูกของจริงอ่านสดจากต้นทาง — เขียนทับได้ก็ไม่มีผล (ตอนแสดงถูกทับอยู่ดี)
+      //    ตอบเหตุผลกลับไปเลย ดีกว่าเงียบแล้วให้ผู้ใช้พิมพ์ทิ้งแล้วเห็นชื่อเดิมเด้งกลับ
+      if (isLinkedCard(card)) {
+        const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
+        return err(400, `ชื่อKANBANใบนี้มาจาก${kind} — แก้ชื่อที่หน้า${kind} แล้วการ์ดจะเปลี่ยนตามเอง`)
+      }
+      if (!t) return err(400, 'ต้องมีชื่อKANBAN')
+      if (t.length > 200) return err(400, 'ชื่อKANBANยาวเกิน 200 ตัวอักษร')
+      fields.title = t
+    }
   }
   if (body.detail !== undefined)        fields.detail = body.detail
   if (body.dueAt !== undefined)         fields.due_at = body.dueAt || null   // ⚠️ ส่งดิบ ห้ามแปลง timezone
   if (body.priority !== undefined)      fields.priority = Number(body.priority) || 0
+  if (body.sourceUrl !== undefined) {
+    const u = String(body.sourceUrl).trim()
+    if (u && !/^https?:\/\//i.test(u)) return err(400, 'ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://')
+    fields.source_url = u
+  }
   if (!Object.keys(fields).length)      return err(400, 'ไม่มีอะไรให้แก้')
 
   const res = await cardDB.updateCard(orgId, card.id, fields, { lockToken: body.lockToken })

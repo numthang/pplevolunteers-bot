@@ -2123,6 +2123,7 @@
       "createdAtLabel": "Created",
       "openLink": "Open link",
       "sourceLink": "From a Discord message",
+      "sourceLinkPlaceholder": "Paste a link from a Discord message",
       "closeTitle": "Close (ESC)",
       "saving": "Saving…",
       "saved": "Saved",

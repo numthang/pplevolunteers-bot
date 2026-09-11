@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-10T06:49:35.987Z
-> Files: 1146 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-11T05:54:01.311Z
+> Files: 1149 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -456,6 +456,9 @@
 ## scripts/dev/
 
 - `_tmp_imgEditModalCheck.mjs` — BASE: mintToken (~2121 tok)
+- `_tmpModalMobile.mjs` — CHROME: mintLoginToken (~1565 tok)
+- `_tmpTestSourceUrl.mjs` — CHROME: mintLoginToken, launchChrome, login (~1935 tok)
+- `_tmpTestTitleGuard.mjs` — ยิง PATCH ตรงๆ ในบริบทหน้าเว็บ (มี cookie session แล้ว) (~1469 tok)
 - `.tmp-cleanup-assignees.mjs` — CHROME: launchChrome (~1442 tok)
 - `.tmp-test-assignee2.mjs` — CHROME: launchChrome, mintLoginToken, login (~2265 tok)
 - `.tmp-test-assignee3.mjs` — CHROME: launchChrome (~1411 tok)
@@ -1182,7 +1185,7 @@
 
 ## web/app/api/kanban/cards/[id]/
 
-- `route.js` — ข้อความบอกว่าทำไมย้ายไม่ได้ — การ์ดที่ผูกของจริงต้องบอกด้วยว่าไปเปลี่ยนที่ไหนแทน (~2641 tok)
+- `route.js` — ข้อความบอกว่าทำไมย้ายไม่ได้ — การ์ดที่ผูกของจริงต้องบอกด้วยว่าไปเปลี่ยนที่ไหนแทน (~3315 tok)
 
 ## web/app/api/kanban/cards/[id]/attachments/
 
@@ -2060,7 +2063,7 @@
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardAttachmentsBox.jsx` — CardAttachmentsBox — รูป/ไฟล์แนบของการ์ด 1 ใบ (สูงสุด 30 — เคาะ 2026-09-06) (~1863 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~8174 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~11410 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~11887 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6915 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
@@ -2187,7 +2190,7 @@
 ## web/db/kanban/
 
 - `boards.js` — กระดานตั้งต้นของ org — ตัวแรกตามลำดับที่แสดง (~1374 tok)
-- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~8212 tok)
+- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~8781 tok)
 - `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~6151 tok)
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `links.js` — "การ์ดใบนี้มีคนรับหรือยัง" — เดิมคือ `c.owner_user_id IS NOT NULL` (คอลัมน์ถูกยุบทิ้งเฟส B) (~4502 tok)
@@ -2378,8 +2381,8 @@
 
 ## web/locales/
 
-- `en.json` (~29592 tok)
-- `th.json` (~28335 tok)
+- `en.json` (~29807 tok)
+- `th.json` (~28533 tok)
 
 ## web/public/media-temp/
 

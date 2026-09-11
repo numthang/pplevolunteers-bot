@@ -2123,6 +2123,7 @@
       "createdAtLabel": "สร้าง",
       "openLink": "เปิดลิงก์",
       "sourceLink": "มาจากข้อความในดิสฯ",
+      "sourceLinkPlaceholder": "แปะลิงก์ข้อความในดิสฯ",
       "closeTitle": "ปิด (ESC)",
       "saving": "กำลังบันทึก…",
       "saved": "บันทึกแล้ว",
