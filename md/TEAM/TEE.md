@@ -51,7 +51,7 @@ My Tasks and bug issue
 # Calling
 
 # Cases
-- ดูเหมือนหน้าจัดการ cases หน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
+
 
 # Rag-AI
 - Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา

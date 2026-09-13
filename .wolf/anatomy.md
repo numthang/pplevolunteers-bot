@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-13T11:11:37.079Z
-> Files: 1164 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-13T12:11:44.528Z
+> Files: 1165 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -479,6 +479,7 @@
 
 ## scripts/finance/
 
+- `backfillBankInfo.mjs` — Backfill ข้อมูลรับเงินของสมาชิก (ธนาคาร/เลขบัญชี/พร้อมเพย์) จากไฟล์ xlsx (~1555 tok)
 - `parse-kbank-statement copy.js` — parse-kbank-statement.js (~2787 tok)
 - `parse-kbank-statement.js` — parse-kbank-statement.js (~3168 tok)
 
