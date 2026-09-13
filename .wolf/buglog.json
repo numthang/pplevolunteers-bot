@@ -8945,6 +8945,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-11T05:52:06.868Z"
+    },
+    {
+      "id": "bug-518",
+      "timestamp": "2026-09-13T11:55:50.541028Z",
+      "error_message": "โมดัลร่างหนังสือร้องเรียน: textarea กลับไปสูงเท่า default (ไม่ยืดตามข้อความ) หลังกด 'พรีวิว' แล้ว 'ย้อนกลับ'",
+      "file": "web/components/case/CaseLetterModal.jsx",
+      "root_cause": "useAutoGrow(value) ยืดกล่องใน layout effect ที่ผูก dep กับ 'ค่าในช่อง' อย่างเดียว · step preview→edit ทำให้ <textarea> ถูก unmount แล้ว mount ใหม่เป็น DOM node ใหม่ที่ความสูงเริ่มต้น แต่ fields.body ไม่ได้เปลี่ยน → effect ไม่ถูกเรียกอีก กล่องจึงค้างเตี้ย (hook มีอยู่แล้วตั้งแต่ 2026-08-31 คนเลยเข้าใจผิดว่าไม่ได้ใส่ autoGrow)",
+      "fix": "ผูก step เข้าไปใน dep ด้วย: useAutoGrow(`${step}:${fields?.body ?? ''}`) — ไม่แตะ lib/useAutoGrow.js เพื่อไม่กระทบ posts/kanban ที่ใช้ร่วม · กฎทั่วไป: textarea ที่ถูก remount ตามสถานะหน้าจอ ต้องเอาสถานะนั้นเข้า dep ของ autoGrow ด้วย",
+      "tags": [
+        "case",
+        "autogrow",
+        "textarea",
+        "react-effect",
+        "remount"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-13T11:55:50.541028Z"
+    },
+    {
+      "id": "bug-519",
+      "timestamp": "2026-09-13T11:55:50.541028Z",
+      "error_message": "หน้าจัดการเคสไม่มีทางแนบไฟล์เพิ่มเลยเมื่อเคสยังไม่มีไฟล์แนบ",
+      "file": "web/app/cases/[ref]/page.js",
+      "root_cause": "การ์ดไฟล์แนบ render แบบมีเงื่อนไข attachments.length > 0 → เคสที่ไม่มีไฟล์ซ่อนทั้งใบ พอเพิ่มปุ่มแนบไฟล์เข้าไปในการ์ดก็ยังกดไม่ได้อยู่ดี (เงื่อนไขแสดงผลผูกกับข้อมูล แทนที่จะผูกกับสิทธิ์)",
+      "fix": "เปลี่ยนเงื่อนไขเป็น (attachments.length > 0 || canEdit) + gallery โชว์ข้อความ 'ยังไม่มีไฟล์แนบ' แทนความว่าง · บทเรียน: การ์ดที่มี action อยู่ข้างใน ห้ามซ่อนด้วยจำนวนข้อมูล ให้ซ่อนด้วยสิทธิ์",
+      "tags": [
+        "case",
+        "attachments",
+        "ui-empty-state"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-13T11:55:50.541028Z"
     }
   ]
 }
