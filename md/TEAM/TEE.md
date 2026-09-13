@@ -13,8 +13,7 @@ My Tasks and bug issue
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
 - ลิงก์ google calendar แสดง deadline 
 - แต่ละ card มีกล่องให้แสดง comment ด้วยอ่ะ เห็นมีใน notion เป็น fix field
-- ผมนำเข้าหมดแล้ว กระทู้ที่นำเข้าด้วย https://pplevolunteers.org/kanban/import/forum สิ่งนี้ ผมว่า description โดย ai สั้นไปอ่ะ ถ้าจะขอให้อัพเดท description อีกรอบได้ไหม แบบขอสรุปประเด็นทั้งจากกระทู้เลย แต่ก็กระชับด้วย ไม่ใช่สั้นแบบนีี้  คุยให้รู้เรื่องก่อนค่อยทำ
-- เพิ่ม kanbanmodal ให้ edit source_url ได้ แปะตรง มาจากข้อความในดิสฯ ได้เลย มีให้แก้ไข 
+- ผมนำเข้าหมดแล้ว กระทู้ที่นำเข้าด้วย https://pplevolunteers.org/kanban/import/forum สิ่งนี้ ผมว่า description โดย ai สั้นไปอ่ะ ถ้าจะขอให้อัพเดท description อีกรอบได้ไหม แบบขอสรุปประเด็นทั้งจากกระทู้เลย แต่ก็กระชับด้วย ไม่ใช่สั้นแบบนีี้  คุยให้รู้เรื่องก่อนค่อยทำ 
 
 # Session Design
 - session design คือ ตารางบอกว่าใคร ทำอะไร ใช้เวลาเท่าไร
