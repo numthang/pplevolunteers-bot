@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Image as ImageIcon, Paperclip, User, Check } from 'lucide-react'
+import { Image as ImageIcon, User, Check } from 'lucide-react'
 import CaseDeleteButton from './CaseDeleteButton.jsx'
 
 /**
@@ -79,32 +79,28 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
   return (
     // stretched link: ลิงก์จริงอยู่ที่หัวเรื่องแล้วยืดคลุมทั้งใบด้วย after:inset-0
     // → คลิกได้ทั้งการ์ด แต่ยังเป็น <a> จริง (กลางเมาส์/คีย์บอร์ด/copy link ใช้ได้) และไม่มีปุ่มซ้อนใน <a>
-    <div className="group relative flex gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-3 [@media(hover:hover)]:hover:border-orange [@media(hover:hover)]:hover:shadow-md transition">
-      {/* ช่องรูปกว้างคงที่เสมอ แม้ไม่มีรูป — ไม่งั้นข้อความแต่ละแถวเริ่มไม่ตรงกัน กวาดตาไม่ติด */}
-      <div className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-warm-100 dark:bg-disc-hover flex items-center justify-center">
-        {thumbSrc && !thumbFailed ? (
-          <img
-            src={thumbSrc}
-            alt=""
-            loading="lazy"
-            onError={() => setThumbFailed(true)}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <ImageIcon size={20} className="text-warm-300 dark:text-disc-muted" />
-        )}
-      </div>
+    <div className="group relative flex flex-col gap-2 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-3 [@media(hover:hover)]:hover:border-orange [@media(hover:hover)]:hover:shadow-md transition">
+      <div className="flex gap-3">
+        {/* ช่องรูปกว้างคงที่เสมอ แม้ไม่มีรูป — ไม่งั้นข้อความแต่ละแถวเริ่มไม่ตรงกัน กวาดตาไม่ติด */}
+        <div className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-warm-100 dark:bg-disc-hover flex items-center justify-center">
+          {thumbSrc && !thumbFailed ? (
+            <img
+              src={thumbSrc}
+              alt=""
+              loading="lazy"
+              onError={() => setThumbFailed(true)}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <ImageIcon size={20} className="text-warm-300 dark:text-disc-muted" />
+          )}
+        </div>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-        <div className="flex items-start justify-between gap-2">
-          {/* ⛔ `truncate` ต้องอยู่ที่ <a> ไม่ใช่ที่ <h3> — <a> เป็น inline กล่องมันกว้างเท่าข้อความจริง
-              แม้พ่อจะ overflow-hidden ให้ (ตาไม่เห็น แต่ mobileAudit จับได้ว่าล้นจอ 800px) */}
-          <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text [@media(hover:hover)]:group-hover:text-orange transition">
-            <Link href={`/cases/${c.ref}`} className="block truncate after:absolute after:inset-0">
-              {c.title || t('manage.noTitle')}
-            </Link>
-          </h3>
-          <div className="shrink-0 flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          {/* สถานะ + ถังขยะ อยู่แถวบนขวาลำพัง · หัวข้อลงบรรทัดใหม่เต็มความกว้าง
+              (เคาะ 2026-09-13) — ของเดิมหัวข้อแชร์บรรทัดกับป้ายสถานะ เหลือที่ไม่กี่ตัวอักษรบนมือถือ
+              แล้วโดน truncate จนอ่านไม่รู้เรื่อง */}
+          <div className="flex items-center justify-end gap-2">
             <span className="flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
               <span className={`w-2 h-2 rounded-full ${STATUS_DOT[c.status] || 'bg-gray-300'}`} />
               {statusText}
@@ -122,53 +118,60 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
               redirectOnPurge={false}
             />
           </div>
-        </div>
 
-        {excerpt ? (
-          <p className="text-sm text-warm-500 dark:text-disc-muted line-clamp-1 break-words">{excerpt}</p>
+          {/* ⛔ `truncate`/`line-clamp` ต้องอยู่ที่ <a> ไม่ใช่ที่ <h3> — <a> เป็น inline กล่องมันกว้าง
+              เท่าข้อความจริง แม้พ่อจะ overflow-hidden ให้ (ตาไม่เห็น แต่ mobileAudit จับได้ว่าล้นจอ) */}
+          <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text [@media(hover:hover)]:group-hover:text-orange transition">
+            <Link href={`/cases/${c.ref}`} className="block line-clamp-2 break-words after:absolute after:inset-0">
+              {c.title || t('manage.noTitle')}
+            </Link>
+          </h3>
+
+          {excerpt ? (
+            <p className="text-sm text-warm-500 dark:text-disc-muted line-clamp-2 break-words">{excerpt}</p>
+          ) : (
+            <p className="text-sm text-warm-400 dark:text-disc-muted italic">{t('manage.noDetail')}</p>
+          )}
+
+          {/* ⛔ ไม่มีเลขเคสและจำนวนไฟล์แนบในการ์ดแล้ว (เคาะ 2026-09-13) — บนมือถือมันเบียดหัวข้อ
+              ทั้งที่ไม่มีใครกวาดตาหาเลขเคสจากรายการ · ดูได้ในหน้าเคส */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="px-2 py-0.5 rounded-full bg-warm-100 dark:bg-disc-hover text-warm-600 dark:text-disc-muted">
+              {c.province}
+            </span>
+            {c.category && (
+              <span className="px-2 py-0.5 rounded-full bg-warm-100 dark:bg-disc-hover text-warm-600 dark:text-disc-muted max-w-[12rem] truncate">
+                {c.category}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ผู้รับผิดชอบ + ความคืบหน้า — เต็มความกว้างใต้รูป ชิดซ้ายสุดของการ์ด (เคาะ 2026-09-13)
+          อยู่ในคอลัมน์ข้างรูปเหมือนเดิม = เหลือที่ไม่พอ แถบสั้นจนอ่านไม่ออกบนมือถือ */}
+      <div className="flex flex-col gap-1.5 text-xs">
+        {/* ผู้รับผิดชอบ — ชื่อแรกเต็มๆ ที่เหลือย่อเป็น +n (การ์ดต้องกวาดตาได้ ไม่ใช่รายชื่อยาว) */}
+        {names.length > 0 ? (
+          <span className="flex items-center gap-1 self-start max-w-full px-2 py-0.5 rounded-full bg-orange/10 text-orange">
+            <User size={12} className="shrink-0" />
+            <span className="truncate">{names[0]}</span>
+            {names.length > 1 && <span className="shrink-0">+{names.length - 1}</span>}
+          </span>
         ) : (
-          <p className="text-sm text-warm-400 dark:text-disc-muted italic">{t('manage.noDetail')}</p>
+          <span className="flex items-center gap-1 self-start text-warm-400 dark:text-disc-muted">
+            <User size={12} />{t('manage.noAssignees')}
+          </span>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-mono text-warm-500 dark:text-disc-muted">{c.ref}</span>
-          <span className="px-2 py-0.5 rounded-full bg-warm-100 dark:bg-disc-hover text-warm-600 dark:text-disc-muted">
-            {c.province}
-          </span>
-          {c.category && (
-            <span className="px-2 py-0.5 rounded-full bg-warm-100 dark:bg-disc-hover text-warm-600 dark:text-disc-muted max-w-[12rem] truncate">
-              {c.category}
-            </span>
-          )}
-          {c.attachment_count > 0 && (
-            <span
-              className="flex items-center gap-1 text-warm-500 dark:text-disc-muted"
-              title={t('manage.attachmentsCount', { count: c.attachment_count })}
-            >
-              <Paperclip size={12} />{c.attachment_count}
-            </span>
-          )}
-          {/* ผู้รับผิดชอบ — ชื่อแรกเต็มๆ ที่เหลือย่อเป็น +n (การ์ดต้องกวาดตาได้ ไม่ใช่รายชื่อยาว) */}
-          {names.length > 0 ? (
-            <span className="flex items-center gap-1 max-w-[14rem] px-2 py-0.5 rounded-full bg-orange/10 text-orange">
-              <User size={12} className="shrink-0" />
-              <span className="truncate">{names[0]}</span>
-              {names.length > 1 && <span className="shrink-0">+{names.length - 1}</span>}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-warm-400 dark:text-disc-muted">
-              <User size={12} />{t('manage.noAssignees')}
-            </span>
-          )}
-        </div>
-
         {/* ความคืบหน้า — แถบ + ขั้นต่อไป (ตัวเลข % อย่างเดียวไม่บอกว่าต้องไปทำอะไรต่อ) */}
-        <div className="flex items-center gap-2 mt-0.5">
-          <div className="w-24 sm:w-32 shrink-0"><ProgressBar pct={pct} tone={tone} /></div>
-          <span className={`shrink-0 text-xs font-semibold tabular-nums ${closed ? 'text-green-600 dark:text-green-500' : 'text-warm-600 dark:text-disc-text'}`}>
+        <div className="flex items-center gap-2">
+          {/* แถบกินที่ที่เหลือ แต่มีพื้นขั้นต่ำ — ข้อความขั้นต่อไปยาวๆ ต้องหด ไม่ใช่บีบแถบจนหาย */}
+          <div className="flex-1 min-w-[5rem]"><ProgressBar pct={pct} tone={tone} /></div>
+          <span className={`shrink-0 font-semibold tabular-nums ${closed ? 'text-green-600 dark:text-green-500' : 'text-warm-600 dark:text-disc-text'}`}>
             {pct}%
           </span>
-          <span className="min-w-0 text-xs text-warm-400 dark:text-disc-muted truncate">
+          <span className="min-w-0 truncate text-warm-400 dark:text-disc-muted">
             {closed
               ? <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-500"><Check size={12} />{stepText}</span>
               : stepText}

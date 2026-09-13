@@ -7,6 +7,7 @@ import { canAccessCaseProvince, canManageCases, isAdmin } from '@/lib/caseAccess
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
 import { smsConfigured } from '@/lib/sendSms.js'
+import { MAX_FILES_PER_CASE } from '@/lib/caseUploads.js'
 import { statusLabel, CASE_REJECT_REASONS, CASE_CATEGORIES, ALL_PROVINCES } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
 import CaseAiActions from '@/components/case/CaseAiActions.jsx'
@@ -112,12 +113,19 @@ export default async function CaseManageDetail({ params }) {
 
         {/* ── ขวา: ไฟล์แนบ (บนสุด เหมือนการ์ด "สื่อ" ของ posts) · จัดการเคส · ข้อมูลเคส · ผู้ร้องเรียน ── */}
         <div className="flex flex-col gap-6 min-w-0">
-          {attachments.length > 0 && (
+          {/* การ์ดนี้ต้องโชว์แม้ไม่มีไฟล์ ถ้าคนนี้แก้เคสได้ — ไม่งั้นเคสที่ยังไม่มีไฟล์เลย
+              จะไม่มีที่ให้กดแนบ (บั๊กเดิม: ซ่อนทั้งใบเมื่อ attachments.length === 0) */}
+          {(attachments.length > 0 || canEdit) && (
             <div className={cardCls}>
               <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-2">
                 {t('manage.attachmentsCount', { count: attachments.length })}
               </h2>
-              <CaseAttachmentGallery refId={c.ref} attachments={attachments} />
+              <CaseAttachmentGallery
+                refId={c.ref}
+                attachments={attachments}
+                canEdit={canEdit}
+                maxFiles={MAX_FILES_PER_CASE}
+              />
             </div>
           )}
 

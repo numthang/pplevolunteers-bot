@@ -852,6 +852,16 @@
       "stageClose": "Close the case",
       "doneLabel": "Closed",
       "rejectedLabel": "Rejected"
+    },
+    "attachments": {
+      "none": "No attachments yet",
+      "addButton": "Attach files",
+      "uploading": "Uploading…",
+      "full": "Up to {max} files per case",
+      "deleteButton": "Delete file",
+      "deleteConfirm": "Delete this file permanently? {name}",
+      "uploadFailed": "Upload failed",
+      "deleteFailed": "Delete failed"
     }
   },
   "docs": {

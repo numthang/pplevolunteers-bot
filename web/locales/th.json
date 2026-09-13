@@ -852,6 +852,16 @@
       "stageClose": "ปิดจบเรื่อง",
       "doneLabel": "ปิดจบแล้ว",
       "rejectedLabel": "ตีกลับแล้ว"
+    },
+    "attachments": {
+      "none": "ยังไม่มีไฟล์แนบ",
+      "addButton": "แนบไฟล์",
+      "uploading": "กำลังอัปโหลด…",
+      "full": "แนบได้สูงสุด {max} ไฟล์ต่อเคส",
+      "deleteButton": "ลบไฟล์",
+      "deleteConfirm": "ลบไฟล์นี้ถาวร? {name}",
+      "uploadFailed": "อัปโหลดไม่สำเร็จ",
+      "deleteFailed": "ลบไฟล์ไม่สำเร็จ"
     }
   },
   "docs": {

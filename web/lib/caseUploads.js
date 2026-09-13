@@ -1,5 +1,5 @@
 /**
- * Case attachments — เก็บไฟล์ภาพ/เสียง "นอก /public" เสิร์ฟผ่าน gated API เท่านั้น
+ * Case attachments — เก็บไฟล์ภาพ/เสียง/PDF "นอก /public" เสิร์ฟผ่าน gated API เท่านั้น
  * convention path เดียวกับ docs (cropDocument.js getUploadPath)
  */
 
@@ -8,7 +8,11 @@ import { writeFile, readFile, mkdir, unlink } from 'fs/promises'
 import { randomUUID } from 'crypto'
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+// ฟอร์มสาธารณะ — คนแจ้งเรื่องแนบได้ไม่เกินนี้ต่อการส่ง 1 ครั้ง
 export const MAX_FILES = 3
+// เพดานรวมต่อเคสสำหรับ **เจ้าหน้าที่** ที่แนบเพิ่มทีหลัง — นับจากไฟล์ที่มีอยู่จริงในเคส
+// ไม่ใช่จำนวนไฟล์ต่อคำขอ ไม่งั้นยิงทีละ 10 หลายรอบก็ทะลุเพดานได้
+export const MAX_FILES_PER_CASE = 10
 
 // mime → นามสกุลไฟล์ (allowlist — ปฏิเสธ mime อื่นทั้งหมด)
 const EXT_BY_MIME = {
@@ -19,6 +23,13 @@ const EXT_BY_MIME = {
   'audio/mp4': 'm4a',
   'audio/x-m4a': 'm4a',
   'audio/ogg': 'ogg',
+  'application/pdf': 'pdf',
+}
+
+// ไฟล์ที่ไม่ใช่รูป (pdf/เสียง) ต้องเสิร์ฟแบบบังคับดาวน์โหลด ไม่ใช่ inline —
+// origin เดียวกับเว็บ การเปิด PDF inline เปิดช่องให้เนื้อหาในไฟล์รันในบริบทของเรา
+export function isInlineSafeMime(mime) {
+  return typeof mime === 'string' && mime.startsWith('image/')
 }
 
 export function isAllowedMime(mime) {
@@ -88,7 +99,7 @@ export async function readCaseFile(relativePath) {
 }
 
 /**
- * ลบไฟล์แนบออกจากดิสก์ — ใช้ตอน **ลบเคสถาวร** เท่านั้น
+ * ลบไฟล์แนบออกจากดิสก์ — ใช้ตอน **ลบเคสถาวร** และตอน **ลบไฟล์แนบทีละใบ** (เจ้าหน้าที่กดลบในหน้าเคส)
  *
  * ⚠️ ต่างจาก posts ที่ปล่อยให้ `scripts/posts/gc-media.js` เก็บทีหลัง: โฟลเดอร์ `uploads/cases/`
  *    ไม่มี gc เลย และไฟล์เคสเป็น 1:1 ต่อแถว (ไม่มี snapshot/history อ้างซ้ำ) → ลบตรงนี้ได้เลย

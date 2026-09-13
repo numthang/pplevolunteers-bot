@@ -128,8 +128,11 @@
 
 ## 🛡️ Security
 
-- **Anonymous upload** (`POST /api/case`): allowlist mime (jpg/png/webp/mp3/m4a/ogg) + ≤10MB + ≤3 ไฟล์ + honeypot + rate limit (เบอร์ 3/วัน, IP 10/วัน)
+- **Anonymous upload** (`POST /api/case`): allowlist mime (jpg/png/webp/mp3/m4a/ogg/**pdf**) + ≤10MB + ≤3 ไฟล์ + honeypot + rate limit (เบอร์ 3/วัน, IP 10/วัน)
+- **Staff upload** (`POST /api/case/[ref]/attachments` · เพิ่ม 2026-09-13): gate `gateCase` (caseworker + scope จังหวัด) · allowlist/ขนาดเดียวกัน · เพดาน **10 ไฟล์ต่อเคส นับจากไฟล์ที่มีอยู่จริง** ไม่ใช่ต่อคำขอ
+- **ลบไฟล์ทีละใบ** (`DELETE …/attachments/[attId]`): ลบแถว + **unlink ไฟล์ทันที** (ไม่มี gc) · ไฟล์ที่มาจาก Discord ลบแล้วไม่กลับ เพราะ watermark เลื่อนไปข้างหน้าอย่างเดียว
 - ไฟล์แนบเก็บนอก `/public` เสิร์ฟผ่าน `/api/case/[ref]/attachments/[attId]` ที่ gate `caseworker` + scope
+  · ทุก response ใส่ `X-Content-Type-Options: nosniff` · **รูปเท่านั้นที่เสิร์ฟ inline** ที่เหลือ (pdf/เสียง) บังคับ `Content-Disposition: attachment` — origin เดียวกับเว็บ
 - ref random กัน enumerate · public page ref ผิด → 404 เป็นมิตร
 
 ---

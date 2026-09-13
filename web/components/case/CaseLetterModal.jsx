@@ -38,8 +38,11 @@ export default function CaseLetterModal({ refId, onClose }) {
   const [pdfBase64, setPdfBase64]   = useState(null)
   const [signerDefaults, setSignerDefaults] = useState({})
   const [deletingId, setDeletingId] = useState(null)
-  const bodyRef = useAutoGrow(fields?.body)
-  const attachmentsRef = useAutoGrow(fields?.attachments)
+  // ⚠️ ผูก `step` เข้าไปด้วย ไม่ใช่แค่ค่าในช่อง — กด "พรีวิว" แล้ว "ย้อนกลับ" ทำให้ textarea
+  //    ถูก unmount/mount ใหม่เป็น DOM node ใหม่ แต่ค่าเดิมไม่เปลี่ยน → effect ไม่ทำงาน
+  //    กล่องเลยกลับไปสูงเท่า default ทั้งที่ข้อความยาว (user เจอเอง)
+  const bodyRef = useAutoGrow(`${step}:${fields?.body ?? ''}`)
+  const attachmentsRef = useAutoGrow(`${step}:${fields?.attachments ?? ''}`)
 
   // โหลดรายการร่างที่บันทึกไว้ + ค่าเริ่มต้นผู้ลงนาม
   useEffect(() => {

@@ -264,6 +264,25 @@ export async function insertAttachment(caseId, orgId, {
 }
 
 /**
+ * ลบไฟล์แนบ 1 ใบ — คืน file_path ให้ route ไป unlink ต่อ (แบบเดียวกับ deleteCase)
+ *
+ * ⚠️ `uploads/cases/` ไม่มี gc → ลบแถวอย่างเดียว = ไฟล์ PII ค้างดิสก์แบบไม่มีใครอ้างถึงได้อีก
+ * ⚠️ ไฟล์ที่ sync มาจาก Discord ลบแล้วไม่กลับมา — `last_attachment_message_id` เลื่อนไปข้างหน้า
+ *    อย่างเดียว ไม่มีทาง reset (ดู timeline/refresh) → รอบ sync ถัดไปไม่กวาดข้อความเก่าซ้ำ
+ * @returns {Promise<string|null>} file_path ที่ต้องลบออกจากดิสก์ · null = ไม่มีแถวนี้/ไม่ใช่ของ org นี้
+ */
+export async function deleteAttachment(orgId, attId) {
+  const { rows } = await pool.query(
+    `DELETE FROM case_attachments a
+      USING cases c
+      WHERE a.id = $1 AND c.id = a.case_id AND c.org_id = $2
+      RETURNING a.file_path`,
+    [attId, orgId],
+  )
+  return rows[0]?.file_path ?? null
+}
+
+/**
  * เลื่อน watermark ของการนำเข้าไฟล์แนบ — **เส้นที่ 2 แยกจาก advanceSyncWatermark**
  *
  * เริ่มจาก NULL โดยตั้งใจ: รอบแรกกวาดตั้งแต่ข้อความแรกสุดของเธรด → ได้รูปเก่าที่เส้น
