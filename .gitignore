@@ -40,3 +40,16 @@ scripts/import/people-map.json
 
 # LibreOffice lock files (เกิดตอน convert docx→pdf)
 .~lock.*#
+
+# ── ข้อมูลส่วนบุคคล — repo นี้เป็น public ──────────────────────────────────
+# ไฟล์ชุดข้อมูลสมาชิก (เลขบัญชี/เบอร์/ชื่อจริง) ห้ามเข้า git เด็ดขาด
+# push ขึ้น public repo แล้ว "ลบทีหลัง" ไม่ได้ — blob ยังดึงได้ด้วย SHA + fork เก็บถาวร
+# วิธีใช้: วางไฟล์ไว้นอก repo หรือชื่อตามแพตเทิร์นนี้ แล้วส่ง path ให้สคริปต์
+*.xlsx
+*.xls
+*-bank-accounts*.csv
+payout-bank*
+เบี้ยเลี้ยง*
+# 2 ไฟล์นี้เป็นซอร์สจริง (ตารางตำบล + เทมเพลตนำเข้า kanban) ไม่ใช่ข้อมูลส่วนบุคคล
+!md/calling/ThepExcel-Thailand-Tambon.xlsx
+!scripts/import/kanban_import.xlsx
