@@ -6,6 +6,7 @@ import { Calculator, Search, X, ChevronDown } from 'lucide-react'
 import { calcMeals, FOOD_RATES, calcSpeakerCeiling, SPEAKER_RULES, calcVenueCeiling, TRAVEL_INDIVIDUAL_TIERS } from '@/config/fund69-rules.js'
 
 const TRAVEL_IN_PROVINCE_RATE = TRAVEL_INDIVIDUAL_TIERS[0].ceiling  // ในจังหวัด 300 บ./คน
+const DEFAULT_DURATION_MIN = 7 * 60  // งานที่ไม่ระบุเวลาเลิก → คิด 7 ชม. (> 6 ชม. = ได้ว่าง 2 มื้อ)
 
 const inputCls        = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
 const compactInputCls = 'border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-2.5 py-2 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
@@ -135,7 +136,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const [snackEnabled, setSnackEnabled] = useState(true)   // ค่าอาหารว่าง/เบรก default ติ๊ก
   const [travelEnabled, setTravelEnabled] = useState(true) // รายการเบิก default ติ๊ก
   const [venueType, setVenueType]       = useState('normal')   // ระดับงาน: ทั่วไป/โรงแรม (คุมเรทอาหาร·เบรก·สถานที่)
-  const [travelMode, setTravelMode]     = useState('individual')
+  const [travelMode, setTravelMode]     = useState('lump')
   const [speakerEnabled, setSpeakerEnabled] = useState(false)
   const [speakerCount, setSpeakerCount] = useState(1)
   const [speakerHours, setSpeakerHours] = useState(1)
@@ -196,15 +197,17 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     if (eventDate) {
       const startTime    = eventDate.split('T')[1] || '09:00'
       const startDateStr = eventDate.split('T')[0]
-      // ถ้าไม่มี eventEndDate → default end = start + 4 ชม.
+      // ถ้าไม่มี eventEndDate → default end = start + 7 ชม. (เคาะ 2026-09-13)
+      // ให้เกิน 6 ชม. ไว้ก่อน = เสนอมื้อ/ว่างเต็มสิทธิ์ ผู้ใช้ลบรายการที่ไม่เบิกเองได้
       let endTime, endDateStr
       if (eventEndDate) {
         endTime    = eventEndDate.split('T')[1] || '17:00'
         endDateStr = eventEndDate.split('T')[0]
       } else {
         const [sth, stm] = startTime.split(':').map(Number)
-        const endMins    = sth * 60 + stm + 240  // +4 ชม.
-        endTime    = `${String(Math.floor(endMins / 60) % 24).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
+        // clamp 23:59 กันเลยเที่ยงคืนแล้ว duration ติดลบ (งานเริ่มเย็น เช่น 19:00)
+        const endMins    = Math.min(sth * 60 + stm + DEFAULT_DURATION_MIN, 23 * 60 + 59)
+        endTime    = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
         endDateStr = startDateStr
       }
       const daysDiff = (new Date(endDateStr) - new Date(startDateStr)) / 86400000
