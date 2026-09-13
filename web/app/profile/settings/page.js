@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { BANKS } from '@/config/banks.js'
 import Image from 'next/image'
 import { Copy, Check, Link2, Unlink, KeyRound, Phone } from 'lucide-react'
 import { startRegistration } from '@simplewebauthn/browser'
@@ -19,11 +20,13 @@ const FIELDS = [
   { key: 'google_id',  label: 'Google Email',           placeholder: '' },
 ]
 
+// ⚠️ ธนาคารต้องเก็บเป็น "รหัส" ไม่ใช่ชื่อพิมพ์เอง — รายการโอนอ้างรหัส และ prod เคยมี "กสิรกรไทย" พิมพ์ผิดปนอยู่
 const BANK_FIELDS = [
-  { key: 'bank_name',     label: 'ธนาคาร',              placeholder: 'เช่น กรุงไทย, กสิกร' },
-  { key: 'account_no',    label: 'เลขบัญชี',            placeholder: '1234567890' },
-  { key: 'account_holder', label: 'ชื่อบัญชี',          placeholder: '' },
+  { key: 'account_no',    label: 'เลขบัญชี',   placeholder: '1234567890' },
+  { key: 'account_holder', label: 'ชื่อบัญชี', placeholder: '' },
 ]
+
+const PROMPTPAY_FIELD = { key: 'promptpay_id', label: 'พร้อมเพย์ (เบอร์โทร/เลขบัตร)', placeholder: '0891234567' }
 
 // ที่อยู่: house_no/moo/soi/road/zipcode เป็น text ธรรมดา · amphoe/tambon ผูกกับ dropdown cascading (จังหวัดแยก state ชื่อ primaryProvince)
 const ADDRESS_KEYS = ['house_no', 'moo', 'soi', 'road', 'amphoe', 'tambon', 'zipcode']
@@ -521,7 +524,55 @@ export default function ProfilePage() {
         {/* Bank Info Tab */}
         {activeTab === 'bank' && (
           <div className="flex flex-col gap-4">
-            {BANK_FIELDS.map(({ key, label, placeholder }) => (
+            <div>
+              <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                วิธีรับเงิน
+              </label>
+              <select
+                value={form.payment_method || 'bank'}
+                onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+              >
+                <option value="bank">โอนเข้าบัญชีธนาคาร</option>
+                <option value="promptpay">พร้อมเพย์</option>
+              </select>
+            </div>
+
+            {(form.payment_method || 'bank') === 'promptpay' ? (
+              <div>
+                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                  {PROMPTPAY_FIELD.label}
+                </label>
+                <input
+                  type="text"
+                  value={form.promptpay_id || ''}
+                  onChange={e => setForm(f => ({ ...f, promptpay_id: e.target.value }))}
+                  placeholder={PROMPTPAY_FIELD.placeholder}
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                  ธนาคาร
+                </label>
+                <select
+                  value={form.bank_code || ''}
+                  onChange={e => {
+                    const code = e.target.value
+                    const bank = BANKS.find(b => b.code === code)
+                    // เขียน bank_name คู่ไปด้วย — หน้าอื่นที่ยังอ่านชื่ออยู่จะได้ไม่ว่าง
+                    setForm(f => ({ ...f, bank_code: code, bank_name: bank?.name || '' }))
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                >
+                  <option value="">— เลือกธนาคาร —</option>
+                  {BANKS.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {(form.payment_method || 'bank') === 'bank' && BANK_FIELDS.map(({ key, label, placeholder }) => (
               <div key={key}>
                 <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
                   {label}

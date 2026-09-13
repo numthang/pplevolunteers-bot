@@ -1,18 +1,15 @@
-const BANKS = {
-  'กสิกรไทย':        { abbr: 'K',    bg: '#00b050', text: '#fff' },
-  'ไทยพาณิชย์':      { abbr: 'SCB',  bg: '#4e2d8f', text: '#fff' },
-  'กรุงเทพ':         { abbr: 'BBL',  bg: '#1e3a7b', text: '#fff' },
-  'กรุงไทย':         { abbr: 'KTB',  bg: '#00aeef', text: '#fff' },
-  'กรุงศรีอยุธยา':   { abbr: 'BAY',  bg: '#fdb827', text: '#000' },
-  'ทหารไทยธนชาต':   { abbr: 'TTB',  bg: '#0066b3', text: '#fff' },
-  'ออมสิน':          { abbr: 'GSB',  bg: '#e40078', text: '#fff' },
-  'ธ.ก.ส.':          { abbr: 'BAAC', bg: '#006633', text: '#fff' },
-  'PayPal':           { abbr: 'PP',   bg: '#003087', text: '#fff' },
-  'เงินสด':          { abbr: '฿',    bg: '#6b7280', text: '#fff' },
+import { resolveBank } from '@/config/banks.js'
+
+// รายการที่ไม่ใช่ธนาคารจริง (ไม่มีรหัส ธปท.) — ใช้แสดงผลอย่างเดียว โอนกลุ่มไม่ได้
+const EXTRA = {
+  'PayPal': { abbr: 'PP', bg: '#003087', text: '#fff' },
+  'เงินสด': { abbr: '฿',  bg: '#6b7280', text: '#fff' },
 }
 
-export default function BankBadge({ bank, size = 32 }) {
-  const info = BANKS[bank] || (bank == null ? BANKS['เงินสด'] : null)
+export default function BankBadge({ bank, bankCode, size = 32 }) {
+  const info = resolveBank({ bank_code: bankCode, bank_name: bank })
+    || EXTRA[bank]
+    || (bank == null && bankCode == null ? EXTRA['เงินสด'] : null)
   if (!info) return null
 
   const fontSize = size <= 28 ? 9 : size <= 36 ? 10 : 12

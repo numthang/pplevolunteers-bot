@@ -67,7 +67,7 @@ export async function GET() {
   const { rows } = rowId ? await pool.query(
     `SELECT om.nickname, u.firstname, u.lastname, om.member_id, om.specialty, om.amphoe, om.province, om.region,
             u.phone, u.phone_verified_at, u.line_id, u.google_id, om.interests, u.username, om.display_name, om.primary_province,
-            om.bank_name, om.account_no, om.account_holder,
+            om.bank_name, om.bank_code, om.account_no, om.account_holder, om.payment_method, om.promptpay_id,
             om.house_no, om.moo, om.soi, om.road, om.tambon, om.zipcode
      FROM org_members om JOIN users u ON u.id = om.user_id
      WHERE om.id = $1`,
@@ -120,7 +120,8 @@ export async function PATCH(req) {
 
   // identity fields → users (by discord_id) · profile fields → org_members (by user_id+guild)
   const USER_COLS   = ['firstname', 'lastname', 'phone', 'line_id', 'google_id']
-  const MEMBER_COLS = ['nickname', 'member_id', 'specialty', 'amphoe', 'primary_province', 'bank_name', 'account_no', 'account_holder',
+  const MEMBER_COLS = ['nickname', 'member_id', 'specialty', 'amphoe', 'primary_province', 'bank_name', 'bank_code', 'account_no', 'account_holder',
+                       'payment_method', 'promptpay_id',
                        'house_no', 'moo', 'soi', 'road', 'tambon', 'zipcode']
 
   const userUpd = {}, memberUpd = {}

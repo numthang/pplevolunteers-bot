@@ -68,6 +68,7 @@ const ICONS = {
 const FINANCE_LINKS = [
   { href: '/finance',               label: 'Overview',    icon: 'overview', exact: true },
   { href: '/finance/transactions',  label: 'Transactions', icon: 'transactions' },
+  { href: '/finance/payouts',       label: 'Payouts',     icon: 'accounts' },
   { href: '/finance/categories',    label: 'Categories',  icon: 'categories' },
   { href: '/finance/report',        label: 'Report',      icon: 'report' },
 ]
