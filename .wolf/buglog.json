@@ -8977,6 +8977,62 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-13T11:55:50.541028Z"
+    },
+    {
+      "id": "bug-520",
+      "timestamp": "2026-09-14T04:35:02.772449Z",
+      "error_message": "relation \"post_assignees\" does not exist (npm run migrate up) ตามด้วย column \"s.archived_at\" does not exist (หน้าแรก /) — DB เครื่อง local ค้างอยู่กลางไฟล์ archive scripts/migration/migration.sql",
+      "file": "scripts/migration/migration.sql",
+      "root_cause": "DB เครื่อง local (Mac, DB_NAME=platfor) ถูก fake-apply baseline.sql ไว้แต่ไม่เคยรัน scripts/migration/migration.sql จริงจนสุดท้าย — schema ค้างอยู่ก่อนช่วง 2026-09-03 (เฟส B kanban_card_helpers→kanban_card_assignees, รอบสอง search_path fix, เฟส C post_episodes.owner_user_id→created_by + สร้าง post_assignees) ทั้งที่ prod รันสามบล็อกนี้ไปแล้ว (อยู่เหนือ marker \"production ทำถึงตรงนี้\" บรรทัด 1959) — migrations/*.sql ที่ตามมาสมมติว่า 3 บล็อกนี้มีอยู่แล้ว เลยพังทันทีที่ table/column ที่คาดหวังไม่มีจริง",
+      "fix": "pg_dump backup ตาราง kanban_cards/kanban_card_helpers/post_episodes ก่อน แล้ว replay 3 บล็อกที่ขาด (บรรทัด 1661-1748, 1752-1795, 1807-1852 ของ scripts/migration/migration.sql) ตรงๆ ผ่าน node pg client ตามลำดับเดิม จากนั้น npm run migrate up ต่อได้ปกติ (14 migration ที่เหลือผ่านหมด) · บทเรียน: การ fake-apply baseline.sql ต้องเช็คว่า schema ตรงกับ migration.sql ทั้งไฟล์จริงๆ ก่อน ไม่ใช่แค่ตอนที่ fake — ไฟล์ archive นี้ยังถูกต่อท้ายเรื่อยๆ หลัง cutover แล้ว DB ที่ fake ไปก่อนหน้าจะตกขบวนเงียบๆ โดยไม่มี error จนกว่าจะมี migration จริงมาชนกับ gap · แก้รอบแรกเฉพาะ 3 บล็อก (เฟส B/รอบสอง/เฟส C) ยังไม่พอ — เจอ gap อีกจุด (cases.archived_at, case_config.default_province, case_letter_config.logo_path จากช่วง 2026-08-31/09-01 ที่ข้ามไป) สุดท้ายแก้ถูกทางด้วยการ pg_dump backup แล้ว psql -v ON_ERROR_STOP=0 -f scripts/migration/migration.sql รันทั้งไฟล์รวดเดียว (ทั้งไฟล์เขียนให้ idempotent — IF NOT EXISTS/ON CONFLICT/self-guarding WHERE เกือบหมด) ส่วนที่ error จริงคือ \"อยู่แล้ว\"/\"ไม่มีแล้ว\" (เพราะรันซ้ำทับของที่มีอยู่ หรือคอลัมน์ที่ rename/drop ไปแล้วจากรอบแรก) ไม่มี error แปลกใหม่ · บทเรียนใหม่: ถ้าเจอ DB local ค้างกลาง archive อย่าแก้ทีละจุดตามอาการ error — รันทั้งไฟล์รวดเดียวตั้งแต่แรกเลย เพราะไฟล์นี้ออกแบบให้ replay ซ้ำได้ปลอดภัย ประหยัดกว่าการวน error ทีละจุด",
+      "tags": [
+        "baseline-drift",
+        "kanban",
+        "local-db-setup",
+        "node-pg-migrate",
+        "full-replay",
+        "migration",
+        "idempotent-migration",
+        "posts"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-14T04:35:02.772449Z"
+    },
+    {
+      "id": "bug-521",
+      "timestamp": "2026-09-14T10:56:28.678Z",
+      "error_message": "ข้อความประกาศเปิดโพสต์ใหม่/นำเข้าโพสต์ใน Discord ไม่มีลิงก์ที่กดได้ — เห็นแค่ [🖼️ 1057](url) เป็นตัวหนังสือดิบ",
+      "file": "handlers/basketHandler.js, handlers/postImportHandler.js, handlers/aiThreadHandler.js, handlers/basketAiHandler.js",
+      "root_cause": "postLabel()/webUrl ใช้ masked markdown link [text](url) ใน message content — syntax นี้ Discord render เป็นลิงก์คลิกได้แค่ใน embed เท่านั้น ข้อความปกติ (content) โชว์เป็นตัวหนังสือดิบพร้อมวงเล็บ กดไม่ได้เลย · เคยเข้าใจผิดว่า masked link \"ไม่ unfurl อยู่แล้ว\" (คอมเมนต์เดิม) ทั้งที่จริงคือมันไม่ render เป็นลิงก์ตั้งแต่ต้น",
+      "fix": "เปลี่ยนเป็นส่ง URL เปล่าต่อท้ายข้อความ (Discord auto-linkify ให้เอง) ห่อด้วย <url> กัน auto-embed unfurl แทนการพึ่ง MessageFlags.SuppressEmbeds ระดับข้อความ (ซึ่งบัง embed อื่นในข้อความเดียวกันไปด้วย ใช้ร่วมกับ buildBasketPayload ไม่ได้) · รวม base URL lookup ให้เช็ค guild_config web_base_url ก่อน env WEB_BASE_URL ให้ตรงทรงกับ db/case.js และ db/kanbanCards.js",
+      "tags": [
+        "discord",
+        "markdown",
+        "posts",
+        "basket",
+        "link",
+        "masked-link"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-14T10:56:28.679Z"
+    },
+    {
+      "id": "bug-522",
+      "timestamp": "2026-09-14T18:17:18.962Z",
+      "error_message": "backfillBankInfo: แถวที่ไม่มีรหัสธนาคารถูกเขียนเป็น bank_code = \"000\" เงียบๆ + อ่านผิดชีต (ชีตแรกเป็นตารางเบี้ยเลี้ยงรายเดือน ไม่ใช่ชีตข้อมูลบัญชี)",
+      "file": "scripts/finance/backfillBankInfo.mjs",
+      "root_cause": "1) digits('').padStart(3,'0') = '000' ยาว 3 → ผ่านการตรวจ bankCode.length !== 3 ทั้งที่ไม่มีรหัสเลย 7 คนได้ธนาคารมั่ว  2) อ่าน wb.SheetNames[0] ตรงๆ แต่ไฟล์จริงมี 10 ชีต ชีตข้อมูลบัญชีคือ Sheet4",
+      "fix": "ตรวจด้วย bankByCode(code) จาก web/config/banks.js แทนการนับความยาว · ไม่มีรหัสให้ถอยไปหาจากชื่อไทยด้วย bankByName (มี alias กสิกร/กรุงศรี/ธกส อยู่แล้ว) · เลือกชีตจากหัวตารางที่มีคำว่า 'เลขบัญชี' + มี --sheet ให้ระบุเอง · 'วิธีรับเงิน' ว่างแล้วช่องชื่อธนาคารเขียน PromptPay ให้นับเป็นพร้อมเพย์",
+      "tags": [
+        "finance",
+        "payouts",
+        "script",
+        "xlsx",
+        "bank",
+        "data-integrity"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-14T18:17:18.962Z"
     }
   ]
 }

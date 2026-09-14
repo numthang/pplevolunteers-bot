@@ -14,11 +14,14 @@
  *   discord username · แก้เป็น username นี้ 👉 · discord_id
  *   เลขบัญชี/พร้อมเพย์ · รหัสธนาคาร · วิธีรับเงิน · ชื่อจริง (ที่ให้มา)
  *   ถ้ามีค่าในช่อง "แก้เป็น username นี้ 👉" จะชนะ username/discord_id ที่ระบบเดาไว้เสมอ
+ *   — ช่องนั้นใส่ discord_id (ตัวเลขล้วน 17-20 หลัก) แทน username ก็ได้
+ *   — เทียบ username แบบตัด "." ท้ายทิ้ง เพราะ Google Sheets กินจุดท้ายเซลล์ ("270879." → "270879")
  *
  * รัน:
  *   node --import ./scripts/smoke/_envload.mjs scripts/finance/backfillBankInfo.mjs <file.xlsx>           # dry-run
  *   node --import ./scripts/smoke/_envload.mjs scripts/finance/backfillBankInfo.mjs <file.xlsx> --apply   # เขียนจริง
- *   … --org 1     ระบุ org (ค่าเริ่มต้น 1)
+ *   … --org 1            ระบุ org (ค่าเริ่มต้น 1)
+ *   … --sheet Sheet4     ระบุชีตเอง (ค่าเริ่มต้น: ชีตแรกที่มีหัวตาราง "เลขบัญชี")
  */
 
 import { createRequire } from 'node:module'
@@ -27,14 +30,20 @@ const require = createRequire(import.meta.url)
 // xlsx เป็น CJS — ต้องผ่าน createRequire (ลอก pattern จาก scripts/import/kanbanFromAppflowy.mjs)
 const XLSX = require('xlsx')
 const pg = require('pg')
+// ใช้ตารางธนาคารตัวเดียวกับเว็บ — อย่าทำตารางรหัสธนาคารซ้ำที่สอง
+const { bankByName, bankByCode } = await import('../../web/config/banks.js')
 
 const args = process.argv.slice(2)
-const file = args.find(a => !a.startsWith('--'))
+const flagValue = flag => (args.includes(flag) ? String(args[args.indexOf(flag) + 1] ?? '') : '')
+// ค่าที่ตามหลัง --org/--sheet ไม่ใช่ชื่อไฟล์
+const valueArgs = new Set(['--org', '--sheet'].map(f => args.indexOf(f) + 1).filter(i => i > 0).map(i => args[i]))
+const file = args.find(a => !a.startsWith('--') && !valueArgs.has(a))
 const APPLY = args.includes('--apply')
-const ORG_ID = Number(args[args.indexOf('--org') + 1]) || 1
+const ORG_ID = Number(flagValue('--org')) || 1
+const SHEET = flagValue('--sheet').trim()
 
 if (!file) {
-  console.error('usage: backfillBankInfo.mjs <file.xlsx> [--apply] [--org 1]')
+  console.error('usage: backfillBankInfo.mjs <file.xlsx> [--apply] [--org 1] [--sheet <ชื่อชีต>]')
   process.exit(1)
 }
 
@@ -56,8 +65,34 @@ const col = (row, ...names) => {
 }
 
 const wb = XLSX.readFile(file)
-const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
-console.log(`อ่าน ${rows.length} แถวจาก ${path.basename(file)} · org ${ORG_ID} · ${APPLY ? '⚠️ APPLY (เขียนจริง)' : 'DRY-RUN'}\n`)
+
+// ⚠️ ไฟล์จริงมีหลายชีต (เดือนละชีตของตารางเบี้ยเลี้ยง) — ชีตแรกไม่ใช่ชีตข้อมูลบัญชี
+//    เลือกชีตที่มีหัวตาราง "เลขบัญชี" หรือระบุเองด้วย --sheet
+const headerOf = name => (XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 })[0] || []).map(String)
+let sheetName = SHEET
+if (sheetName) {
+  if (!wb.Sheets[sheetName]) {
+    console.error(`ไม่มีชีตชื่อ "${sheetName}" — ในไฟล์มี: ${wb.SheetNames.join(' · ')}`)
+    process.exit(1)
+  }
+} else {
+  sheetName = wb.SheetNames.find(n => headerOf(n).some(h => h.includes('เลขบัญชี')))
+  if (!sheetName) {
+    console.error(`หาชีตที่มีคอลัมน์ "เลขบัญชี" ไม่เจอ — ในไฟล์มี: ${wb.SheetNames.join(' · ')}`)
+    console.error('ระบุชีตเองด้วย --sheet <ชื่อชีต>')
+    process.exit(1)
+  }
+}
+
+const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' })
+console.log(`อ่าน ${rows.length} แถวจากชีต "${sheetName}" (${path.basename(file)}) · org ${ORG_ID} · ${APPLY ? '⚠️ APPLY (เขียนจริง)' : 'DRY-RUN'}\n`)
+
+// นับก่อน — 'Applied' ไม่ได้แปลว่าข้อมูลเปลี่ยน ต้องเทียบตัวเลขก่อน/หลังเสมอ
+const { rows: before } = await pool.query(
+  `SELECT COUNT(DISTINCT user_id)::int AS people
+     FROM org_members
+    WHERE org_id = $1 AND COALESCE(account_no, promptpay_id) IS NOT NULL`, [ORG_ID])
+console.log(`ก่อนรัน: มีข้อมูลรับเงินอยู่แล้ว ${before[0].people} คนใน org ${ORG_ID}\n`)
 
 const skipped = []
 const ambiguous = []
@@ -68,23 +103,38 @@ for (const r of rows) {
   const acct = digits(col(r, 'เลขบัญชี'))
   if (!acct) { skipped.push([label, 'ไม่มีเลขบัญชี']); continue }
 
-  const isPromptpay = col(r, 'วิธีรับเงิน').includes('พร้อมเพย์')
-  const bankCode = digits(col(r, 'รหัสธนาคาร')).padStart(3, '0')
+  // ช่อง "วิธีรับเงิน" ว่างได้ — บางแถวไปเขียนไว้ที่ช่องชื่อธนาคารแทน (เจอจริง: "PromptPay")
+  const method = col(r, 'วิธีรับเงิน')
+  const bankRaw = col(r, 'ธนาคาร (ที่ให้มา)', 'ธนาคาร')
+  const isPromptpay = method.includes('พร้อมเพย์') || (!method && /promptpay|พร้อมเพย์/i.test(bankRaw))
 
-  if (!isPromptpay && bankCode.length !== 3) { skipped.push([label, 'ไม่มีรหัสธนาคาร']); continue }
+  // ⛔ ห้าม padStart ช่องว่างตรงๆ — ''.padStart(3,'0') = '000' ผ่านการตรวจความยาวไปเงียบๆ
+  //    ทั้งที่ไม่มีรหัส แล้วไฟล์โอนกลุ่มจะได้ธนาคารมั่ว → ไม่มีรหัสให้ถอยไปหาจากชื่อไทยแทน
+  const rawCode = digits(col(r, 'รหัสธนาคาร'))
+  const bankCode = rawCode ? rawCode.padStart(3, '0') : (bankByName(bankRaw)?.code || '')
+
+  if (!isPromptpay && !bankByCode(bankCode)) {
+    skipped.push([label, rawCode
+      ? `รหัสธนาคาร ${bankCode} ไม่อยู่ในตาราง web/config/banks.js`
+      : `ไม่มีรหัสธนาคาร${bankRaw ? ` และชื่อ "${bankRaw}" ไม่อยู่ในตาราง` : ''}`])
+    continue
+  }
   if (isPromptpay && ![10, 13].includes(acct.length)) { skipped.push([label, `เลขพร้อมเพย์ ${acct.length} หลัก`]); continue }
 
   // ช่องแก้มือชนะเสมอ — เป็นคำตอบสุดท้ายจากคนที่รู้จักตัวจริง
-  const fixUser = col(r, 'แก้เป็น username', 'แก้ discord')
-  const username = fixUser || col(r, 'discord username')
-  const discordId = fixUser ? '' : digits(col(r, 'discord_id'))
+  // ใส่ได้ทั้ง username และ discord_id (ตัวเลขล้วน 17-20 หลัก) — กรอกช่องเดียวจบ
+  const fixRaw = col(r, 'แก้เป็น username', 'แก้ discord')
+  const fixIsId = /^\d{17,20}$/.test(fixRaw)
+  const fixUser = fixIsId ? '' : fixRaw
+  const username = fixUser || (fixRaw ? '' : col(r, 'discord username'))
+  const discordId = fixIsId ? fixRaw : (fixUser ? '' : digits(col(r, 'discord_id')))
 
   if (!username && !discordId) { skipped.push([label, 'ไม่มี username/discord_id']); continue }
 
   const { rows: found } = await pool.query(
     `SELECT DISTINCT u.id, u.username, u.discord_id, u.firstname, u.lastname
        FROM users u JOIN org_members om ON om.user_id = u.id AND om.org_id = $3
-      WHERE ($1 <> '' AND lower(u.username) = lower($1))
+      WHERE ($1 <> '' AND rtrim(lower(u.username), '.') = rtrim(lower($1), '.'))
          OR ($2 <> '' AND u.discord_id = $2)`,
     [username, discordId, ORG_ID]
   )
@@ -97,6 +147,7 @@ for (const r of rows) {
     user: found[0],
     payment_method: isPromptpay ? 'promptpay' : 'bank',
     bank_code: isPromptpay ? null : bankCode,
+    bank_name: isPromptpay ? null : (bankByCode(bankCode)?.name || null),
     account_no: isPromptpay ? null : acct,
     promptpay_id: isPromptpay ? acct : null,
     account_holder: col(r, 'ชื่อจริง (ที่ให้มา)') || null,
@@ -138,7 +189,7 @@ for (const p of planned) {
             account_holder = COALESCE(account_holder, $6)
       WHERE user_id = $7 AND org_id = $8`,
     [p.payment_method, p.bank_code, p.account_no, p.promptpay_id,
-     null, p.account_holder, p.user.id, ORG_ID]
+     p.bank_name, p.account_holder, p.user.id, ORG_ID]
   )
   updated += rowCount
 }
