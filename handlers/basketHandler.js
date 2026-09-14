@@ -118,13 +118,18 @@ function stripDiscordMarkdown(text) {
 
 /**
  * ป้ายลิงก์โพสต์ — ทรงเดียวกับการ์ด kanban: ไอคอนสื่อ + เลขโพสต์ (user เคาะ 2026-09-05)
- * ไม่ตั้ง WEB_BASE_URL → ตกเป็นตัวหนา ข้อความไม่พัง
+ * base URL: guild_config 'web_base_url' ก่อน แล้วค่อยตกไป .env WEB_BASE_URL (ทรงเดียวกับ db/case.js, db/kanbanCards.js)
+ * ไม่ตั้งอะไรเลย → ตกเป็นตัวหนา ข้อความไม่พัง
+ * ⚠️ (แก้ 2026-09-14) เดิมใช้ masked link `[text](url)` — Discord render แบบนี้ได้แค่ใน embed
+ *    ในข้อความปกติ (content) จะโชว์เป็นตัวหนังสือ `[🖼️ 1057](https://...)` เฉยๆ กดไม่ได้เลย
+ *    → ส่ง URL เปล่าต่อท้ายแทน Discord auto-linkify ให้เอง กดได้จริง
+ *    ห่อด้วย `<url>` กัน auto-embed unfurl (การ์ดพรีวิวใหญ่) โดยไม่ต้องพึ่ง MessageFlags.SuppressEmbeds
+ *    ระดับข้อความ — ใช้ได้แม้ข้อความนั้นมี embed อื่นแนบอยู่ด้วย (SuppressEmbeds จะบังทุก embed ในข้อความ)
  */
-function postLabel(episodeId) {
-  const url = process.env.WEB_BASE_URL && episodeId
-    ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
-    : null;
-  return url ? `[🖼️ ${episodeId}](${url})` : `**🖼️ ${episodeId}**`;
+async function postLabel(guildId, episodeId) {
+  const base = (await getSetting(guildId, 'web_base_url')) || process.env.WEB_BASE_URL;
+  const url = base && episodeId ? `${String(base).replace(/\/$/, '')}/posts/${episodeId}` : null;
+  return url ? `🖼️ ${episodeId} — <${url}>` : `**🖼️ ${episodeId}**`;
 }
 
 /**
@@ -136,8 +141,8 @@ function postLabel(episodeId) {
  *    เคสจริง 2026-09-04: ปุ่ม "🧺 ใช้เป็น caption ในตะกร้า" ใต้ผล AI สรุปเธรด เปิดโพสต์ 1052
  *    + การ์ด KB-1280 โดยไม่แจ้งอะไรเลย — user นึกว่าระบบสร้างเองมั่ว ต้องมาไล่ DB ถึงรู้ว่าตัวเองกด
  */
-function openedPostLine(episodeId, created) {
-  return created ? `\nเปิดโพสต์ใหม่ของห้องนี้แล้ว → ${postLabel(episodeId)}` : '';
+async function openedPostLine(guildId, episodeId, created) {
+  return created ? `\nเปิดโพสต์ใหม่ของห้องนี้แล้ว → ${await postLabel(guildId, episodeId)}` : '';
 }
 
 function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
@@ -479,12 +484,12 @@ async function handleBasketAdd(interaction) {
   /**
    * ลิงก์แบ็ค — **แจ้งครั้งเดียวตอนเปิดโพสต์ใหม่** (user เคาะ 2026-09-05 · ทรงเดียวกับ kanban/cases)
    * หย่อนเพิ่มเข้าใบเดิมไม่แจ้งซ้ำ: ปุ่ม 🖼️ จัดการสื่อ ใน embed ติดมาทุกครั้งอยู่แล้ว
-   * ใช้ลิงก์ตัวเดียวกับปุ่มนั้น (`/posts/{id}`) · ไม่ตั้ง WEB_BASE_URL → ตกเป็นตัวหนา ข้อความไม่พัง
+   * ใช้ลิงก์ตัวเดียวกับปุ่มนั้น (`/posts/{id}`) · ไม่ตั้งอะไรเลย → ตกเป็นตัวหนา ข้อความไม่พัง
    * ⛔ ห้ามใส่ MessageFlags.SuppressEmbeds ที่ editReply นี้ — จะกลืน embed ตะกร้าไปด้วย
-   *    (masked link `[x](url)` ไม่ unfurl อยู่แล้ว ไม่ต้องกัน)
+   *    (postLabel ห่อ URL ด้วย `<>` กัน unfurl เองแล้ว ไม่ต้องพึ่ง flag นี้)
    */
-  const openedLabel = postLabel(episodeId);
-  const openedLine = openedPostLine(episodeId, createdNew);
+  const openedLabel = await postLabel(guildId, episodeId);
+  const openedLine = await openedPostLine(guildId, episodeId, createdNew);
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${openedLine}`, ...payload });
@@ -938,7 +943,7 @@ async function handleBasketCaptionEditModal(interaction) {
 
   const basket = await getBasket(guildId, channelId);
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
-  await interaction.editReply({ content: `✅ แก้ caption แล้ว${openedPostLine(episodeId, created)}`, ...payload });
+  await interaction.editReply({ content: `✅ แก้ caption แล้ว${await openedPostLine(guildId, episodeId, created)}`, ...payload });
 }
 
 // ─── สร้าง Discord Event จากโพสต์ ────────────────────────────────────────────

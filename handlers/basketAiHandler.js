@@ -177,7 +177,7 @@ async function handleBasketAiAppendModal(interaction) {
 
   const basket  = await getBasket(interaction.guildId, interaction.channelId);
   const payload = await buildBasketPayload(basket, interaction.guildId, interaction.channelId, interaction.user.id);
-  await interaction.reply({ content: `✅ ต่อท้าย caption แล้ว${openedPostLine(episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `✅ ต่อท้าย caption แล้ว${await openedPostLine(interaction.guildId, episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
 }
 
 // ─── 3. กดแทนที่ → modal pre-fill AI text ให้ confirm/แก้ก่อนบันทึก ────────────
@@ -216,7 +216,7 @@ async function handleBasketAiReplaceModal(interaction) {
 
   const basket  = await getBasket(guildId, channelId);
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
-  await interaction.reply({ content: `✅ แทนที่ caption แล้ว${openedPostLine(episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `✅ แทนที่ caption แล้ว${await openedPostLine(guildId, episodeId, created)}`, ...payload, flags: MessageFlags.Ephemeral });
 }
 
 module.exports = {

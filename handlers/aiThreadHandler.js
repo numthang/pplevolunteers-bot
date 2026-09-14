@@ -165,7 +165,7 @@ async function handleAiThreadAddCaption(interaction) {
   const basket  = await getBasket(data.guildId, data.channelId);
   const payload = await buildBasketPayload(basket, data.guildId, data.channelId, interaction.user.id);
   await interaction.reply({
-    content: `✅ หยิบลงตะกร้าสื่อแล้ว (แทนที่ caption เดิม)${openedPostLine(episodeId, created)}`,
+    content: `✅ หยิบลงตะกร้าสื่อแล้ว (แทนที่ caption เดิม)${await openedPostLine(data.guildId, episodeId, created)}`,
     ...payload,
     flags: MessageFlags.Ephemeral,
   });

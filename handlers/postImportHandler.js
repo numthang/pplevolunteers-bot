@@ -8,6 +8,7 @@ const { callAI } = require('../services/aiSummarize');
 const { refreshAttachmentUrls } = require('../services/discordAttachments');
 const { downloadPending } = require('../db/mediaBasket');
 const { createImportedPost, attachImages } = require('../db/postsImport');
+const { getSetting } = require('../db/settings');
 
 // รูปเท่านั้นสำหรับรุ่นแรก — ไม่รองรับวิดีโอ/ไฟล์อื่น (ขยายทีหลังได้ถ้าต้องการ)
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)(?:[?#]|$)/i;
@@ -116,10 +117,14 @@ async function handlePostImportModal(interaction) {
     return interaction.editReply({ content: '❌ สร้างโพสต์ไม่สำเร็จ' });
   }
 
-  const webUrl = process.env.WEB_BASE_URL ? `${process.env.WEB_BASE_URL.replace(/\/$/, '')}/posts/${post.id}` : null;
+  // base URL: guild_config 'web_base_url' ก่อน แล้วค่อยตกไป .env WEB_BASE_URL (ทรงเดียวกับ db/case.js, db/kanbanCards.js)
+  const base = (await getSetting(interaction.guildId, 'web_base_url')) || process.env.WEB_BASE_URL;
+  const webUrl = base ? `${String(base).replace(/\/$/, '')}/posts/${post.id}` : null;
   try {
+    // masked link `[text](url)` ไม่คลิกได้ในข้อความปกติ (ใช้ได้แค่ใน embed) — ส่ง URL เปล่าแทน
+    // ห่อ `<>` กัน auto-embed unfurl โดยไม่ต้องพึ่ง SuppressEmbeds
     await thread.send({
-      content: `📝 นำเข้าเป็นโพสต์แล้ว${webUrl ? ` · [แก้ไข](${webUrl})` : ''}`,
+      content: `📝 นำเข้าเป็นโพสต์แล้ว${webUrl ? ` · แก้ไข: <${webUrl}>` : ''}`,
       flags: MessageFlags.SuppressEmbeds,
     });
   } catch { /* best-effort */ }
