@@ -97,28 +97,6 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          {/* สถานะ + ถังขยะ อยู่แถวบนขวาลำพัง · หัวข้อลงบรรทัดใหม่เต็มความกว้าง
-              (เคาะ 2026-09-13) — ของเดิมหัวข้อแชร์บรรทัดกับป้ายสถานะ เหลือที่ไม่กี่ตัวอักษรบนมือถือ
-              แล้วโดน truncate จนอ่านไม่รู้เรื่อง */}
-          <div className="flex items-center justify-end gap-2">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
-              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[c.status] || 'bg-gray-300'}`} />
-              {statusText}
-            </span>
-            <span className="text-xs text-warm-400 dark:text-disc-muted hidden sm:inline">
-              {fmtDate(c.created_at)}
-            </span>
-            <CaseDeleteButton
-              refId={c.ref}
-              title={c.title || c.ref}
-              archived={archived}
-              canPurge={canPurge}
-              counts={{ timeline: c.timeline_count || 0, attachments: c.attachment_count || 0 }}
-              variant="icon"
-              redirectOnPurge={false}
-            />
-          </div>
-
           {/* ⛔ `truncate`/`line-clamp` ต้องอยู่ที่ <a> ไม่ใช่ที่ <h3> — <a> เป็น inline กล่องมันกว้าง
               เท่าข้อความจริง แม้พ่อจะ overflow-hidden ให้ (ตาไม่เห็น แต่ mobileAudit จับได้ว่าล้นจอ) */}
           <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text [@media(hover:hover)]:group-hover:text-orange transition">
@@ -151,18 +129,40 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
       {/* ผู้รับผิดชอบ + ความคืบหน้า — เต็มความกว้างใต้รูป ชิดซ้ายสุดของการ์ด (เคาะ 2026-09-13)
           อยู่ในคอลัมน์ข้างรูปเหมือนเดิม = เหลือที่ไม่พอ แถบสั้นจนอ่านไม่ออกบนมือถือ */}
       <div className="flex flex-col gap-1.5 text-xs">
-        {/* ผู้รับผิดชอบ — ชื่อแรกเต็มๆ ที่เหลือย่อเป็น +n (การ์ดต้องกวาดตาได้ ไม่ใช่รายชื่อยาว) */}
-        {names.length > 0 ? (
-          <span className="flex items-center gap-1 self-start max-w-full px-2 py-0.5 rounded-full bg-orange/10 text-orange">
-            <User size={12} className="shrink-0" />
-            <span className="truncate">{names[0]}</span>
-            {names.length > 1 && <span className="shrink-0">+{names.length - 1}</span>}
-          </span>
-        ) : (
-          <span className="flex items-center gap-1 self-start text-warm-400 dark:text-disc-muted">
-            <User size={12} />{t('manage.noAssignees')}
-          </span>
-        )}
+        {/* ผู้รับผิดชอบ — ชื่อแรกเต็มๆ ที่เหลือย่อเป็น +n (การ์ดต้องกวาดตาได้ ไม่ใช่รายชื่อยาว)
+            สถานะ/วันที่/ถังขยะ ตามหลังชื่อในแถวเดียวกัน (ย้ายมาจากแถวบนขวา เคาะ 2026-09-15) */}
+        <div className="flex items-center justify-between gap-2">
+          {names.length > 0 ? (
+            <span className="flex items-center gap-1 min-w-0 px-2 py-0.5 rounded-full bg-orange/10 text-orange">
+              <User size={12} className="shrink-0" />
+              <span className="truncate">{names[0]}</span>
+              {names.length > 1 && <span className="shrink-0">+{names.length - 1}</span>}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 min-w-0 text-warm-400 dark:text-disc-muted">
+              <User size={12} className="shrink-0" />{t('manage.noAssignees')}
+            </span>
+          )}
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="flex items-center gap-1.5 font-medium text-warm-500 dark:text-disc-muted">
+              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[c.status] || 'bg-gray-300'}`} />
+              {statusText}
+            </span>
+            <span className="text-warm-400 dark:text-disc-muted hidden sm:inline">
+              {fmtDate(c.created_at)}
+            </span>
+            <CaseDeleteButton
+              refId={c.ref}
+              title={c.title || c.ref}
+              archived={archived}
+              canPurge={canPurge}
+              counts={{ timeline: c.timeline_count || 0, attachments: c.attachment_count || 0 }}
+              variant="icon"
+              redirectOnPurge={false}
+            />
+          </div>
+        </div>
 
         {/* ความคืบหน้า — แถบ + ขั้นต่อไป (ตัวเลข % อย่างเดียวไม่บอกว่าต้องไปทำอะไรต่อ) */}
         <div className="flex items-center gap-2">
