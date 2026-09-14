@@ -2,6 +2,8 @@ My Tasks and bug issue
 - calling ลงพื้นที่แม่นยำ ให้พิยะโดม ตรวจ calling จากพี่ฝนสักหน่อย ว่ามีอะไรที่ไปต่อได้บ้าง
 - หน้าไหนที่มีชื่อ username ให้คลิกแล้วเป็น userprofilemodal เลย
 
+/poll question:[ลงมติ] เลือกผู้สมัคร นายก อบจ. ราชบุรี choices::green_circle: A: ชัยรัตน์ ศักดิ์อิสระพงศ์, :blue_circle: B: สมบัติ ขำละม้าย, :red_circle: C: ไม่เลือกผู้ใด/ยังไม่พร้อมส่ง description::warning: หากมติส่วนใหญ่เลือก "ส่ง" จะเข้าสู่ขั้นตอนการเปิดรับสมัครสาธารณะต่อไป anon:Semi-Anonymous single:Yes time:2d results:When the poll ends buttons:Yes
+
 # PLATFOR{m}.ORG
 - platfor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
