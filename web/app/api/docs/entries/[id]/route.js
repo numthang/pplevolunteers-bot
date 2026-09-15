@@ -5,6 +5,7 @@ import { canAccessEvent } from '@/lib/docsAccess.js'
 import { updateEntry, deleteEntry, getEntryByIdSimple, resetRecipientSignature, autoAssignPayers, reassignEntryPayer } from '@/db/docs/entries.js'
 import { getPayersForEvent } from '@/db/docs/payers.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { logAction } from '@/db/auditLog.js'
 
 /** PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) */
 export async function PATCH(req, { params }) {
@@ -36,16 +37,28 @@ export async function PATCH(req, { params }) {
         ? memberUserId    !== entry.member_user_id
         : externalPayeeId !== entry.external_payee_id
     )
-    // เนื้อหาที่ขึ้นบน PDF เปลี่ยน (item_type/description/amount/ระยะทาง) หลังเซ็นแล้ว
-    // = ลายเซ็นที่มีอยู่ไม่ตรงกับใบที่จะพิมพ์ออกไปอีกต่อไป ต้อง reset ให้เซ็นใหม่เหมือนตอนเปลี่ยนผู้รับ
-    const contentChanged =
-      (itemType !== undefined && itemType !== entry.item_type) ||
-      (description !== undefined && (description || null) !== (entry.description || null)) ||
-      (amount !== undefined && Number(amount) !== Number(entry.amount)) ||
-      (overrideData?.distance_km !== undefined && overrideData.distance_km !== (entry.override_data?.distance_km ?? null))
-    const needsResign = (recipientChanged || contentChanged) && entry.status === 'signed'
+    // เนื้อหาบน PDF (item_type/description/amount/ระยะทาง) แก้หลังเซ็นได้ **โดยไม่ต้องเซ็นใหม่** (user เคาะ 2026-09-15:
+    // เอกสารจุกจิก ตามคนมาเซ็นซ้ำไม่ไหว) → ชดเชยด้วย audit log ค่าก่อน/หลัง ให้ตรวจย้อนได้ว่าแก้อะไรหลังเซ็น
+    // ส่วนเปลี่ยนผู้รับยัง reset เหมือนเดิม — ลายเซ็นเดิมเป็นของอีกคน ไม่ใช่แค่รายละเอียดเปลี่ยน
+    const changes = {}
+    if (itemType !== undefined && itemType !== entry.item_type) changes.item_type = [entry.item_type, itemType]
+    if (description !== undefined && (description || null) !== (entry.description || null)) changes.description = [entry.description || null, description || null]
+    if (amount !== undefined && Number(amount) !== Number(entry.amount)) changes.amount = [Number(entry.amount), Number(amount)]
+    const oldKm = entry.override_data?.distance_km ?? null
+    if (overrideData?.distance_km !== undefined && overrideData.distance_km !== oldKm) changes.distance_km = [oldKm, overrideData.distance_km]
+    const isSigned    = entry.status === 'signed'
+    const needsResign = recipientChanged && isSigned
     if (needsResign) {
       await resetRecipientSignature(id)
+    } else if (isSigned && Object.keys(changes).length) {
+      await logAction({
+        orgId:    entry.org_id,
+        app:      'docs',
+        action:   'entry.edit_after_sign',
+        actorId:  session.user.userId,
+        targetId: String(id),
+        meta:     { signed_at: entry.signed_at ?? null, changes },
+      })
     }
     await updateEntry(id, { itemType, description, amount,
       ...(recipient !== undefined ? { recipient } : {}),

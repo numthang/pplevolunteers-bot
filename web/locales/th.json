@@ -896,7 +896,6 @@
       },
       "recipientRequired": "กรุณาระบุผู้รับก่อนบันทึก",
       "confirmResetRecipientSignature": "รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?",
-      "confirmResetSignatureOnEdit": "รายการนี้เซ็นรับแล้ว การแก้ไขรายละเอียด/จำนวนเงินจะ reset ลายเซ็น (เนื้อหาบนใบเปลี่ยนไปจากตอนเซ็น) — ยืนยัน?",
       "confirmResetPayerSignature": "ผู้จ่ายเดิมเซ็นแล้ว การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?",
       "confirmDelete": "ลบรายการนี้?",
       "errorPrefix": "เกิดข้อผิดพลาด: {message}",

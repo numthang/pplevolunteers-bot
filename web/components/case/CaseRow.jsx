@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Image as ImageIcon, User, Check } from 'lucide-react'
+import { Image as ImageIcon, User } from 'lucide-react'
 import CaseDeleteButton from './CaseDeleteButton.jsx'
 
 /**
@@ -59,20 +59,12 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
   const archived = !!c.archived_at
   const names = c.assignee_names || []
   const excerpt = (c.detail || '').replace(/\s+/g, ' ').trim()
-  const { pct, closed, rejected, assigned, started } = progress(c)
+  const { pct, closed, rejected } = progress(c)
 
   const tone = closed ? 'bg-green-500'
     : rejected ? 'bg-red-400'
       : pct >= 75 ? 'bg-orange'
         : 'bg-warm-300 dark:bg-disc-border'
-
-  const stepText = closed ? t('progress.doneLabel')
-    : rejected ? t('progress.rejectedLabel')
-      : t('progress.nextStep', {
-        step: !assigned ? t('progress.stageAssign')
-          : !started ? t('progress.stageWork')
-            : t('progress.stageClose'),
-      })
 
   const thumbSrc = c.thumb_att_id ? `/api/case/${c.ref}/attachments/${c.thumb_att_id}` : null
 
@@ -164,17 +156,11 @@ export default function CaseRow({ c, statusText, canPurge = false }) {
           </div>
         </div>
 
-        {/* ความคืบหน้า — แถบ + ขั้นต่อไป (ตัวเลข % อย่างเดียวไม่บอกว่าต้องไปทำอะไรต่อ) */}
+        {/* ความคืบหน้า — แถบ + % (เคาะ 2026-09-15 ตัดป้าย "ขั้นต่อไป: ..." ออก) */}
         <div className="flex items-center gap-2">
-          {/* แถบกินที่ที่เหลือ แต่มีพื้นขั้นต่ำ — ข้อความขั้นต่อไปยาวๆ ต้องหด ไม่ใช่บีบแถบจนหาย */}
           <div className="flex-1 min-w-[5rem]"><ProgressBar pct={pct} tone={tone} /></div>
           <span className={`shrink-0 font-semibold tabular-nums ${closed ? 'text-green-600 dark:text-green-500' : 'text-warm-600 dark:text-disc-text'}`}>
             {pct}%
-          </span>
-          <span className="min-w-0 truncate text-warm-400 dark:text-disc-muted">
-            {closed
-              ? <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-500"><Check size={12} />{stepText}</span>
-              : stepText}
           </span>
         </div>
       </div>

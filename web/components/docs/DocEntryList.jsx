@@ -174,15 +174,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     const entry = entries.find(e => e.id === entryId)
     const memberChanged = editForm.memberUserId    !== entry?.member_user_id
                        || editForm.externalPayeeId !== entry?.external_payee_id
-    // เนื้อหาบนใบเปลี่ยน (ไม่ใช่แค่ผู้รับ) หลังเซ็นแล้ว = ลายเซ็นเดิมไม่ตรงกับใบที่จะพิมพ์ใหม่อีกต่อไป
-    const contentChanged = editForm.itemType    !== entry?.item_type
-                        || (editForm.description || null) !== (entry?.description || null)
-                        || parseFloat(editForm.amount) !== Number(entry?.amount)
-                        || (editForm.itemType === 'travel' &&
-                            (editForm.distanceKm !== '' ? parseFloat(editForm.distanceKm) : null) !== (entry?.override_data?.distance_km ?? null))
-    if ((memberChanged || contentChanged) && entry?.status === 'signed') {
-      const msg = memberChanged ? t('entryList.confirmResetRecipientSignature') : t('entryList.confirmResetSignatureOnEdit')
-      if (!confirm(msg)) return
+    // แก้รายละเอียด/ยอดหลังเซ็นไม่ reset ลายเซ็น (server เขียน audit log แทน) — reset เฉพาะเปลี่ยนผู้รับ
+    if (memberChanged && entry?.status === 'signed') {
+      if (!confirm(t('entryList.confirmResetRecipientSignature'))) return
     }
     setSaving(true)
     try {

@@ -14,7 +14,7 @@ import { consumeAiQuota } from '@/lib/postsAiQuota.js'
 import { askAiJson, AiError } from '@/lib/ai.js'
 import { getPrompt } from '@/db/orgAiPrompts.js'
 
-// 9 หมวดที่ตรวจ — ต้องตรงกับ RISK_LABEL ใน PostEditor.jsx (UI lookup label จาก category)
+// หมวดที่ตรวจ — ต้องตรงกับ RISK_LABEL ใน PostEditor.jsx (UI lookup label จาก category)
 export const RISK_CATEGORIES = [
   'defamation',
   'factual_risk',
@@ -25,6 +25,8 @@ export const RISK_CATEGORIES = [
   'vulnerable_group',
   'divisive',
   'party_tone',
+  'typo',
+  'unclear',
 ]
 
 const SEVERITIES = ['high', 'medium', 'low']

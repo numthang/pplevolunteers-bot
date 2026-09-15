@@ -2212,3 +2212,5 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
   จะ "ไม่พบผู้ใช้" ทั้งที่มีจริงบน prod → อย่าสรุปว่าคนนั้นไม่มีตัวตน ให้ไปยืนยันกับ prod
 - ช่อง "แก้เป็น username นี้ 👉" รับ **discord_id (ตัวเลข 17-20 หลัก)** ได้ด้วย — ใช้ตอน username
   ในระบบไม่ตรงกับที่คนกรอกมา
+
+- **[2026-09-15] docs — แก้ใบหลังเซ็นไม่ต้องเซ็นใหม่ (user เคาะ "เอกสารจุกจิก แก้ได้เสมอ"):** PATCH `/api/docs/entries/[id]` reset ลายเซ็นเฉพาะเมื่อเปลี่ยนผู้รับ · แก้ item_type/description/amount/distance_km หลังเซ็น → audit log `docs/entry.edit_after_sign` (meta.changes {field:[ก่อน,หลัง]}) แทน · ห้ามใส่ reset-on-content-edit กลับ (เคยใส่ใน c9ed57f8)
