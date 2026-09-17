@@ -18,6 +18,7 @@
  *   node --import ./scripts/smoke/_envload.mjs scripts/members/syncPhoneFromRegistry.mjs                        # dry-run
  *   … --review-out /tmp/phone-review.xlsx      ออกไฟล์รายชื่อ weak ให้คนตรวจ (ห้ามเข้า git — มีชื่อจริง)
  *   … --confirm 12,34,56                        user_id ของ weak ที่ตรวจแล้วว่าใช่คนเดียวกัน
+ *   … --pick 12:4455,34:9876                    ชื่อต้นซ้ำ/ไม่พบในจังหวัด → user_id:source_id ที่เลือกจากชีต pick
  *   … --apply                                   เขียนจริง
  *   … --org 1  --province ราชบุรี
  */
@@ -34,6 +35,9 @@ const ORG_ID = Number(flagValue('--org')) || 1
 const PROVINCE = flagValue('--province') || 'ราชบุรี'
 const REVIEW_OUT = flagValue('--review-out')
 const CONFIRMED = new Set(flagValue('--confirm').split(',').map(s => Number(s.trim())).filter(Boolean))
+// ชื่อต้นซ้ำ/ไม่พบในจังหวัด → คนเลือกผู้สมัครจากไฟล์ตรวจ: --pick <user_id>:<source_id>,…
+const PICKS = new Map(flagValue('--pick').split(',').map(s => s.split(':').map(Number)).filter(([u, m]) => u && m))
+const MAX_CANDIDATES = 15
 
 const pool = new pg.Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -82,9 +86,12 @@ for (const r of holderRows) {
 
 const byFull = new Map()
 const byFirstInProvince = new Map()
+const byFirstAll = new Map()
 for (const m of registry) {
   const fk = key(m.full_name)
   byFull.set(fk, [...(byFull.get(fk) || []), m])
+  const ak = key(firstToken(m.full_name))
+  byFirstAll.set(ak, [...(byFirstAll.get(ak) || []), m])
   if (m.home_province === PROVINCE) {
     const k = key(firstToken(m.full_name))
     byFirstInProvince.set(k, [...(byFirstInProvince.get(k) || []), m])
@@ -96,6 +103,7 @@ console.log(`Loaded ${users.size} users with account_holder · registry ${regist
 // ── วางแผน ────────────────────────────────────────────────────────────────
 const phonePlan = []      // { u, member, level }
 const weak = []           // รอคนยืนยัน
+const ambiguous = []      // { u, candidates, scope } — รอคนเลือก
 const skipped = []        // [label, reason]
 const namePlan = []       // { u, firstname, lastname }
 
@@ -125,9 +133,24 @@ for (const u of users.values()) {
   }
   if (!member) {
     if (u.holders.size > 1) { skipped.push([label, 'account_holder หลายค่า']); continue }
-    const hits = byFirstInProvince.get(key(firstToken([...u.holders][0]))) || []
-    if (hits.length !== 1) { skipped.push([label, hits.length ? `ชื่อต้นซ้ำ ${hits.length} คนใน${PROVINCE}` : `ไม่พบใน${PROVINCE}`]); continue }
-    member = hits[0]; level = 'weak'
+    const fk = key(firstToken([...u.holders][0]))
+    const hits = byFirstInProvince.get(fk) || []
+    if (hits.length === 1) { member = hits[0]; level = 'weak' }
+    else {
+      const scope = hits.length ? PROVINCE : 'ทุกจังหวัด'
+      const candidates = hits.length ? hits : (byFirstAll.get(fk) || [])
+      const pick = PICKS.get(u.user_id)
+      if (pick) {
+        member = candidates.find(c => c.source_id === pick)
+        if (!member) { skipped.push([label, `--pick ${pick} ไม่อยู่ในรายชื่อผู้สมัคร`]); continue }
+        level = 'picked'
+      } else {
+        if (!candidates.length) skipped.push([label, 'ไม่พบชื่อต้นนี้ในทะเบียนเลย'])
+        else if (candidates.length > MAX_CANDIDATES) skipped.push([label, `ชื่อต้นซ้ำเกิน ${MAX_CANDIDATES} คน (${scope})`])
+        else ambiguous.push({ u, candidates, scope })
+        continue
+      }
+    }
   }
 
   const phone = normPhone(member.mobile_number)
@@ -148,10 +171,12 @@ const finalPlan = phonePlan.filter(p => {
 })
 
 // ── รายงาน ────────────────────────────────────────────────────────────────
-console.log(`\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${finalPlan.filter(p => p.level === 'strong').length} · weak ที่ยืนยันแล้ว ${finalPlan.filter(p => p.level === 'weak').length})`)
+const lv = l => finalPlan.filter(p => p.level === l).length
+console.log(`\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${lv('strong')} · weak ที่ยืนยันแล้ว ${lv('weak')} · เลือกจากไฟล์ ${lv('picked')})`)
 for (const p of finalPlan) console.log(`  ${p.label} [${p.level}] → ${mask(p.phone)}`)
 console.log(`\nรอยืนยัน (weak) ${weak.length} คน — ใช้ --review-out ดูรายละเอียด แล้วส่ง id ที่ใช่ผ่าน --confirm`)
 console.log(`  ids: ${weak.map(w => w.u.user_id).join(',')}`)
+console.log(`\nรอเลือกผู้สมัคร ${ambiguous.length} คน (${ambiguous.reduce((s, a) => s + a.candidates.length, 0)} แถวในไฟล์ตรวจ ชีต pick) — ส่งผลผ่าน --pick user_id:source_id`)
 console.log(`\nจะเติม firstname ${namePlan.length} คน`)
 console.log(`\nข้าม ${skipped.length} รายการ:`)
 const reasons = skipped.reduce((m, [, r]) => m.set(r, (m.get(r) || 0) + 1), new Map())
@@ -168,10 +193,27 @@ if (REVIEW_OUT) {
     'เบอร์ในทะเบียน': mask(w.phone),
     'ใช่คนเดียวกัน? (y)': '',
   }))
+  // 1 แถว = 1 ผู้สมัคร · ติ๊ก y ได้คนเดียวต่อ user · source_id คือค่าที่ส่งกลับใน --pick
+  const pickRows = ambiguous.flatMap(a => a.candidates.map((c, i) => ({
+    user_id: a.u.user_id,
+    'discord username': a.u.username || '',
+    'ชื่อจริง (จากไฟล์บัญชี)': [...a.u.holders][0],
+    'ชื่อในระบบ': [a.u.firstname, a.u.lastname].filter(Boolean).join(' '),
+    'ผู้สมัคร': `${i + 1}/${a.candidates.length}`,
+    'ค้นใน': a.scope,
+    'ชื่อ-นามสกุลในทะเบียนพรรค': c.full_name,
+    'จังหวัด': c.home_province || '',
+    'เบอร์ในทะเบียน': mask(normPhone(c.mobile_number)) || '(ไม่มีเบอร์)',
+    source_id: c.source_id,
+    'ใช่คนนี้? (y)': '',
+  })))
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'review')
-  XLSX.writeFile(wb, REVIEW_OUT)
-  console.log(`\nเขียนไฟล์ตรวจ ${rows.length} แถว → ${REVIEW_OUT}`)
+  if (rows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'review')
+  if (pickRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pickRows), 'pick')
+  if (wb.SheetNames.length) {
+    XLSX.writeFile(wb, REVIEW_OUT)
+    console.log(`\nเขียนไฟล์ตรวจ review ${rows.length} แถว · pick ${pickRows.length} แถว → ${REVIEW_OUT}`)
+  } else console.log('\nไม่มีรายชื่อให้ตรวจ — ไม่ได้เขียนไฟล์')
 }
 
 if (!APPLY) {
