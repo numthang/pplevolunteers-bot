@@ -843,8 +843,11 @@ export default function SignPage({ params }) {
               {t('sign.preview.intro')}
             </p>
             {previewLoading && (
-              <div className="flex items-center justify-center py-12 text-warm-400 dark:text-disc-muted text-sm">
-                {t('sign.preview.loading')}
+              <div className="relative w-full rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden animate-pulse">
+                <img src="/docs-preview-placeholder.svg" alt="" className="w-full" />
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 text-warm-400 text-sm">
+                  {t('sign.preview.loading')}
+                </div>
               </div>
             )}
             {previewErr && (
