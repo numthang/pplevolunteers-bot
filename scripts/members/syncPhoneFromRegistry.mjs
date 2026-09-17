@@ -19,6 +19,7 @@
  *   … --review-out /tmp/phone-review.xlsx      ออกไฟล์รายชื่อ weak ให้คนตรวจ (ห้ามเข้า git — มีชื่อจริง)
  *   … --confirm 12,34,56                        user_id ของ weak ที่ตรวจแล้วว่าใช่คนเดียวกัน
  *   … --pick 12:4455,34:9876                    ชื่อต้นซ้ำ/ไม่พบในจังหวัด → user_id:source_id ที่เลือกจากชีต pick
+ *   … --force-pick 3895:2452                    account_holder เป็นชื่อคนอื่น → คนระบุตัวให้เอง (ข้ามการจับคู่ด้วยชื่อ)
  *   … --apply                                   เขียนจริง
  *   … --org 1  --province ราชบุรี
  */
@@ -37,6 +38,9 @@ const REVIEW_OUT = flagValue('--review-out')
 const CONFIRMED = new Set(flagValue('--confirm').split(',').map(s => Number(s.trim())).filter(Boolean))
 // ชื่อต้นซ้ำ/ไม่พบในจังหวัด → คนเลือกผู้สมัครจากไฟล์ตรวจ: --pick <user_id>:<source_id>,…
 const PICKS = new Map(flagValue('--pick').split(',').map(s => s.split(':').map(Number)).filter(([u, m]) => u && m))
+// account_holder เป็นชื่อคนอื่น (ยืมบัญชีรับเงิน / map ผิดตอน import) → ชื่อในไฟล์บัญชีใช้หาตัวไม่ได้เลย
+// คนบอกเองว่าใครคือใคร: --force-pick <user_id>:<source_id> ข้ามการจับคู่ด้วยชื่อ แต่ยังตรวจเบอร์ซ้ำ/ยืนยันแล้วตามปกติ
+const FORCE = new Map(flagValue('--force-pick').split(',').map(s => s.split(':').map(Number)).filter(([u, m]) => u && m))
 const MAX_CANDIDATES = 15
 
 const pool = new pg.Pool({
@@ -126,7 +130,12 @@ for (const u of users.values()) {
   if (u.phone_verified_at) { skipped.push([label, 'ยืนยันเบอร์แล้ว']); continue }
 
   let member = null, level = null
-  if (u.firstname?.trim() && u.lastname?.trim()) {
+  if (FORCE.has(u.user_id)) {
+    member = registry.find(m => m.source_id === FORCE.get(u.user_id))
+    if (!member) { skipped.push([label, `--force-pick ${FORCE.get(u.user_id)} ไม่มีในทะเบียน org ${ORG_ID}`]); continue }
+    level = 'forced'
+  }
+  if (!member && u.firstname?.trim() && u.lastname?.trim()) {
     const hits = byFull.get(key(`${u.firstname}${u.lastname}`)) || []
     if (hits.length === 1) { member = hits[0]; level = 'strong' }
     else if (hits.length > 1) { skipped.push([label, `ชื่อ-นามสกุลซ้ำในทะเบียน ${hits.length} คน`]); continue }
@@ -172,7 +181,7 @@ const finalPlan = phonePlan.filter(p => {
 
 // ── รายงาน ────────────────────────────────────────────────────────────────
 const lv = l => finalPlan.filter(p => p.level === l).length
-console.log(`\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${lv('strong')} · weak ที่ยืนยันแล้ว ${lv('weak')} · เลือกจากไฟล์ ${lv('picked')})`)
+console.log(`\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${lv('strong')} · weak ที่ยืนยันแล้ว ${lv('weak')} · เลือกจากไฟล์ ${lv('picked')} · ระบุตัวเอง ${lv('forced')})`)
 for (const p of finalPlan) console.log(`  ${p.label} [${p.level}] → ${mask(p.phone)}`)
 console.log(`\nรอยืนยัน (weak) ${weak.length} คน — ใช้ --review-out ดูรายละเอียด แล้วส่ง id ที่ใช่ผ่าน --confirm`)
 console.log(`  ids: ${weak.map(w => w.u.user_id).join(',')}`)
