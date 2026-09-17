@@ -190,7 +190,6 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
   // derive from cache_pple_event; override_data takes precedence
   const eventVenue    = entry.location || entry.province || ''
   const eventDuration = calcDuration(entry.event_date, entry.event_end_date)
-  const eventTopic    = entry.event_name ?? ''
 
   // ที่อยู่ที่ใช้จริง — คำนวณก่อน เพราะ description ต้องใช้เติมจุดไข่ปลาด้วย
   const subdistrict   = override.subdistrict   ?? ngs.subdistrict
@@ -231,7 +230,7 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
     // body-specific (override_data takes precedence, then event cache)
     venue:            override.venue          ?? eventVenue,
     duration:         override.duration       ?? eventDuration,
-    topic:            override.topic          ?? eventTopic,
+    topic:            override.topic          ?? description,
     meal_count:       override.meal_count     ?? '',
     unit_price:       override.unit_price     ?? '',
     quantity:         override.quantity       ?? '',
