@@ -110,7 +110,8 @@ const ITEM_SELECT = `
          COALESCE(i.bank_code,    om.bank_code,    p.bank_code)    AS bank_code,
          COALESCE(i.account_no,   om.account_no,   p.account_no)   AS account_no,
          COALESCE(i.promptpay_id, om.promptpay_id, p.promptpay_id) AS promptpay_id,
-         COALESCE(om.account_holder, p.account_holder) AS account_holder
+         COALESCE(om.account_holder, p.account_holder) AS account_holder,
+         COALESCE(u.phone, p.phone) AS phone
     FROM finance_payout_items i
     LEFT JOIN users u ON u.id = i.member_user_id
     -- ⚠️ org_members มีได้หลายแถวต่อ user (แถวละ guild — org 1 มี 3 guild)

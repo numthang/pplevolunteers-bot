@@ -22,7 +22,8 @@ export function buildPlainText(round, items, account) {
       const dest = isPP
         ? `พร้อมเพย์ ${digitsOnly(it.promptpay_id)}`
         : `${bankByCode(it.bank_code)?.name || '—'} ${digitsOnly(it.account_no)}`
-      out.push(`${i + 1}. ${it.payee_name || '—'} · ${dest} · ${Number(it.amount).toLocaleString('th-TH')}`)
+      const phone = it.phone ? ` · ${digitsOnly(it.phone)}` : ''
+      out.push(`${i + 1}. ${it.payee_name || '—'} · ${dest} · ${Number(it.amount).toLocaleString('th-TH')}${phone}`)
     })
   }
 

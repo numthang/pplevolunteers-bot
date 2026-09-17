@@ -2,7 +2,7 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, Check, UserPlus, Pencil, X } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, UserPlus, Pencil, X } from 'lucide-react'
 import { resolveBank, digitsOnly } from '@/config/banks.js'
 import { chunkIntoGroups } from '@/lib/payoutExport/shared.js'
 import { buildPlainText } from '@/lib/payoutExport/plainText.js'
@@ -10,6 +10,8 @@ import ExternalPayeeModal from '@/components/docs/ExternalPayeeModal'
 import PayeeBankFields from '@/components/finance/PayeeBankFields'
 
 const INPUT = 'h-11 px-3 text-base rounded-lg w-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal'
+// ห้ามสร้างจาก `${INPUT} w-20` — INPUT มี w-full ซึ่งชนะ w-20 เสมอไม่ว่าจะเรียงคลาสยังไง (ลำดับ utility ของ Tailwind เอง ไม่ใช่ลำดับใน className)
+const AMOUNT_INPUT = 'h-11 px-2 text-base text-right rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-20 shrink-0 sm:w-24'
 const LABEL = 'block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1'
 const BTN   = 'bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50'
 const BTN2  = 'border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50'
@@ -285,9 +287,18 @@ export default function PayoutRoundPage({ params }) {
                     <p className={`text-base text-warm-900 dark:text-disc-text truncate ${paid ? 'line-through' : ''}`}>
                       {it.payee_name || '—'}
                     </p>
-                    <p className="text-sm text-warm-500 dark:text-disc-muted truncate">
-                      {isPP ? t('payouts.kindPromptpay') : (bank?.name || t('payouts.noBank'))} {dest || '—'}
-                    </p>
+                    {dest ? (
+                      <button type="button" onClick={() => copyText(dest, `a-${it.id}`)}
+                        aria-label={t('payouts.copyAccountAria')}
+                        className={`block w-full text-left text-sm truncate active:opacity-70 ${copied === `a-${it.id}` ? 'text-teal' : 'text-warm-500 dark:text-disc-muted'}`}>
+                        {isPP ? t('payouts.kindPromptpay') : (bank?.name || t('payouts.noBank'))} {dest}
+                        {copied === `a-${it.id}` ? ` · ${t('common.copied')}` : ''}
+                      </button>
+                    ) : (
+                      <p className="text-sm text-warm-500 dark:text-disc-muted truncate">
+                        {isPP ? t('payouts.kindPromptpay') : (bank?.name || t('payouts.noBank'))} —
+                      </p>
+                    )}
                     {missing && (
                       <p className="text-sm text-red-500 flex items-center gap-1">
                         <AlertTriangle size={16} /> {t(`payouts.problem_${problems.find(p => p.id === it.id)?.reason}`)}
@@ -302,17 +313,10 @@ export default function PayoutRoundPage({ params }) {
                     </button>
                   )}
 
-                  {!!dest && (
-                    <button onClick={() => copyText(dest, `a-${it.id}`)} aria-label={t('payouts.copyAccountAria')}
-                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
-                      {copied === `a-${it.id}` ? <Check size={16} className="text-teal" /> : <Copy size={16} />}
-                    </button>
-                  )}
-
-                  <input type="number" inputMode="decimal" disabled={locked}
-                    className={`${INPUT} flex-1 min-w-0 sm:flex-none sm:w-28 sm:shrink-0`} value={it.amount ?? ''}
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" disabled={locked}
+                    className={AMOUNT_INPUT} value={it.amount ?? ''}
                     aria-label={t('payouts.amountAria')}
-                    onChange={e => patchItem(it.id, { amount: e.target.value })} />
+                    onChange={e => patchItem(it.id, { amount: e.target.value.replace(/\D/g, '') })} />
 
                   {!locked && (
                     <button onClick={() => removeItem(it.id)} aria-label={t('payouts.removeItemAria')}

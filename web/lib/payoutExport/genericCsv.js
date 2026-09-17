@@ -16,7 +16,7 @@ const excelText = v => `="${String(v ?? '')}"`
 const pad2 = n => String(n).padStart(2, '0')
 const ymd = d => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`
 
-const HEAD = ['กลุ่ม', 'ลำดับ', 'ชื่อผู้รับ', 'วิธีรับเงิน', 'ธนาคาร', 'รหัสธนาคาร', 'เลขบัญชี/พร้อมเพย์', 'จำนวนเงิน', 'หมายเหตุ']
+const HEAD = ['กลุ่ม', 'ลำดับ', 'ชื่อผู้รับ', 'เบอร์โทร', 'วิธีรับเงิน', 'ธนาคาร', 'รหัสธนาคาร', 'เลขบัญชี/พร้อมเพย์', 'จำนวนเงิน', 'หมายเหตุ']
 
 export function buildGenericCsv(round, items, account) {
   const now = new Date()
@@ -40,6 +40,7 @@ export function buildGenericCsv(round, items, account) {
       esc(groupLabel(i)),
       i + 1,
       esc(it.payee_name),
+      it.phone ? excelText(digitsOnly(it.phone)) : esc(''),
       esc(isPP ? 'พร้อมเพย์' : 'บัญชีธนาคาร'),
       esc(bank?.name || ''),
       esc(bank?.code || ''),

@@ -106,6 +106,15 @@ describe('buildExport generic-csv', () => {
     expect(out.content).toContain('="0891234567"')
   })
 
+  it('มีคอลัมน์เบอร์โทร กัน Excel ตัดศูนย์หน้าเหมือนเลขบัญชี', () => {
+    const withPhone = buildExport('generic-csv', {
+      round, account,
+      items: [member({ id: 3, phone: '081-234-5678' })],
+    })
+    expect(withPhone.content).toContain('"เบอร์โทร"')
+    expect(withPhone.content).toContain('="0812345678"')
+  })
+
   it('เครื่องหมายคำพูดในชื่อไม่ทำ CSV พัง', () => {
     expect(out.content).toContain('"สมหญิง ""เจ๊"" ดีงาม"')
   })
@@ -190,6 +199,11 @@ describe('buildPlainText', () => {
   it('เลขบัญชีเป็นตัวเลขล้วน ก๊อปจากแชตไปวางได้เลย', () => {
     expect(text).toContain('กสิกรไทย 1234567890')
     expect(text).toContain('พร้อมเพย์ 0891234567')
+  })
+
+  it('มีเบอร์โทรต่อท้ายบรรทัดถ้ามีข้อมูล', () => {
+    const withPhone = buildPlainText(round, [member({ id: 3, phone: '081-234-5678', amount: 300 })], account)
+    expect(withPhone).toContain('· 0812345678')
   })
 
   it('แบ่งกลุ่มมาให้ในข้อความ', () => {
