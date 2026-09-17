@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T10:50:40.646Z
-> Files: 1176 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T17:49:50.136Z
+> Files: 1177 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -507,6 +507,10 @@
 - `testAllStyles.js` — scripts/testAllStyles.js (~307 tok)
 - `testFalQuote.js` — scripts/testFalQuote.js (~794 tok)
 - `testQuoteTemplates.js` — scripts/testQuoteTemplates.js (~813 tok)
+
+## scripts/members/
+
+- `syncPhoneFromRegistry.mjs` — ดึงเบอร์จากทะเบียนพรรค (cache_pple_member) ใส่ users.phone + phone_verified_at (~3148 tok)
 
 ## scripts/migration/
 
@@ -1863,7 +1867,7 @@
 
 ## web/app/finance/payouts/[id]/
 
-- `page.js` — Next.js page component (~4705 tok)
+- `page.js` — Next.js page component (~6209 tok)
 
 ## web/app/finance/report/
 
@@ -2234,7 +2238,7 @@
 - `accounts.js` — org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId (~1107 tok)
 - `categories.js` — org-scope: guild_id→org_id · owner_id = users.id (INT) · ownerId param = userId (~506 tok)
 - `funds.js` — Exports getFunds, createFund, deleteFund, getFundBalances (~496 tok)
-- `payouts.js` — รอบจ่ายเบี้ยเลี้ยง — ดู migrations/1788900000000_finance-payout-rounds.sql (~2505 tok)
+- `payouts.js` — รอบจ่ายเบี้ยเลี้ยง — ดู migrations/1788900000000_finance-payout-rounds.sql (~3113 tok)
 - `transactions.js` — org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId (~2604 tok)
 
 ## web/db/kanban/
@@ -2388,7 +2392,7 @@
 - `orgMemberRoles.live.test.js` — Live check (ต่อ DB จริง) — ORG_ACCESS_REDESIGN ขั้น 5: "ทางเขียน" (~1796 tok)
 - `orgScopeNodes.live.test.js` — Live check (ต่อ DB จริง) — ตัวจัดผังพื้นที่ (org_scope_nodes) (~1124 tok)
 - `payersDiff.live.test.js` — diff test ชั่วคราว — เทียบ payers เก่า (dc_guild_roles + geography.js) (~450 tok)
-- `payoutExport.test.js` — Declares round (~1290 tok)
+- `payoutExport.test.js` — Declares round (~2053 tok)
 - `permissions.test.js` — permissions.test.js — พิสูจน์ว่า capability ใหม่ (แทน name-check ใน step 11) (~1424 tok)
 - `postsAccess.test.js` — posts ไม่มี geography scope → ไม่ต้องใช้ fixture rolesToAccess เหมือน calling/finance (~3801 tok)
 - `resolveAccess.test.js` — mock pg pool (default export) ก่อน import resolveAccess (~1300 tok)
@@ -2401,9 +2405,9 @@
 
 ## web/lib/payoutExport/
 
-- `genericCsv.js` — CSV กลาง — เปิดด้วย Excel ได้ตรงๆ และใช้เป็นเช็กลิสต์ตอนกดโอนมือใน K PLUS (~558 tok)
+- `genericCsv.js` — CSV กลาง — เปิดด้วย Excel ได้ตรงๆ และใช้เป็นเช็กลิสต์ตอนกดโอนมือใน K PLUS (~645 tok)
 - `index.js` — ไฟล์โอนกลุ่มของรอบจ่ายเบี้ยเลี้ยง — registry ของ formatter (~813 tok)
-- `plainText.js` — รายการโอนแบบข้อความ — สำหรับ "ส่งต่อให้คนอื่นไปกดโอน" ทาง LINE / Discord (~374 tok)
+- `plainText.js` — รายการโอนแบบข้อความ — สำหรับ "ส่งต่อให้คนอื่นไปกดโอน" ทาง LINE / Discord (~395 tok)
 
 ## web/lib/scripts/migration/
 

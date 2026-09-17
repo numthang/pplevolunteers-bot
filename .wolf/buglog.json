@@ -9147,6 +9147,119 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-17T10:50:40.728Z"
+    },
+    {
+      "id": "bug-529",
+      "timestamp": "2026-09-17T16:53:05.410Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/app/finance/payouts/[id]/page.js",
+      "root_cause": "Had `${INPUT} flex-1 min-w-0 sm:flex-none sm:w-28 sm:s",
+      "fix": "Changed to `${INPUT} w-24 shrink-0 sm:w-28`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T16:53:05.410Z"
+    },
+    {
+      "id": "payouts-amount-input-w-full-override",
+      "timestamp": "2026-09-18T00:04:10.114127",
+      "error_message": "ช่องจำนวนเงินในแถวรอบจ่าย (finance/payouts/[id]) กว้างเต็มแถวจนหลุดไปอยู่บรรทัดใหม่ ทั้งที่ตั้ง w-20/w-24 ไว้แล้ว",
+      "file": "web/app/finance/payouts/[id]/page.js",
+      "root_cause": "className ผสม INPUT constant (มี w-full ติดมา) เข้ากับ w-20/w-24 ที่ต่อท้าย — Tailwind สร้าง .w-full ไว้หลัง .w-20/.w-24 ในสไตล์ชีตเสมอ (ลำดับ utility ภายในของ Tailwind เอง ไม่ใช่ลำดับ class ใน className string) ทำให้ w-full ชนะเสมอเมื่ออยู่ base breakpoint เดียวกัน — ต่างจาก sm:w-28 เดิมที่ชนะได้เพราะ media-query variant ถูกจัดไว้หลังสุดเสมออยู่แล้ว",
+      "fix": "แยก const ใหม่ AMOUNT_INPUT ที่ไม่มี w-full ปนอยู่เลย แทนการสร้างจาก INPUT + w-20/w-24 ต่อท้าย",
+      "tags": [
+        "tailwind",
+        "css-specificity",
+        "flex-layout",
+        "mobile",
+        "finance-payouts"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-18T00:04:10.114127"
+    },
+    {
+      "id": "bug-531",
+      "timestamp": "2026-09-17T17:06:49.516Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/lib/payoutExport/genericCsv.js",
+      "root_cause": "Had 'วิธีรับเงิน'",
+      "fix": "Changed to 'เบอร์โทร'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T17:06:49.516Z"
+    },
+    {
+      "id": "bug-532",
+      "timestamp": "2026-09-17T17:07:11.956Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/lib/payoutExport/plainText.js",
+      "root_cause": "Had `${i + 1}. ${it.payee_name || '",
+      "fix": "Changed to ` · ${digitsOnly(it.phone)}`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T17:07:11.956Z"
+    },
+    {
+      "id": "bug-533",
+      "timestamp": "2026-09-17T17:49:19.656Z",
+      "error_message": "Wrong condition in logic",
+      "file": "scripts/members/syncPhoneFromRegistry.mjs",
+      "root_cause": "Condition was: if (hits.length !== 1)",
+      "fix": "Changed to: if (hits.length === 1)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T17:49:19.656Z"
+    },
+    {
+      "id": "bug-534",
+      "timestamp": "2026-09-17T17:49:31.638Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/members/syncPhoneFromRegistry.mjs",
+      "root_cause": "Had `\\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${",
+      "fix": "Changed to `\\nจะอัปเดตเบอร์ ${finalPlan.length} คน (strong ${",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-09-17T17:49:37.975Z"
+    },
+    {
+      "id": "bug-535",
+      "timestamp": "2026-09-17T17:49:44.038Z",
+      "error_message": "Significant refactor of syncPhoneFromRegistry.mjs",
+      "file": "scripts/members/syncPhoneFromRegistry.mjs",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→21 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T17:49:44.038Z"
     }
   ]
 }
