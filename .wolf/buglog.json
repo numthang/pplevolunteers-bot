@@ -9097,6 +9097,56 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-17T09:29:50.092Z"
+    },
+    {
+      "id": "bug-526",
+      "timestamp": "2026-09-17T16:56:57.083720",
+      "error_message": "native <select> ใน modal สร้างรอบจ่าย เปิดแล้วปิดทันที ต้องคลิกค้างถึงเลือกได้ — เป็นแค่บน production (desktop) localhost ปกติ",
+      "file": "web/app/finance/payouts/page.js",
+      "root_cause": "ไม่ใช่บั๊กโค้ด — สถานะค้างของเบราว์เซอร์ (Brave) ปิด-เปิดเบราว์เซอร์ใหม่แล้วหาย · ปิด Shields/extensions ไม่ช่วย · private window ใช้ได้ · probe build production บนเครื่อง: 0 re-render, 0 DOM mutation, commit เดียวกับ prod",
+      "fix": "ไม่แก้โค้ด — อาการ UI native 'prod เป็น local ไม่เป็น' ให้ลอง private window / restart เบราว์เซอร์ก่อนไล่โค้ด",
+      "tags": [
+        "select",
+        "modal",
+        "production-only",
+        "browser-state",
+        "brave",
+        "not-a-bug"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T16:56:57.083720"
+    },
+    {
+      "id": "bug-527",
+      "timestamp": "2026-09-17T10:08:28.734Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/docs/external-payees/route.js",
+      "root_cause": "Was returning: Response.json({ success: true, data: created })",
+      "fix": "Now returns: Response.json({ success: true, data: r.data })",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T10:08:28.734Z"
+    },
+    {
+      "id": "bug-528",
+      "timestamp": "2026-09-17T10:50:40.728Z",
+      "error_message": "Significant refactor of updateMemberBankById.mjs",
+      "file": "scripts/finance/updateMemberBankById.mjs",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→5 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T10:50:40.728Z"
     }
   ]
 }

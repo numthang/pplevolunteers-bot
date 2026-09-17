@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:30:12.402Z
-> Files: 1171 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T10:50:40.646Z
+> Files: 1176 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -488,6 +488,7 @@
 - `backfillBankInfo.mjs` — Backfill ข้อมูลรับเงินของสมาชิก (ธนาคาร/เลขบัญชี/พร้อมเพย์) จากไฟล์ xlsx (~1555 tok)
 - `parse-kbank-statement copy.js` — parse-kbank-statement.js (~2787 tok)
 - `parse-kbank-statement.js` — parse-kbank-statement.js (~3168 tok)
+- `updateMemberBankById.mjs` — อัพเดทบัญชีธนาคาร (payment_method/bank_code/bank_name/account_no/account_holder) (~783 tok)
 
 ## scripts/import/
 
@@ -1009,7 +1010,7 @@
 
 ## web/app/api/docs/external-payees/
 
-- `route.js` — GET รายชื่อคนนอกทั้ง org / POST สร้างใหม่ (ตรวจ checksum + กันเลขซ้ำ) (~700 tok)
+- `route.js` — GET /api/docs/external-payees — รายชื่อคนนอกทั้งหมดของ org (หน้า settings) (~535 tok)
 
 ## web/app/api/docs/external-payees/[id]/
 
@@ -1171,6 +1172,14 @@
 ## web/app/api/finance/payouts/[id]/items/
 
 - `route.js` — Next.js API route: GET, POST, PATCH, DELETE (~714 tok)
+
+## web/app/api/finance/payouts/[id]/payees/
+
+- `route.js` — POST /api/finance/payouts/[id]/payees — สร้างคนนอกใหม่ (พร้อมข้อมูลบัญชี) แล้วใส่เข้ารอบทันที (~348 tok)
+
+## web/app/api/finance/payouts/[id]/payees/[payeeId]/
+
+- `route.js` — PATCH /api/finance/payouts/[id]/payees/[payeeId] — ใส่/แก้ข้อมูลบัญชีของคนนอกจากหน้ารอบจ่าย (~338 tok)
 
 ## web/app/api/finance/payouts/payees/
 
@@ -1675,7 +1684,7 @@
 ## web/app/calling/assignments/[campaignId]/
 
 - `layout.js` — Next.js layout (~73 tok)
-- `page.js` — Next.js page component (~14392 tok)
+- `page.js` — Next.js page component (~14574 tok)
 
 ## web/app/calling/campaigns/
 
@@ -2094,6 +2103,7 @@
 - `AccountCard.jsx` — fmt (~1898 tok)
 - `AccountFormFields.jsx` — BANKS (~1118 tok)
 - `AddAccountButton.jsx` — EMPTY (~739 tok)
+- `PayeeBankFields.jsx` — ช่องข้อมูลรับเงินของผู้รับคนนอก — ใช้ร่วมกัน 3 ที่ (~662 tok)
 
 ## web/components/kanban/
 
@@ -2288,6 +2298,7 @@
 - `discordRoles.js` — Web → Discord REST (Bot token) — เพิ่ม/ถอด role ให้ member ในเซิร์ฟเวอร์ (~495 tok)
 - `docsAccess.js` — Docs System Access Control (~500 tok)
 - `docsOcrQuota.js` — โควตาอ่านบัตรด้วย AI ต่อคนต่อวัน (user_config key docs_ocr_quota, 15/วัน) กันสมาชิกที่ถือลิงก์เซ็นยิง vision รัว (~250 tok)
+- `externalPayeeInput.js` — สร้างผู้รับเงินคนนอก — ใช้ร่วมกันระหว่าง Docs กับรอบจ่ายการเงิน (~395 tok)
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
