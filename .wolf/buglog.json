@@ -9033,6 +9033,22 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-09-14T18:17:18.962Z"
+    },
+    {
+      "id": "bug-522",
+      "timestamp": "2026-09-17T09:02:24.648Z",
+      "error_message": "Wrong reference: eventTopic should be description",
+      "file": "web/lib/generatePdf.js",
+      "root_cause": "Used \"eventTopic\" instead of \"description\"",
+      "fix": "Changed eventTopic → description",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T09:02:24.648Z"
     }
   ]
 }

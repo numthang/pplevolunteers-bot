@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-13T12:11:44.528Z
-> Files: 1165 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:02:24.542Z
+> Files: 1170 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -72,10 +72,11 @@
 - `_bottest2.js` — Declares caseDb (~357 tok)
 - `.claudeignore` (~4 tok)
 - `.gitignore` — Git ignore rules (~150 tok)
-- `CLAUDE.md` — OpenWolf (~3439 tok)
+- `CLAUDE.md` — OpenWolf (~4281 tok)
 - `deploy-commands.js` — deploy-commands.js (~1310 tok)
 - `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~1250 tok)
-- `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
+- `eslint.config.mjs` — ESLint ฝั่งบอท (root) — จับ "ของที่ไม่มีจริง" อย่างเดียว (~665 tok)
+- `eslint.db-allowlist.mjs` — ⛔ Allowlist ไฟล์ที่ต่อ DB เองนอกโฟลเดอร์ db/ — ห้ามเพิ่ม ลบได้อย่างเดียว (~1316 tok)
 - `index.js` — index.js (~9292 tok)
 - `NOTE.md` (~1073 tok)
 - `org shell + switcher + settings (2026-07-15, step 2)OrgShell.jsx` — web/components/org/OrgShell.jsx — top switcher [ส่วนตัว ↔ องค์กร] + nav (หน้าหลัก/ตั้งค่า) + ออกจากระบบ (~200 tok)
@@ -85,7 +86,7 @@
 
 ## .claude/
 
-- `settings.json` (~713 tok)
+- `settings.json` (~1323 tok)
 - `settings.local.json` — Declares l (~12678 tok)
 
 ## .claude/agents/
@@ -103,6 +104,10 @@
 - `ship.md` — Phase A — Parallel fan-out (~1140 tok)
 - `spec.md` (~169 tok)
 - `test.md` (~166 tok)
+
+## .claude/hooks/
+
+- `block-direct-db.js` — PreToolUse hook (Edit|Write|MultiEdit) — บังคับกฎ "query ต้องอยู่ใน db/ หรือ web/db/ เท่านั้น" (~819 tok)
 
 ## .claude/rules/
 
@@ -367,6 +372,7 @@
 - `1788490304371_correct-completed-at-to-created-at-for-backfilled-resolved-rejected-cases.sql` — Up Migration (~373 tok)
 - `1788800000000_calling-perf-indexes.sql` — Up Migration (~507 tok)
 - `1788900000000_finance-payout-rounds.sql` — Up Migration (~1902 tok)
+- `1788950000000_fix-entry-137-speaker-description.sql` — Up Migration (~316 tok)
 
 ## org core (platformfor.org identity/
 
@@ -657,7 +663,7 @@
 - `casecheck.tmp.mjs` — TEMP — "ยังไม่มีผู้รับผิดชอบ 2" vs "เปิดอยู่ 180" ตัวไหนถูก (~212 tok)
 - `cdp-kanban.tmp.mjs` — TEMP — ขับ Chrome headless ผ่าน CDP (ไม่ใช้ dependency ใดๆ · Node 24 มี WebSocket ในตัว) (~1419 tok)
 - `chk-tmp.mjs` — Declares q (~256 tok)
-- `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~917 tok)
+- `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~1090 tok)
 - `gap.tmp.mjs` — TEMP — งานของ user 1 ที่ "มองไม่เห็นบนหน้าแรก" มีเท่าไหร่ แยกตามสถานะ/กำหนดส่ง (~332 tok)
 - `jsconfig.json` (~67 tok)
 - `middleware.js` — ส่ง path ปัจจุบันเข้า request header ให้ server component อ่านได้ (~246 tok)
@@ -2171,6 +2177,7 @@
 - `caseLetterConfig.js` — หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter (~507 tok)
 - `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~9075 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
+- `emailBind.js` — query ของ lib/emailBindLink.js (owner ผูก email ให้สมาชิก) — ย้ายมาจาก lib 2026-09-17 SQL เดิมทุกตัว (~340 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
 - `orgAiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI (~1029 tok)
@@ -2286,7 +2293,7 @@
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
 - `forumImportCommit.js` — รูปจากกระทู้ (ทั้งเธรด ไม่ใช่แค่ข้อความเปิด) → uploads/kanban — ต้องโหลด bytes เอง URL ดิสฯ หมดอายุ (~1656 tok)
 - `generateComplaintLetter.js` — โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — แทรกเข้าไปตอน render ผ่าน image module (~1486 tok)
-- `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
+- `generatePdf.js` — สร้าง working dir ชั่วคราวใต้ TMP_ROOT (~6564 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
@@ -2357,6 +2364,7 @@
 - `authIdentity.live.test.js` — Live check (ต่อ DB จริง) — resolveUserByDiscord + phone login resolution (~1357 tok)
 - `callingAccess.test.js` — access fn รับ access object (จาก DB) — test เคสเขียนด้วย "ชื่อ role" ของ guild อาสาประชาชน (~2117 tok)
 - `caseAccess.test.js` — caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ (~378 tok)
+- `emailBindLink.test.js` — ล็อกพฤติกรรม emailBindLink หลังย้าย SQL เข้า web/db/emailBind.js (2026-09-17) (~953 tok)
 - `financeAccess.test.js` — Declares canViewAccount (~2368 tok)
 - `geography.test.js` — ---- province grant ---- (~817 tok)
 - `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3668 tok)

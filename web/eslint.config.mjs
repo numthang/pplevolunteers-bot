@@ -11,6 +11,11 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import next from '@next/eslint-plugin-next'
+import {
+  WEB_DB_ALLOWLIST, DB_MODULE_RE, DB_RULE_MESSAGE, toGlobs, assertAllowlistFresh,
+} from '../eslint.db-allowlist.mjs'
+
+assertAllowlistFresh(import.meta.dirname, WEB_DB_ALLOWLIST)
 
 export default [
   {
@@ -87,6 +92,21 @@ export default [
       'no-control-regex': 'off',
       'no-prototype-builtins': 'off',
       'no-irregular-whitespace': 'off',   // ข้อความไทยมีวรรคแปลกได้
+    },
+  },
+
+  // ── query ต้องอยู่ใน web/db/ เท่านั้น — นอกนั้นห้าม import pool/pg (allowlist = ของเดิม ห้ามเพิ่ม) ──
+  {
+    files: ['**/*.{js,jsx,mjs}'],
+    ignores: [
+      'db/**', 'scripts/**', '**/migrations/**',
+      '**/__tests__/**', '**/*.test.*', 'vitest*.js',
+      ...toGlobs(WEB_DB_ALLOWLIST),
+    ],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{ regex: DB_MODULE_RE.source, message: DB_RULE_MESSAGE }],
+      }],
     },
   },
 

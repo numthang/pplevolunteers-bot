@@ -8,6 +8,15 @@
 
 import js from '@eslint/js'
 import globals from 'globals'
+import {
+  BOT_DB_ALLOWLIST, DB_MODULE_RE, DB_RULE_MESSAGE, toGlobs, assertAllowlistFresh,
+} from './eslint.db-allowlist.mjs'
+
+assertAllowlistFresh(import.meta.dirname, BOT_DB_ALLOWLIST)
+
+// esquery อ่าน "/" ใน regex ไม่ได้ → ใช้ \x2F แทน
+const DB_REQUIRE_SELECTOR =
+  `CallExpression[callee.name='require'][arguments.0.value=/${DB_MODULE_RE.source.replaceAll('\\/', '\\x2F')}/]`
 
 export default [
   {
@@ -52,6 +61,22 @@ export default [
       'no-control-regex': 'off',
       'no-prototype-builtins': 'off',
       'no-irregular-whitespace': 'off',
+    },
+  },
+
+  // ── query ต้องอยู่ใน db/ เท่านั้น — นอกนั้นห้าม require/import pool/pg (allowlist = ของเดิม ห้ามเพิ่ม) ──
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    ignores: [
+      'db/**', 'scripts/**', 'migrations/**',
+      '**/__tests__/**', '**/*.test.*',
+      ...toGlobs(BOT_DB_ALLOWLIST),
+    ],
+    rules: {
+      'no-restricted-syntax': ['error', { selector: DB_REQUIRE_SELECTOR, message: DB_RULE_MESSAGE }],
+      'no-restricted-imports': ['error', {
+        patterns: [{ regex: DB_MODULE_RE.source, message: DB_RULE_MESSAGE }],
+      }],
     },
   },
 ]

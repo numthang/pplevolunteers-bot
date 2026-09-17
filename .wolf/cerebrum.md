@@ -2214,3 +2214,5 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
   ในระบบไม่ตรงกับที่คนกรอกมา
 
 - **[2026-09-15] docs — แก้ใบหลังเซ็นไม่ต้องเซ็นใหม่ (user เคาะ "เอกสารจุกจิก แก้ได้เสมอ"):** PATCH `/api/docs/entries/[id]` reset ลายเซ็นเฉพาะเมื่อเปลี่ยนผู้รับ · แก้ item_type/description/amount/distance_km หลังเซ็น → audit log `docs/entry.edit_after_sign` (meta.changes {field:[ก่อน,หลัง]}) แทน · ห้ามใส่ reset-on-content-edit กลับ (เคยใส่ใน c9ed57f8)
+
+- [2026-09-17] กฎ "query อยู่ใน db/ เท่านั้น" — allowlist `eslint.db-allowlist.mjs` (ลบได้อย่างเดียว) + hook `.claude/hooks/block-direct-db.js` · gotchas: (1) ชื่อไฟล์ Next `[id]` ใน ESLint `ignores` ต้อง escape เป็น `\[id\]` ไม่งั้นเป็น character class (2) esquery selector regex ห้ามมี `/` → ใช้ `\x2F` (3) `cd web && npx eslint .` พังหมื่นตัวเพราะกวาด `.next-*`/`tmp/` ในเครื่อง (ไม่ใช่โค้ดจริง) — ตรวจ source ด้วย `npx eslint app components db lib i18n middleware.js`
