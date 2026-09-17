@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:02:24.542Z
-> Files: 1170 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:30:12.402Z
+> Files: 1171 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -1823,7 +1823,7 @@
 ## web/app/docs/sign/[token]/
 
 - `layout.js` — Next.js layout (~71 tok)
-- `page.js` — Next.js page component (~13773 tok)
+- `page.js` — Next.js page component (~13845 tok)
 
 ## web/app/dojo/
 
@@ -1850,7 +1850,7 @@
 
 ## web/app/finance/payouts/
 
-- `page.js` — Next.js page component (~2841 tok)
+- `page.js` — Next.js page component (~3422 tok)
 
 ## web/app/finance/payouts/[id]/
 
@@ -2429,8 +2429,12 @@
 
 ## web/locales/
 
-- `en.json` (~29807 tok)
-- `th.json` (~28533 tok)
+- `en.json` (~30597 tok)
+- `th.json` (~29307 tok)
+
+## web/public/
+
+- `docs-preview-placeholder.svg` (~318 tok)
 
 ## web/public/media-temp/
 

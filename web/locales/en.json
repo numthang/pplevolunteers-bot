@@ -189,6 +189,8 @@
       "sourceEvent": "Linked to an event",
       "sourcePeriod": "Monthly period",
       "fieldEvent": "Event",
+      "eventSearchPlaceholder": "Search events…",
+      "eventNoResults": "No events found",
       "fieldPeriod": "Month",
       "fieldDefaultAmount": "Default amount per person",
       "choose": "— choose —",

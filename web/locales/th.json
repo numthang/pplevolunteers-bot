@@ -189,6 +189,8 @@
       "sourceEvent": "ผูกกับกิจกรรม",
       "sourcePeriod": "รอบประจำเดือน",
       "fieldEvent": "กิจกรรม",
+      "eventSearchPlaceholder": "ค้นหากิจกรรม…",
+      "eventNoResults": "ไม่พบกิจกรรม",
       "fieldPeriod": "เดือน",
       "fieldDefaultAmount": "ยอดตั้งต้นต่อคน",
       "choose": "— เลือก —",

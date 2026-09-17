@@ -159,11 +159,8 @@ export default function PayoutsPage() {
             {form.source_type === 'event' ? (
               <div>
                 <label className={LABEL}>{t('payouts.fieldEvent')}</label>
-                <select className={INPUT} value={form.event_id}
-                  onChange={e => setForm(f => ({ ...f, event_id: e.target.value }))}>
-                  <option value="">{t('payouts.choose')}</option>
-                  {events.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
+                <EventCombobox events={events} value={form.event_id}
+                  onChange={id => setForm(f => ({ ...f, event_id: id }))} />
               </div>
             ) : (
               <div>
@@ -190,6 +187,68 @@ export default function PayoutsPage() {
             </button>
           </div>
         </Modal>
+      )}
+    </div>
+  )
+}
+
+function EventCombobox({ events, value, onChange }) {
+  const t = useTranslations('finance')
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    setQuery(events.find(e => String(e.id) === String(value))?.name || '')
+  }, [value, events])
+
+  useEffect(() => {
+    const handler = e => { if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = query.trim()
+    ? events.filter(e => e.name.includes(query.trim()))
+    : events
+
+  function handleSelect(ev) {
+    onChange(String(ev.id))
+    setQuery(ev.name)
+    setOpen(false)
+  }
+
+  function handleInputChange(e) {
+    setQuery(e.target.value)
+    onChange('')
+    setOpen(true)
+  }
+
+  function handleBlur() {
+    const exact = events.find(e => e.name === query.trim())
+    if (exact) { onChange(String(exact.id)); setQuery(exact.name); return }
+    setQuery(events.find(e => String(e.id) === String(value))?.name || '')
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input type="text" className={INPUT} value={query}
+        onChange={handleInputChange} onFocus={() => setOpen(true)} onBlur={handleBlur}
+        placeholder={t('payouts.eventSearchPlaceholder')} autoComplete="off" />
+
+      {open && (
+        <ul className="absolute z-50 top-full mt-1 w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <li className="px-3 py-2.5 text-base text-warm-400 dark:text-disc-muted">{t('payouts.eventNoResults')}</li>
+          ) : filtered.map(ev => (
+            <li key={ev.id}>
+              <button type="button" onMouseDown={() => handleSelect(ev)}
+                className={`w-full text-left px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-disc-hover ${String(ev.id) === String(value) ? 'font-semibold text-teal' : 'text-warm-900 dark:text-disc-text'}`}>
+                {ev.name}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
