@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Pencil, Trash2, Check, X, IdCard } from 'lucide-react'
 import { formatThaiId } from '@/lib/thaiId.js'
+import { resolveBank } from '@/config/banks.js'
+import PayeeBankFields from '@/components/finance/PayeeBankFields'
 
 const inputCls = 'w-full text-sm px-2 py-1.5 rounded border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text focus:outline-none focus:ring-1 focus:ring-orange'
 
 const EDITABLE = ['title', 'first_name', 'last_name', 'entity_name', 'id_number',
                   'house_no', 'moo', 'road', 'subdistrict', 'district', 'province', 'zip_code', 'phone']
+const BANK_EDITABLE = ['payment_method', 'bank_code', 'account_no', 'account_holder', 'promptpay_id']
 
 /**
  * จัดการผู้รับเงินคนนอกที่สะสมไว้ — คนกลุ่มนี้ reuse ข้ามงาน ถ้าไม่มีที่แก้
@@ -46,7 +49,7 @@ export default function ExternalPayeeSettings() {
 
   function startEdit(p) {
     setEditId(p.id)
-    setForm(Object.fromEntries(EDITABLE.map(f => [f, p[f] ?? ''])))
+    setForm(Object.fromEntries([...EDITABLE, ...BANK_EDITABLE].map(f => [f, p[f] ?? ''])))
   }
 
   async function save(id) {
@@ -77,6 +80,10 @@ export default function ExternalPayeeSettings() {
     if (!res.ok) { setError((await res.json()).error); return }
     setRows(rs => rs.filter(r => r.id !== p.id))
   }
+
+  const bankLabel = p => p.payment_method === 'promptpay'
+    ? (p.promptpay_id && `${t('externalPayee.settings.promptpay')} ${p.promptpay_id}`)
+    : (p.account_no && `${resolveBank(p)?.name || ''} ${p.account_no}`.trim())
 
   const label = p => p.entity_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || '—'
 
@@ -114,6 +121,9 @@ export default function ExternalPayeeSettings() {
                       </div>
                     ))}
                   </div>
+                  <PayeeBankFields
+                    value={form} onChange={patch => setForm(s => ({ ...s, ...patch }))}
+                    inputCls={inputCls} labelCls="block text-xs text-warm-500 dark:text-disc-muted mb-1" />
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => save(p.id)} disabled={saving}
                       className="flex items-center gap-1.5 text-sm px-4 py-2 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors">
@@ -140,6 +150,7 @@ export default function ExternalPayeeSettings() {
                       {p.id_number ? formatThaiId(p.id_number) : t('externalPayee.settings.noIdNumber')}
                       {p.province && ` · ${p.province}`}
                       {p.phone && ` · ${p.phone}`}
+                      {` · ${bankLabel(p) || t('externalPayee.settings.noBank')}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">

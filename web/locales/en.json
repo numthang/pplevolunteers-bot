@@ -229,7 +229,23 @@
       "problem_bank_code": "Bank not selected",
       "problem_account_no": "Account number missing",
       "problem_promptpay": "Invalid PromptPay ID",
-      "problem_empty": "This round is empty"
+      "problem_empty": "This round is empty",
+      "addExternal": "Add non-member",
+      "editBankAria": "Add/edit bank account",
+      "editBankTitle": "Payout account — {name}",
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "payeeBank": {
+      "method": "Payment method",
+      "methodBank": "Bank transfer",
+      "methodPromptpay": "PromptPay",
+      "promptpayId": "PromptPay (phone/ID number)",
+      "bank": "Bank",
+      "selectBank": "— Select bank —",
+      "accountNo": "Account number",
+      "accountHolder": "Account name"
     }
   },
   "calling": {
@@ -1323,7 +1339,9 @@
         "loadFailed": "Could not load the list",
         "noIdNumber": "No ID number",
         "viewCard": "View ID card copy",
-        "confirmDelete": "Remove {name}?"
+        "confirmDelete": "Remove {name}?",
+        "noBank": "No bank info",
+        "promptpay": "PromptPay"
       }
     },
     "signPolicy": {

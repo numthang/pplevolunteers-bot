@@ -2,10 +2,12 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, Check, UserPlus, Pencil, X } from 'lucide-react'
 import { resolveBank, digitsOnly } from '@/config/banks.js'
 import { chunkIntoGroups } from '@/lib/payoutExport/shared.js'
 import { buildPlainText } from '@/lib/payoutExport/plainText.js'
+import ExternalPayeeModal from '@/components/docs/ExternalPayeeModal'
+import PayeeBankFields from '@/components/finance/PayeeBankFields'
 
 const INPUT = 'h-11 px-3 text-base rounded-lg w-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal'
 const LABEL = 'block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1'
@@ -26,6 +28,8 @@ export default function PayoutRoundPage({ params }) {
   const [results, setResults] = useState([])
   const [copied, setCopied] = useState('')
   const [loading, setLoading] = useState(true)
+  const [newPayeeName, setNewPayeeName] = useState(null)   // null = ปิด · string = เปิดพร้อมชื่อที่พิมพ์ค้าง
+  const [bankEdit, setBankEdit] = useState(null)           // บรรทัดคนนอกที่กำลังใส่บัญชี
 
   const saveTimer = useRef(null)
   const locked = round?.status === 'paid'
@@ -232,6 +236,10 @@ export default function PayoutRoundPage({ params }) {
                 </ul>
               )}
             </div>
+            <button type="button" onClick={() => { setNewPayeeName(query); setResults([]) }}
+              className={`${BTN2} h-11 shrink-0 flex items-center justify-center gap-1.5`}>
+              <UserPlus size={16} /> {t('payouts.addExternal')}
+            </button>
             {!!otherRounds.length && (
               <select className={`${INPUT} sm:w-64`} value="" onChange={e => copyFrom(e.target.value)}>
                 <option value="">{t('payouts.copyFrom')}</option>
@@ -287,6 +295,13 @@ export default function PayoutRoundPage({ params }) {
                     )}
                   </div>
 
+                  {!locked && it.external_payee_id && !it.snapshot_at && (
+                    <button onClick={() => setBankEdit(it)} aria-label={t('payouts.editBankAria')}
+                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
+                      <Pencil size={16} />
+                    </button>
+                  )}
+
                   {!!dest && (
                     <button onClick={() => copyText(dest, `a-${it.id}`)} aria-label={t('payouts.copyAccountAria')}
                       className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
@@ -335,6 +350,94 @@ export default function PayoutRoundPage({ params }) {
       {!locked && !!items.length && !allPaid && (
         <p className="text-sm text-warm-500 dark:text-disc-muted mt-2">{t('payouts.closeHint')}</p>
       )}
+
+      {newPayeeName !== null && (
+        <ExternalPayeeModal
+          initialName={newPayeeName}
+          createUrl={`/api/finance/payouts/${id}/payees`}
+          allowCard={false}
+          onClose={() => setNewPayeeName(null)}
+          onCreated={(payee, res) => {
+            setNewPayeeName(null)
+            setQuery('')
+            // สร้างใหม่ = route ใส่เข้ารอบให้แล้ว · เลือก "ใช้คนเดิม" = ยังไม่ได้ใส่ ต้องยิงเพิ่มเอง
+            if (res?.items) setItems(res.items)
+            else addPayee({ kind: 'external', id: payee.id })
+          }}
+        />
+      )}
+
+      {bankEdit && (
+        <BankEditModal
+          item={bankEdit} roundId={id} t={t}
+          onClose={() => setBankEdit(null)}
+          onSaved={next => {
+            setItems(next)
+            setProblems(ps => ps.filter(p => p.id !== bankEdit.id))
+            setBankEdit(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * ใส่/แก้บัญชีของคนนอกจากหน้ารอบจ่าย — แก้ทะเบียนคนนอกจริง (ครั้งหน้าค้นเจอพร้อมบัญชี)
+ * ไม่มี autosave → มีปุ่มบันทึก (กฎ Update ใน CLAUDE.md)
+ */
+function BankEditModal({ item, roundId, t, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    payment_method: item.payment_method || 'bank',
+    bank_code: item.bank_code || '',
+    account_no: item.account_no || '',
+    account_holder: item.account_holder || '',
+    promptpay_id: item.promptpay_id || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onClose])
+
+  async function save() {
+    setSaving(true); setError('')
+    const res = await fetch(`/api/finance/payouts/${roundId}/payees/${item.external_payee_id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+    })
+    setSaving(false)
+    if (!res.ok) { setError(t('payouts.saveFailed')); return }
+    onSaved((await res.json()).items)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-warm-200 dark:border-disc-border">
+          <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text min-w-0 truncate">
+            {t('payouts.editBankTitle', { name: item.payee_name || '—' })}
+          </h2>
+          <button type="button" onClick={onClose} aria-label={t('payouts.close')}
+            className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-3">
+          <PayeeBankFields value={form} onChange={patch => setForm(f => ({ ...f, ...patch }))}
+            inputCls={INPUT} labelCls={LABEL} />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border">
+          <button type="button" onClick={onClose} className={BTN2}>{t('payouts.cancel')}</button>
+          <button type="button" onClick={save} disabled={saving} className={BTN}>
+            {saving ? t('payouts.saving') : t('payouts.save')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

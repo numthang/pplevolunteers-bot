@@ -109,7 +109,8 @@ const ITEM_SELECT = `
          COALESCE(i.payment_method, om.payment_method, p.payment_method, 'bank') AS payment_method,
          COALESCE(i.bank_code,    om.bank_code,    p.bank_code)    AS bank_code,
          COALESCE(i.account_no,   om.account_no,   p.account_no)   AS account_no,
-         COALESCE(i.promptpay_id, om.promptpay_id, p.promptpay_id) AS promptpay_id
+         COALESCE(i.promptpay_id, om.promptpay_id, p.promptpay_id) AS promptpay_id,
+         COALESCE(om.account_holder, p.account_holder) AS account_holder
     FROM finance_payout_items i
     LEFT JOIN users u ON u.id = i.member_user_id
     -- ⚠️ org_members มีได้หลายแถวต่อ user (แถวละ guild — org 1 มี 3 guild)
@@ -120,7 +121,7 @@ const ITEM_SELECT = `
        ORDER BY (COALESCE(om2.account_no, om2.promptpay_id) IS NOT NULL) DESC, om2.id
        LIMIT 1
     ) om ON TRUE
-    LEFT JOIN docs_external_payees p ON p.id = i.external_payee_id`
+    LEFT JOIN docs_external_payees p ON p.id = i.external_payee_id AND p.org_id = $2`
 
 export async function listItems(orgId, roundId) {
   const { rows } = await pool.query(
@@ -134,11 +135,14 @@ export async function listItems(orgId, roundId) {
 
 export async function addItem(orgId, roundId, { member_user_id = null, external_payee_id = null, amount, note = null }) {
   const { rows } = await pool.query(
+    // ผู้รับต้องอยู่ org เดียวกับรอบ — ไม่งั้นเดา id แล้วดึงชื่อ/เลขบัญชีคนของ org อื่นมาดูได้
     `INSERT INTO finance_payout_items (round_id, member_user_id, external_payee_id, amount, note)
-     VALUES ($1, $2, $3, $4, $5)
+     SELECT $1, $2::int, $3::int, $4, $5
+      WHERE ($2::int IS NOT NULL AND EXISTS (SELECT 1 FROM org_members WHERE user_id = $2::int AND org_id = $6))
+         OR ($3::int IS NOT NULL AND EXISTS (SELECT 1 FROM docs_external_payees WHERE id = $3::int AND org_id = $6))
      ON CONFLICT DO NOTHING
      RETURNING id`,
-    [roundId, member_user_id || null, external_payee_id || null, amount, note]
+    [roundId, member_user_id || null, external_payee_id || null, amount, note, orgId]
   )
   return rows[0]?.id || null
 }
@@ -220,4 +224,19 @@ export async function searchPayees(orgId, q, limit = 20) {
     [orgId, like, limit]
   )
   return rows
+}
+
+/**
+ * คนนอกคนนี้อยู่ในรอบนี้ และบรรทัดของเขายังไม่ถูก snapshot หรือเปล่า
+ * — ด่านของหน้ารอบจ่ายก่อนแก้ข้อมูลบัญชีในทะเบียนคนนอก (สิทธิ์การเงินแก้ได้เฉพาะคนในรอบตัวเอง)
+ * ⚠️ บรรทัดที่ snapshot แล้วแสดงค่าที่ล็อกไว้ แก้ทะเบียนไปก็ไม่เห็นผล → ไม่ให้แก้ผ่านทางนี้
+ */
+export async function isEditableExternalPayeeInRound(orgId, roundId, payeeId) {
+  const { rowCount } = await pool.query(
+    `SELECT 1 FROM finance_payout_items i
+       JOIN finance_payout_rounds r ON r.id = i.round_id AND r.org_id = $1
+      WHERE i.round_id = $2 AND i.external_payee_id = $3 AND i.snapshot_at IS NULL`,
+    [orgId, roundId, payeeId]
+  )
+  return rowCount > 0
 }

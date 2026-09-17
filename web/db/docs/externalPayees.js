@@ -1,5 +1,6 @@
 import pool from '../index.js'
 import { digitsOnly } from '../../lib/thaiId.js'
+import { bankByCode } from '../../config/banks.js'
 
 /**
  * ผู้รับเงิน "คนนอก" — คนที่ไม่มี users/Discord และไม่อยู่ทะเบียนสมาชิก
@@ -16,7 +17,8 @@ import { digitsOnly } from '../../lib/thaiId.js'
 
 const COLS = `id, org_id, payee_type, title, first_name, last_name, entity_name,
               id_number, house_no, moo, road, subdistrict, district, province,
-              zip_code, phone, linked_user_id, created_by, created_at, updated_at,
+              zip_code, phone, payment_method, bank_code, bank_name, account_no,
+              account_holder, promptpay_id, linked_user_id, created_by, created_at, updated_at,
               (id_card_image IS NOT NULL) AS has_id_card`
 
 /** ชื่อที่ใช้แสดง — บุคคลใช้ชื่อ-สกุล, นิติบุคคลใช้ชื่อร้าน */
@@ -84,20 +86,32 @@ const FIELDS = ['payee_type', 'title', 'first_name', 'last_name', 'entity_name',
                 'house_no', 'moo', 'road', 'subdistrict', 'district', 'province',
                 'zip_code', 'phone']
 
+/** ข้อมูลรับเงิน — แยกชุดไว้ เพราะหน้ารอบจ่ายแก้ได้เฉพาะชุดนี้ (สิทธิ์การเงิน ไม่ใช่สิทธิ์ docs) */
+export const BANK_FIELDS = ['payment_method', 'bank_code', 'account_no', 'account_holder', 'promptpay_id']
+
+const ALL_FIELDS = [...FIELDS, ...BANK_FIELDS]
+
 /** ช่องที่ผู้ใช้ไม่ได้กรอกมาเป็น '' จากฟอร์ม — ต้องลงเป็น NULL
  *  ไม่งั้น COALESCE ที่ view/ค้นหาจะเลือก '' มาใช้แล้วชื่อผู้รับกลายเป็นช่องว่าง */
 const clean = (f, v) => {
   if (f === 'id_number')  return digitsOnly(v) || null
   if (f === 'payee_type') return v || 'person'
+  if (f === 'payment_method') return v === 'promptpay' ? 'promptpay' : 'bank'
+  // เลขบัญชี/พร้อมเพย์ต้องเป็นตัวเลขล้วน — ขีดกับเว้นวรรคทำไฟล์โอนพัง
+  if (f === 'account_no' || f === 'promptpay_id') return digitsOnly(v) || null
   const t = typeof v === 'string' ? v.trim() : v
   return t === '' || t === undefined ? null : t
 }
 
+// ชื่อธนาคารไทยตามรหัสเสมอ — ไม่รับชื่อที่พิมพ์มาเอง (เคยสะกดผิดกันใน prod)
+const bankNameOf = code => bankByCode(code)?.name || null
+
 export async function createExternalPayee(orgId, createdBy, data) {
-  const vals = FIELDS.map(f => clean(f, data[f]))
+  const cols = [...ALL_FIELDS, 'bank_name']
+  const vals = [...ALL_FIELDS.map(f => clean(f, data[f])), bankNameOf(data.bank_code)]
   const { rows } = await pool.query(
-    `INSERT INTO docs_external_payees (org_id, created_by, ${FIELDS.join(', ')})
-     VALUES ($1, $2, ${FIELDS.map((_, i) => `$${i + 3}`).join(', ')})
+    `INSERT INTO docs_external_payees (org_id, created_by, ${cols.join(', ')})
+     VALUES ($1, $2, ${cols.map((_, i) => `$${i + 3}`).join(', ')})
      RETURNING ${COLS}`,
     [orgId, createdBy, ...vals]
   )
@@ -108,10 +122,14 @@ export async function createExternalPayee(orgId, createdBy, data) {
 export async function updateExternalPayee(id, orgId, data) {
   const sets = []
   const vals = [id, orgId]
-  for (const f of FIELDS) {
+  for (const f of ALL_FIELDS) {
     if (data[f] === undefined) continue
     vals.push(clean(f, data[f]))
     sets.push(`${f} = $${vals.length}`)
+  }
+  if (data.bank_code !== undefined) {
+    vals.push(bankNameOf(data.bank_code))
+    sets.push(`bank_name = $${vals.length}`)
   }
   if (!sets.length) return getExternalPayeeById(id, orgId)
   const { rows } = await pool.query(

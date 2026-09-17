@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Upload, Loader2, AlertTriangle, UserPlus } from 'lucide-react'
 import IdCardCropper from './IdCardCropper'
+import PayeeBankFields from '@/components/finance/PayeeBankFields'
 
 const inputCls = 'h-8 w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
 const labelCls = 'text-xs text-warm-600 dark:text-disc-text mb-1 block'
@@ -12,6 +13,7 @@ const EMPTY = {
   payee_type: 'person', title: '', first_name: '', last_name: '', entity_name: '',
   id_number: '', house_no: '', moo: '', road: '', subdistrict: '', district: '',
   province: '', zip_code: '', phone: '',
+  payment_method: 'bank', bank_code: '', account_no: '', account_holder: '', promptpay_id: '',
 }
 
 // ชื่อที่พิมพ์ค้างในช่องค้นหา — พาเข้ามาเป็นค่าตั้งต้น ไม่ต้องพิมพ์ซ้ำ
@@ -26,8 +28,14 @@ function seedName(base, name) {
  *
  * กฎ Create (CLAUDE.md): ไม่สร้างแถวใน DB จนกว่าจะกดบันทึก · OCR แค่เติมฟอร์ม ไม่แตะ DB
  * รูปบัตรถูกอัปหลังสร้างแถวเสร็จ (ต้องมี id ก่อนถึงจะรู้ว่าเก็บให้ใคร)
+ *
+ * createUrl — หน้ารอบจ่ายส่ง endpoint ของตัวเอง (สิทธิ์การเงิน) · allowCard=false ซ่อนการถ่ายบัตร
+ * เพราะ OCR/เก็บรูปบัตรต้องใช้สิทธิ์ docs · onCreated(payee, response) — response มี items ของรอบด้วย
  */
-export default function ExternalPayeeModal({ initialName = '', onClose, onCreated }) {
+export default function ExternalPayeeModal({
+  initialName = '', onClose, onCreated,
+  createUrl = '/api/docs/external-payees', allowCard = true,
+}) {
   const t = useTranslations('docs')
   const [form, setForm]       = useState(() => seedName(EMPTY, initialName))
   const [cropSrc, setCropSrc] = useState(null)
@@ -82,7 +90,7 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
     setSaving(true)
     setErr(null)
     try {
-      const res = await fetch('/api/docs/external-payees', {
+      const res = await fetch(createUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -99,7 +107,7 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
         await fetch(`/api/docs/external-payees/${d.data.id}/id-card`, { method: 'POST', body: fd })
           .catch(() => {})
       }
-      onCreated(d.data)
+      onCreated(d.data, d)
     } catch (e2) {
       setErr(e2.message)
     } finally {
@@ -131,7 +139,7 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
 
         <div className="p-5 space-y-4">
           {/* ถ่ายบัตร → เติมฟอร์มให้ */}
-          <div>
+          {allowCard && <div>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={pickFile} className="hidden" />
             <button
               type="button"
@@ -145,7 +153,7 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
             </button>
             {cardUrl && <img src={cardUrl} alt="" className="mt-2 rounded-lg max-h-32 mx-auto" />}
             <p className="mt-1.5 text-xs text-warm-400 dark:text-disc-muted">{t('externalPayee.uploadHint')}</p>
-          </div>
+          </div>}
 
           {existing && (
             <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-3 text-sm">
@@ -199,6 +207,11 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
             {/* บัตรไม่มีเบอร์โทร — ช่องเดียวที่ต้องพิมพ์เองเสมอ */}
             <Field label={t('externalPayee.fields.phone')}       value={form.phone}       onChange={v => setForm(f => ({ ...f, phone: v }))} />
           </div>
+
+          <PayeeBankFields
+            className="pt-4 border-t border-warm-200 dark:border-disc-border"
+            value={form} onChange={patch => setForm(f => ({ ...f, ...patch }))}
+            inputCls={inputCls} labelCls={labelCls} />
 
           {err && <p className="text-sm text-red-accent">{err}</p>}
         </div>

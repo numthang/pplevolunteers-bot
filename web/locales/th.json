@@ -229,7 +229,23 @@
       "problem_bank_code": "ยังไม่ได้เลือกธนาคาร",
       "problem_account_no": "ยังไม่มีเลขบัญชี",
       "problem_promptpay": "เลขพร้อมเพย์ไม่ถูกต้อง",
-      "problem_empty": "รอบนี้ยังไม่มีใคร"
+      "problem_empty": "รอบนี้ยังไม่มีใคร",
+      "addExternal": "เพิ่มคนนอก",
+      "editBankAria": "ใส่/แก้บัญชี",
+      "editBankTitle": "บัญชีรับเงิน — {name}",
+      "close": "ปิด",
+      "cancel": "ยกเลิก",
+      "save": "บันทึก"
+    },
+    "payeeBank": {
+      "method": "วิธีรับเงิน",
+      "methodBank": "โอนเข้าบัญชีธนาคาร",
+      "methodPromptpay": "พร้อมเพย์",
+      "promptpayId": "พร้อมเพย์ (เบอร์โทร/เลขบัตร)",
+      "bank": "ธนาคาร",
+      "selectBank": "— เลือกธนาคาร —",
+      "accountNo": "เลขบัญชี",
+      "accountHolder": "ชื่อบัญชี"
     }
   },
   "calling": {
@@ -1323,7 +1339,9 @@
         "loadFailed": "โหลดรายชื่อไม่สำเร็จ",
         "noIdNumber": "ไม่มีเลขประจำตัว",
         "viewCard": "ดูสำเนาบัตร",
-        "confirmDelete": "ลบ {name} ออกจากระบบ?"
+        "confirmDelete": "ลบ {name} ออกจากระบบ?",
+        "noBank": "ไม่มีข้อมูลบัญชี",
+        "promptpay": "พร้อมเพย์"
       }
     },
     "signPolicy": {
