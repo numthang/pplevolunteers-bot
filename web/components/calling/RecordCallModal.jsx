@@ -10,8 +10,10 @@ import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.j
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import StarredStar from '@/components/calling/StarredStar.jsx'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
-import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
+// eslint-disable-next-line no-shadow-restricted-names -- Infinity คือชื่อไอคอน lucide ไม่ได้ตั้งใจทับ global
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, Infinity } from 'lucide-react'
 import { FLAG_OPTIONS, getFlagOption, flagDotStyle } from '@/lib/callingFlags.js'
+import { TIER_COLORS } from '@/lib/callingTiers.js'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -38,13 +40,6 @@ function getExpiryIcon(expiredAt, t) {
   if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: t('assignment.expiredLabel') }
   if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: t('assignment.expiringLabel') }
   return null
-}
-
-const TIER_COLORS = {
-  A: { bg: '#ead3ce', text: '#714b2b' },
-  B: { bg: '#cce5f4', text: '#0c447c' },
-  C: { bg: '#faeeda', text: '#854f0b' },
-  D: { bg: '#fcebeb', text: '#a32d2d' },
 }
 
 const URL_RE = /https?:\/\/[^\s]+/g
@@ -376,6 +371,10 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   <span className="font-semibold text-lg text-warm-900 dark:text-disc-text truncate">{displayName}</span>
                   <span className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                  {/* ตลอดชีพ/หมดอายุ โชว์ที่นี่ที่เดียว — ถอดออกจากแถวรายชื่อแล้วเพราะรก (user เคาะ 2026-09-17) */}
+                  {!isContact && (member.membership_type === 'ตลอดชีพ' || member.membership_type === 'สมาชิกตลอดชีพ') && (
+                    <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 flex-shrink-0 text-green-600 dark:text-green-400" />
+                  )}
                   {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                   {memberId && isFavLoaded && (
                     <StarredStar

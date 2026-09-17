@@ -11,13 +11,7 @@ import { can } from '@/lib/permissions.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, Star, IdCard, BookUser, History } from 'lucide-react'
-
-const TIER_COLORS = {
-  A: { bg: '#ead3ce', text: '#714b2b' },
-  B: { bg: '#cce5f4', text: '#0c447c' },
-  C: { bg: '#faeeda', text: '#854f0b' },
-  D: { bg: '#fcebeb', text: '#a32d2d' },
-}
+import { TIER_COLORS } from '@/lib/callingTiers.js'
 
 const RSVP_ICONS = {
   yes:   { icon: '✓', color: '#0d9e94' },

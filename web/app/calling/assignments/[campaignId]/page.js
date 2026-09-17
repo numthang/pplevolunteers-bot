@@ -10,8 +10,7 @@ import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
-// eslint-disable-next-line no-shadow-restricted-names -- Infinity คือชื่อไอคอน lucide ไม่ได้ตั้งใจทับ global
-import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Star, Infinity } from 'lucide-react'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, UserMinus, Star } from 'lucide-react'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -27,6 +26,7 @@ const STATUS_ICONS = {
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 import { getFlagOption, flagDotStyle, FLAG_OPTIONS } from '@/lib/callingFlags.js'
+import { TIER_COLORS } from '@/lib/callingTiers.js'
 
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
@@ -42,32 +42,15 @@ function parseLinksPage(text) {
 
 const PAGE_SIZE = 100
 
-const TIER_COLORS = {
-  A: { bg: '#ead3ce', text: '#714b2b' },
-  B: { bg: '#cce5f4', text: '#0c447c' },
-  C: { bg: '#faeeda', text: '#854f0b' },
-  D: { bg: '#fcebeb', text: '#a32d2d' },
-}
-
 const RSVP_ICONS = {
   yes:   { icon: '✓', color: '#0d9e94' },
   no:    { icon: '✗', color: '#a32d2d' },
   maybe: { icon: '?', color: '#854f0b' },
 }
 
-
 function getStatusBadge(status, t) {
   if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: t('assignment.statusAssigned') }
   return { bg: '#faeeda', text: '#854f0b', label: t('assignment.statusUnassigned') }
-}
-
-function getExpiryIcon(expiredAt, t) {
-  if (!expiredAt) return null
-  const now = Date.now()
-  const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: t('assignment.expiredLabel') }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: t('assignment.expiringLabel') }
-  return null
 }
 
 const URL_RE = /https?:\/\/[^\s]+/g
@@ -849,7 +832,6 @@ export default function CampaignPage({ params }) {
               const flagOption = getFlagOption(item.flag)
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
               const dimmed    = !hasPhone ? 'opacity-50' : ''
-              const expiryIcon = isMember ? getExpiryIcon(item.expired_at, t) : null
               const catColor  = !isMember && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
               const displayName = isMember ? item.full_name : [item.first_name, item.last_name].filter(Boolean).join(' ')
@@ -874,15 +856,12 @@ export default function CampaignPage({ params }) {
                     <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
                     <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => openRecordModal(item)}>
                       <div className="flex items-center gap-1.5 truncate">
+                        {/* tier อยู่หน้าชื่อ กว้างคงที่ ชื่อทุกแถวจึงเริ่มตรงกัน */}
+                        <span className="shrink-0 w-5 py-px rounded text-center text-xs font-bold"
+                          style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {displayName}
                         </span>
-                        <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
-                          style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                        {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
-                          <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
-                        )}
-                        {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="md:hidden shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t(item.phone_hidden ? 'assignment.phoneHiddenLabel' : 'assignment.noPhoneLabel')}</span>}
                       </div>
