@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T17:49:50.136Z
-> Files: 1177 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-18T10:22:22.893Z
+> Files: 1180 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -486,6 +486,8 @@
 ## scripts/finance/
 
 - `backfillBankInfo.mjs` — Backfill ข้อมูลรับเงินของสมาชิก (ธนาคาร/เลขบัญชี/พร้อมเพย์) จากไฟล์ xlsx (~1555 tok)
+- `clearBankInfo.mjs` — ล้างข้อมูลรับเงินของสมาชิกใน org_members (ธนาคาร/เลขบัญชี/พร้อมเพย์/ชื่อเจ้าของบัญชี) (~787 tok)
+- `lookupPhonesById.mjs` — ค้นเบอร์โทรจาก discord_id — one-off lookup, ไม่เขียนข้อมูล (~355 tok)
 - `parse-kbank-statement copy.js` — parse-kbank-statement.js (~2787 tok)
 - `parse-kbank-statement.js` — parse-kbank-statement.js (~3168 tok)
 - `updateMemberBankById.mjs` — อัพเดทบัญชีธนาคาร (payment_method/bank_code/bank_name/account_no/account_holder) (~783 tok)
@@ -510,7 +512,7 @@
 
 ## scripts/members/
 
-- `syncPhoneFromRegistry.mjs` — ดึงเบอร์จากทะเบียนพรรค (cache_pple_member) ใส่ users.phone + phone_verified_at (~3148 tok)
+- `syncPhoneFromRegistry.mjs` — ดึงเบอร์จากทะเบียนพรรค (cache_pple_member) ใส่ users.phone + phone_verified_at (~3350 tok)
 
 ## scripts/migration/
 
@@ -2235,9 +2237,10 @@
 
 ## web/db/finance/
 
+- `_fundtest.tmp.mjs` — Declares ok (~821 tok)
 - `accounts.js` — org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId (~1107 tok)
 - `categories.js` — org-scope: guild_id→org_id · owner_id = users.id (INT) · ownerId param = userId (~506 tok)
-- `funds.js` — Exports getFunds, createFund, deleteFund, getFundBalances (~496 tok)
+- `funds.js` — กองที่รายการนี้นับอยู่จริง (ใช้ทั้ง list/filter/ยอดกอง — กฎอยู่ที่นี่ที่เดียว) (~1206 tok)
 - `payouts.js` — รอบจ่ายเบี้ยเลี้ยง — ดู migrations/1788900000000_finance-payout-rounds.sql (~3113 tok)
 - `transactions.js` — org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId (~2604 tok)
 

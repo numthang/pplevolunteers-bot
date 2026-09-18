@@ -9260,6 +9260,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-17T17:49:44.038Z"
+    },
+    {
+      "id": "bug-536",
+      "timestamp": "2026-09-17T18:34:20.787Z",
+      "error_message": "Wrong condition in logic",
+      "file": "scripts/members/syncPhoneFromRegistry.mjs",
+      "root_cause": "Condition was: if (u.firstname?.trim()",
+      "fix": "Changed to: if (FORCE.has(u.user_id)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T18:34:20.787Z"
+    },
+    {
+      "id": "bug-537",
+      "timestamp": "2026-09-17T18:34:26.883Z",
+      "error_message": "Incorrect value in code",
+      "file": "scripts/members/syncPhoneFromRegistry.mjs",
+      "root_cause": "Had ')})`",
+      "fix": "Changed to ')} · ระบุตัวเอง ${lv('",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "mjs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-17T18:34:26.883Z"
     }
   ]
 }

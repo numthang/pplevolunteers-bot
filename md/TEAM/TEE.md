@@ -16,7 +16,7 @@ My Tasks and bug issue
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - JotForm ลอกมาเลยครับ มีแบบให้ login และ public ลองดู spec ก่อน แต่ feature ยากไม่จำเป็น ตัดทิ้ง แต่ให้ถามก่อน
 - Poll anonymous, semi-anon, public ลอก pollbotplus มาเลย แต่อาจจะอัพเกรดนิดหน่อย ลองดูว่าควรอัพเกรดอะไร อย่างน้อยผมว่า max 7 วันควรเพิ่มได้อีก, แล้วก็แก้ไขโพล
-- Theme https://designmd.ai/
+- Theme https://designmd.ai/ ศึกษา Design System
 
 # Kanban
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
@@ -66,7 +66,53 @@ My Tasks and bug issue
 - Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา
 
 # i18n
-- ยังไม่หมด
+งาน: ทำ hook + ตัวตรวจใน lint บังคับกฎ i18n (§🌍 i18n ใน CLAUDE.md) ให้เป็นระบบ ไม่ใช่แค่กฎที่เขียนไว้
+รัน /scrutinize กับแผนก่อนลงมือเขียนโค้ด ตามกฎของ repo นี้
+
+## ที่มา
+- กฎ "string ที่ user เห็นต้องผ่าน t()" มีอยู่แค่ใน CLAUDE.md ไม่มีอะไรบังคับ
+- ผลคือยังมีข้อความไทย hardcode เพิ่มเข้ามา: เคยพลาดที่ PostsHome.jsx (บันทึกไว้ใน CLAUDE.md เมื่อ 2026-07-30) และ md/PENDING.md ยังค้างหนี้ i18n หลายข้อ
+  (PostEditor.jsx 764 บรรทัดยังไม่มี t() เลย, PostMetaPanel.jsx, basketHandler.js)
+- ตรวจคร่าวๆ ด้วย grep ใน web/app + web/components:
+  ใช้ t() อย่างเดียว 71 ไฟล์ · ใช้ t() แต่ยังมีไทยปน 75 ไฟล์ · ยังไม่มี t() เลย 60 ไฟล์
+  (ตัวเลขนี้ให้ตรวจซ้ำเอง อย่าเชื่อตามนี้)
+- repo นี้มีแบบให้ลอกอยู่แล้ว: .claude/hooks/block-direct-db.js (hook ตอนเขียน) + eslint.db-allowlist.mjs (ด่านหลังบ้าน, allowlist ลดได้อย่างเดียว)
+  ให้ออกแบบ i18n ตามโครงเดียวกัน
+
+## สิ่งที่ต้องได้
+1. hook `.claude/hooks/block-hardcoded-thai.js` (PreToolUse, matcher Edit|Write|MultiEdit)
+   - นับบรรทัดที่มีตัวอักษรไทย (U+0E00–U+0E7F) โดยไม่นับบรรทัดที่เป็น comment ทั้งในเนื้อหาใหม่และเนื้อหาเดิม
+     Edit เทียบ new_string กับ old_string · Write เทียบกับไฟล์เดิมบนดิสก์ (ไฟล์ใหม่ให้นับเดิมเป็น 0) · MultiEdit รวมทุก edit
+   - ถ้าจำนวนเพิ่มขึ้น ให้บล็อก (exit 2) และบอกวิธีแก้ใน stderr: ใช้ useTranslations/getTranslations, ใส่คีย์ใน web/locales/th.json + en.json
+     หรือสำหรับบอท ใช้ getT + locales/ ที่ root
+   - ขอบเขต: ไฟล์ UI ของเว็บ (web/app, web/components) และ handler ของบอทที่ user เห็นข้อความ ให้ระบุ path ให้ชัดหลังสำรวจโครง repo
+   - ไม่ตรวจ: locales/*.json, test, scripts/, migration, หน้า dev (เช่น app/dev/*) และบรรทัดที่มี `i18n-ignore`
+     (เป็นช่องหนีสำหรับกรณีที่ต้องเป็นไทยจริง เช่น regex หรือชื่อธนาคาร)
+2. ด่านหลังบ้านใน lint แบบ ratchet: baseline เก็บจำนวนบรรทัดไทย hardcode ต่อไฟล์ ถ้าไฟล์ไหนจำนวนเพิ่มขึ้นหรือมีไฟล์ใหม่ที่มีไทย ให้ fail
+   - baseline ลดได้อย่างเดียว ให้ hook ข้อ 1 บล็อกการแก้ baseline ที่ทำให้ตัวเลขเพิ่ม แบบเดียวกับ eslint.db-allowlist.mjs
+   - ต่อเข้า `npm run lint` หรือ `lint:all` ที่มีอยู่ (repo นี้ยังไม่มี .github/workflows ถ้าจะเพิ่ม CI ให้ถามก่อน)
+   - จำเป็นเพราะการแก้ผ่าน Bash (sed/heredoc) และโค้ดที่คนเขียนเองไม่ผ่าน hook
+3. แก้ CLAUDE.md §🌍 i18n: เพิ่มว่ามี hook + ratchet บังคับ, วิธีใช้ i18n-ignore และวิธีลด baseline หลัง migrate แล้ว
+
+## ต้องตัดสินใจร่วมกับผม (ให้ถามก่อน อย่าเลือกเอง)
+- ไฟล์เก่าที่ยังไม่ migrate: CLAUDE.md ยอมให้ "แก้เล็กน้อย" (ไม่ถึง 3 ประโยค) ได้ แต่ hook ที่บล็อกทุกครั้งที่จำนวนเพิ่ม
+  จะขัดกับกฎนี้ ข้อเสนอของผม:
+  บล็อกเต็มที่กับไฟล์ใหม่และไฟล์ที่ใช้ t() แล้ว · ส่วนไฟล์ที่ยังไม่มี t() เลย ยอมให้เพิ่มได้ไม่เกิน 2 บรรทัดต่อครั้ง
+  แล้วเตือนให้จดลง PENDING.md
+  ถ้ามีทางที่ดีกว่าให้เสนอมา
+- app/api และ lib ที่ส่งข้อความ error ภาษาไทยกลับไปให้ผู้ใช้: รวมไว้ในรอบนี้ด้วย หรือแยกไปเป็นงานถัดไป
+  (ทางที่น่าจะถูกคือให้ API ส่ง error เป็นรหัส แล้วฝั่ง client แปล)
+
+## ไม่ต้องทำในงานนี้
+- ไม่ต้อง migrate ข้อความเดิม (งานนั้นใช้ agent i18n-migrator แยกต่างหาก)
+- ไม่ต้องแก้ styling หรือ logic ของ component
+
+## ตรวจก่อนส่งงาน
+- ทดสอบ hook ด้วย JSON ปลอมทาง stdin (`echo '{...}' | node .claude/hooks/block-hardcoded-thai.js`) ให้ครบเคส:
+  เพิ่มไทยในไฟล์ UI → บล็อก · ไทยใน comment → ผ่าน · มี i18n-ignore → ผ่าน · แก้ locales/th.json → ผ่าน ·
+  ลบไทยออก → ผ่าน · ไฟล์นอกขอบเขต → ผ่าน · แก้ baseline ให้ตัวเลขเพิ่ม → บล็อก
+- `npm run lint:all` ต้องผ่านกับโค้ดปัจจุบันทั้งหมด (baseline ต้องครอบของเดิมครบ)
+- รายงานกลับ: baseline เริ่มต้นกี่ไฟล์ กี่บรรทัด · 10 ไฟล์ที่หนี้มากที่สุด · เคสที่ hook จับไม่ได้
 
 ##### =========================================================
 End of the Day
