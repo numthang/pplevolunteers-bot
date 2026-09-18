@@ -406,6 +406,15 @@ function TransactionsContent() {
                     )
                   )}
                 </div>
+                {(fundBalances.funds?.length > 0 || Number(fundBalances.untagged?.count) > 0) && (
+                  <button
+                    onClick={() => { setFilter(f => ({ ...f, fundId: '' })); setAccOpen(false) }}
+                    className={`w-full flex justify-between text-sm rounded px-1.5 py-1 transition ${!filter.fundId ? 'bg-indigo-100 dark:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 font-semibold ring-1 ring-inset ring-indigo-300 dark:ring-indigo-600' : 'text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
+                  >
+                    <span>{t('filters.allFunds')}</span>
+                    <span className="font-mono tabular-nums select-text">{[...(fundBalances.funds || []), fundBalances.untagged || {}].reduce((sum, f) => sum + Number(f.net || 0), 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </button>
+                )}
                 {(fundBalances.funds || []).map(fund => (
                   <div key={fund.id} className="flex items-center gap-1 group">
                     <button
