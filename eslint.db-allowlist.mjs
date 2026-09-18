@@ -45,7 +45,6 @@ export const WEB_DB_ALLOWLIST = [
   'app/api/docs/ngs-search/route.js',
   'app/api/docs/sign/link-ngs/route.js',
   'app/api/docs/sign/self-info/route.js',
-  'app/api/finance/funds/[id]/route.js',
   'app/api/finance/payouts/events/route.js',
   'app/api/kanban/import/forum/route.js',
   'app/api/meta/oauth/callback/route.js',

@@ -109,6 +109,17 @@
       "addFundButton": "Add fund",
       "unspecifiedFundCount": "No fund ({count} items)",
       "removeFundConfirm": "Delete this fund? Linked transactions will be changed to \"Unspecified\"",
+      "fundRangeLabel": "Income in this date range goes to this fund automatically (optional · no end date = still open)",
+      "fundRange": "{start} – {end}",
+      "fundRangeOpen": "From {start}",
+      "fundAutoTitle": "Assigned automatically by the fund's date range",
+      "fundErrors": {
+        "invalid_date": "Invalid date",
+        "ends_without_start": "Set a start date first",
+        "ends_before_start": "End date can't be before start date",
+        "overlap": "Date range overlaps fund \"{name}\"",
+        "generic": "Couldn't save the fund"
+      },
       "searchPlaceholder": "Search transactions...",
       "confirmDelete": "Delete this transaction?",
       "editModalTitle": "Edit transaction #{id}",

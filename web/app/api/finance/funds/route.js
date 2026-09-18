@@ -5,6 +5,7 @@ import { getAccountById } from '@/db/finance/accounts.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { checkFundRange } from '@/lib/fundRange.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -33,7 +34,7 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { accountId, name } = await req.json()
+  const { accountId, name, startsAt, endsAt } = await req.json()
   if (!accountId || !name?.trim()) {
     return Response.json({ error: 'accountId and name required' }, { status: 400 })
   }
@@ -47,6 +48,9 @@ export async function POST(req) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const id = await createFund(accountId, name.trim())
+  const range = await checkFundRange(accountId, { startsAt, endsAt })
+  if (range.error) return range.error
+
+  const id = await createFund(accountId, name.trim(), range)
   return Response.json({ id }, { status: 201 })
 }

@@ -109,6 +109,17 @@
       "addFundButton": "เพิ่มกอง",
       "unspecifiedFundCount": "ไม่ระบุกอง ({count} รายการ)",
       "removeFundConfirm": "ลบกองเงินนี้? transaction ที่ผูกไว้จะถูกเปลี่ยนเป็น \"ไม่ระบุ\"",
+      "fundRangeLabel": "เงินเข้าช่วงวันที่นี้ เข้ากองนี้อัตโนมัติ (ไม่ใส่ก็ได้ · ไม่ใส่วันสิ้นสุด = ยังเปิดรับอยู่)",
+      "fundRange": "{start} – {end}",
+      "fundRangeOpen": "ตั้งแต่ {start}",
+      "fundAutoTitle": "เข้ากองอัตโนมัติตามช่วงวันที่ของกอง",
+      "fundErrors": {
+        "invalid_date": "วันที่ไม่ถูกต้อง",
+        "ends_without_start": "ใส่วันเริ่มก่อน",
+        "ends_before_start": "วันสิ้นสุดต้องไม่ก่อนวันเริ่ม",
+        "overlap": "ช่วงวันที่ทับกับกอง \"{name}\"",
+        "generic": "บันทึกกองเงินไม่สำเร็จ"
+      },
       "searchPlaceholder": "ค้นหารายการ...",
       "confirmDelete": "ลบรายการนี้?",
       "editModalTitle": "แก้ไขรายการ #{id}",

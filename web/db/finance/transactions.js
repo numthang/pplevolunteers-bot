@@ -1,4 +1,5 @@
 import pool from '../index.js'
+import { effectiveFundSql } from './funds.js'
 
 // org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId
 // ⚠️ transaction ไม่มี org_id ในเงื่อนไข visibility → scope ผ่าน account (a.org_id) เสมอ
@@ -16,8 +17,9 @@ export async function getTransactions(orgId, { accountId, type, categoryId, noCa
   if (type)       { params.push(type);                   where += ` AND t.type = $${params.length}` }
   if (categoryId) { params.push(categoryId);             where += ` AND t.category_id = $${params.length}` }
   if (noCategory) {                                      where += ` AND t.category_id IS NULL` }
-  if (fundId)     { params.push(fundId);                 where += ` AND t.fund_id = $${params.length}` }
-  if (noFund)     {                                      where += ` AND t.fund_id IS NULL` }
+  // กองที่นับจริง (รวมกองมีวันที่ที่จับอัตโนมัติ) — ไม่ใช่ fund_id ดิบ
+  if (fundId)     { params.push(fundId);                 where += ` AND ${effectiveFundSql('t')} = $${params.length}` }
+  if (noFund)     {                                      where += ` AND ${effectiveFundSql('t')} IS NULL` }
   if (search)     { params.push(`%${search}%`, `%${search}%`); where += ` AND (t.description ILIKE $${params.length - 1} OR t.counterpart_name ILIKE $${params.length})` }
   if (year)       { params.push(year);                   where += ` AND EXTRACT(YEAR  FROM t.txn_at) = $${params.length}` }
   if (month)      { params.push(month);                  where += ` AND EXTRACT(MONTH FROM t.txn_at) = $${params.length}` }
@@ -26,11 +28,13 @@ export async function getTransactions(orgId, { accountId, type, categoryId, noCa
 
   params.push(limit, offset)
   const { rows } = await pool.query(
-    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon, f.name AS fund_name
+    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon, f.name AS fund_name,
+            ef.id AS effective_fund_id, (t.fund_id IS NULL AND ef.id IS NOT NULL) AS fund_auto
      FROM finance_transactions t
      JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id
-     LEFT JOIN finance_funds f ON f.id = t.fund_id
+     LEFT JOIN LATERAL (SELECT ${effectiveFundSql('t')} AS id) ef ON TRUE
+     LEFT JOIN finance_funds f ON f.id = ef.id
      ${where}
      ORDER BY t.txn_at DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -79,17 +83,20 @@ export async function createTransaction(orgId, data, updatedBy) {
 }
 
 export async function updateTransaction(id, data, updatedBy) {
-  const { account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, txn_at } = data
+  const { account_id, type, amount, description, category_id, fund_id, fund_manual, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, txn_at } = data
+  // fund_manual: ส่งมาเฉพาะตอนกดเลือกกอง (รวม "ไม่ระบุ") · ไม่ส่ง = คงค่าเดิม
   await pool.query(
     `UPDATE finance_transactions
      SET account_id=$1, type=$2, amount=$3, description=$4, category_id=$5, fund_id=$6,
+         fund_manual=COALESCE($16, fund_manual),
          counterpart_name=$7, counterpart_account=$8, counterpart_bank=$9,
          fee=$10, balance_after=$11, evidence_url=$12, txn_at=$13, updated_by=$14, updated_at=NOW()
      WHERE id=$15`,
     [account_id, type, amount, description, category_id || null, fund_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
-     evidence_url || null, txn_at || null, updatedBy, id]
+     evidence_url || null, txn_at || null, updatedBy, id,
+     typeof fund_manual === 'boolean' ? fund_manual : null]
   )
 }
 

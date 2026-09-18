@@ -38,8 +38,8 @@ function TransactionsContent() {
   const [balance, setBalance]       = useState(null)
   const [funds, setFunds]           = useState([])
   const [fundBalances, setFundBalances] = useState(null)
-  const [newFundName, setNewFundName]   = useState('')
-  const [addingFund, setAddingFund]     = useState(false)
+  // null = ปิดฟอร์ม · { id?, name, startsAt, endsAt } — ไม่มี id = สร้างกองใหม่
+  const [fundForm, setFundForm]         = useState(null)
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
 
   // sync filter → URL
@@ -186,6 +186,7 @@ function TransactionsContent() {
   const noCategoryLabel = t('categories.none')
   const fundsLabel      = t('transactions.fundsTitle')
   const unspecifiedLabel = t('common.unspecified')
+  const fundAutoTitle   = t('transactions.fundAutoTitle')
   const editAllLabel    = t('transactions.editAllButton')
   const deleteLabel     = t('common.delete')
 
@@ -197,11 +198,13 @@ function TransactionsContent() {
     await fetch(`/api/finance/transactions/${t.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...t, fund_id: fundId ? Number(fundId) : null, txn_at: toLocalDT(new Date(t.txn_at)) }),
+      // fund_manual: กดเลือกเองแล้ว (รวม "ไม่ระบุ") → กองมีวันที่ไม่จับรายการนี้อีก
+      body: JSON.stringify({ ...t, fund_id: fundId ? Number(fundId) : null, fund_manual: true, txn_at: toLocalDT(new Date(t.txn_at)) }),
     })
     const fund = funds.find(f => String(f.id) === String(fundId))
+    const id = fundId ? Number(fundId) : null
     setTxns(prev => prev.map(x => x.id === t.id
-      ? { ...x, fund_id: fundId ? Number(fundId) : null, fund_name: fund?.name || null }
+      ? { ...x, fund_id: id, effective_fund_id: id, fund_manual: true, fund_auto: false, fund_name: fund?.name || null }
       : x
     ))
     setExpandedId(null)
@@ -209,14 +212,27 @@ function TransactionsContent() {
   }
 
   async function saveFund() {
-    if (!newFundName.trim() || !filter.accountId) return
-    await fetch('/api/finance/funds', {
-      method: 'POST',
+    if (!fundForm?.name.trim() || !filter.accountId) return
+    const body = { name: fundForm.name.trim(), startsAt: fundForm.startsAt || null, endsAt: fundForm.endsAt || null }
+    const res = await fetch(fundForm.id ? `/api/finance/funds/${fundForm.id}` : '/api/finance/funds', {
+      method: fundForm.id ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId: filter.accountId, name: newFundName.trim() }),
+      body: JSON.stringify(fundForm.id ? body : { ...body, accountId: filter.accountId }),
     })
-    setNewFundName(''); setAddingFund(false)
-    fetchFunds()
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      const known = ['invalid_date', 'ends_without_start', 'ends_before_start', 'overlap']
+      return alert(known.includes(d.error) ? t(`transactions.fundErrors.${d.error}`, { name: d.fundName || '' }) : t('transactions.fundErrors.generic'))
+    }
+    setFundForm(null)
+    load()
+  }
+
+  function fundRangeLabel(f) {
+    if (!f.starts_at) return null
+    return f.ends_at
+      ? t('transactions.fundRange', { start: formatThaiDateShort(f.starts_at), end: formatThaiDateShort(f.ends_at) })
+      : t('transactions.fundRangeOpen', { start: formatThaiDateShort(f.starts_at) })
   }
 
   async function removeFund(id) {
@@ -387,25 +403,36 @@ function TransactionsContent() {
               <div className="border-t dark:border-disc-border px-4 py-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">{t('transactions.fundsTitle')}</span>
-                  {canEditAcc && (
-                    addingFund ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          autoFocus
-                          className="text-xs border dark:border-disc-border rounded px-2 py-0.5 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text w-28 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                          placeholder={t('transactions.newFundPlaceholder')}
-                          value={newFundName}
-                          onChange={e => setNewFundName(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveFund(); if (e.key === 'Escape') { setAddingFund(false); setNewFundName('') } }}
-                        />
-                        <button onClick={saveFund} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t('common.save')}</button>
-                        <button onClick={() => { setAddingFund(false); setNewFundName('') }} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">{t('common.cancel')}</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setAddingFund(true)} className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">+ {t('transactions.addFundButton')}</button>
-                    )
+                  {canEditAcc && !fundForm && (
+                    <button onClick={() => setFundForm({ name: '', startsAt: '', endsAt: '' })} className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">+ {t('transactions.addFundButton')}</button>
                   )}
                 </div>
+                {fundForm && (
+                  <div className="mb-2 rounded border dark:border-disc-border p-2 space-y-2">
+                    <input
+                      autoFocus
+                      className="w-full text-sm border dark:border-disc-border rounded px-2 py-1.5 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      placeholder={t('transactions.newFundPlaceholder')}
+                      value={fundForm.name}
+                      onChange={e => setFundForm(f => ({ ...f, name: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Escape') setFundForm(null) }}
+                    />
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-disc-text mb-1">{t('transactions.fundRangeLabel')}</p>
+                      <div className="flex items-center gap-1">
+                        <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
+                          value={fundForm.startsAt} onChange={e => setFundForm(f => ({ ...f, startsAt: e.target.value }))} />
+                        <span className="text-gray-400 flex-shrink-0">–</span>
+                        <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
+                          value={fundForm.endsAt} onChange={e => setFundForm(f => ({ ...f, endsAt: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button onClick={() => setFundForm(null)} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">{t('common.cancel')}</button>
+                      <button onClick={saveFund} disabled={!fundForm.name.trim()} className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-40">{t('common.save')}</button>
+                    </div>
+                  </div>
+                )}
                 {(fundBalances.funds?.length > 0 || Number(fundBalances.untagged?.count) > 0) && (
                   <button
                     onClick={() => { setFilter(f => ({ ...f, fundId: '' })); setAccOpen(false) }}
@@ -421,9 +448,18 @@ function TransactionsContent() {
                       onClick={() => { setFilter(f => ({ ...f, fundId: String(filter.fundId) === String(fund.id) ? '' : String(fund.id) })); setAccOpen(false) }}
                       className={`flex-1 flex justify-between text-sm rounded px-1.5 py-1 transition ${String(filter.fundId) === String(fund.id) ? 'bg-indigo-100 dark:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 font-semibold ring-1 ring-inset ring-indigo-300 dark:ring-indigo-600' : 'text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
                     >
-                      <span>{fund.name}</span>
-                      <span className="font-mono tabular-nums select-text">{Number(fund.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                      <span className="text-left min-w-0">
+                        {fund.name}
+                        {fund.starts_at && <span className="block text-xs font-normal text-gray-500 dark:text-disc-muted">⚡ {fundRangeLabel(fund)}</span>}
+                      </span>
+                      <span className="font-mono tabular-nums select-text flex-shrink-0">{Number(fund.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                     </button>
+                    {canEditAcc && (
+                      <button onClick={() => setFundForm({ id: fund.id, name: fund.name, startsAt: fund.starts_at || '', endsAt: fund.ends_at || '' })}
+                        aria-label={t('common.edit')} className="text-gray-400 hover:text-indigo-500 transition px-1 flex-shrink-0">
+                        <Pencil size={12} />
+                      </button>
+                    )}
                     {canEditAcc && (
                       <button onClick={() => removeFund(fund.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition text-xs px-1 flex-shrink-0">✕</button>
                     )}
@@ -556,7 +592,7 @@ function TransactionsContent() {
                   )}
                   {!t.category_name && <span className="text-gray-300 dark:text-disc-muted/50">· {noCategoryLabel}</span>}
                   {t.fund_name && (
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex-shrink-0">{t.fund_name}</span>
+                    <span title={t.fund_auto ? fundAutoTitle : undefined} className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex-shrink-0">{t.fund_auto && '⚡ '}{t.fund_name}</span>
                   )}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-disc-muted mt-0.5">
@@ -605,7 +641,7 @@ function TransactionsContent() {
                     <button
                       onClick={() => changeFund(t, null)}
                       className={`px-3 py-1.5 rounded-full text-[15px] border transition
-                        ${!t.fund_id
+                        ${!t.effective_fund_id
                           ? 'bg-gray-200 dark:bg-disc-hover border-gray-400 dark:border-disc-border text-gray-800 dark:text-disc-text font-medium'
                           : 'border-gray-200 dark:border-disc-border text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
                     >{unspecifiedLabel}</button>
@@ -614,7 +650,7 @@ function TransactionsContent() {
                         key={fund.id}
                         onClick={() => changeFund(t, fund.id)}
                         className={`px-3 py-1.5 rounded-full text-[15px] border transition
-                          ${t.fund_id === fund.id
+                          ${t.effective_fund_id === fund.id
                             ? 'bg-indigo-100 dark:bg-indigo-900/60 border-indigo-400 dark:border-indigo-500 text-indigo-700 dark:text-indigo-300 font-medium'
                             : 'border-gray-200 dark:border-disc-border text-gray-600 dark:text-disc-text hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
                       >{fund.name}</button>
