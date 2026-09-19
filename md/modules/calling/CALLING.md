@@ -104,28 +104,24 @@ cache_pple_event (type='campaign', id=70)     ← parent
 - `category`: `donor` | `prospect` | `volunteer` | `oranger` | `leader` | `community_leader` | `civil` | `media` | `politician` | `venue` | `print` | `event_service` | `other`
 - province กรอกจาก dropdown Thailand geography (JSON static ที่ `web/lib/thailand-geography.json`)
 
-**⚠️ ID Overlap:** `calling_contacts.id` (auto-increment) กับ `cache_pple_member.source_id` เป็น PK คนละตาราง — ทั้งคู่เริ่มนับจาก id เลขน้อยๆ จึงทับกันได้เสมอ  
-→ ทุก SQL query ที่ JOIN ตาราง shared (`calling_logs`, `calling_assignments`, `calling_member_tiers`, `calling_starred`) **ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ** ไม่งั้น ID จะปนกัน
+**⚠️ ID Overlap:** `calling_contacts.id` กับ `cache_pple_member.source_id` เป็น PK คนละตารางที่ช่วงเลขทับกัน
+→ **กฎเต็ม (ตารางไหนบ้าง · ต้องเขียน SQL ยังไง) อยู่ที่ [`CLAUDE.md` §Calling — `contact_type` ใน SQL ต้องใส่เสมอ](../../../CLAUDE.md)**
+(เอาสำเนาออกจากที่นี่ 2026-09-19 — เดิมกฎเดียวเขียนอยู่ 3 ที่)
 
 ---
 
 ### 5. `calling_assignments` — assign สมาชิก/contact ให้คนโทร
 
-Schema ปัจจุบัน (Postgres):
 
-```sql
-id            SERIAL PRIMARY KEY
-campaign_id   INTEGER      NULL              -- 0 = Undefined
-contact_type  calling_assignments_contact_type NOT NULL DEFAULT 'member'  -- enum('member','contact')
-member_id     VARCHAR(20)  NOT NULL          -- source_id หรือ calling_contacts.id
-assigned_to   INTEGER      NOT NULL REFERENCES users(id)
-assigned_by   INTEGER      NOT NULL REFERENCES users(id)
-rsvp          calling_assignments_rsvp NULL  -- enum('yes','no','maybe') — member เท่านั้น
-org_id        INTEGER      NOT NULL REFERENCES orgs(id)
-created_at    TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+> 📋 **คอลัมน์ทั้งตาราง** ดู [`md/reference/DATABASE.md` §calling_assignments](../../reference/DATABASE.md#calling-assignments) — ที่นั่น generate จาก DB จริง
+> เอาสำเนาคอลัมน์ออกจากที่นี่ 2026-09-19 — มี 2 ชุดเมื่อไหร่ = เพี้ยนกันเองเมื่อนั้น
 
-UNIQUE (campaign_id, member_id, contact_type)
-```
+**คอลัมน์ที่ต้องรู้ความหมาย (DATABASE.md ไม่ได้อธิบาย):**
+- `campaign_id   INTEGER      NULL` — 0 = Undefined
+- `contact_type  calling_assignments_contact_type NOT NULL DEFAULT 'member'` — enum('member','contact')
+- `member_id     VARCHAR(20)  NOT NULL` — source_id หรือ calling_contacts.id
+- `rsvp          calling_assignments_rsvp NULL` — enum('yes','no','maybe') — member เท่านั้น
+- UNIQUE (campaign_id, member_id, contact_type)
 
 - unique key คือ `(campaign_id, member_id, contact_type)` — assign ได้ 1 ครั้งต่อ 1 campaign (ไม่ใช่ unique ทั้งระบบเหมือนที่เอกสารเดิมเขียนไว้ — คนละ campaign assign ซ้ำกันได้)
 - `assigned_to` / `assigned_by` เก็บ `users.id` (INT, FK) — ไม่ใช่ discord_id string แล้ว
@@ -136,28 +132,19 @@ UNIQUE (campaign_id, member_id, contact_type)
 
 ### 6. `calling_logs` — บันทึกการโทรแต่ละครั้ง
 
-Schema ปัจจุบัน (Postgres):
 
-```sql
-id               SERIAL PRIMARY KEY
-campaign_id      INTEGER NULL              -- 0 = Undefined
-contact_type     calling_logs_contact_type NOT NULL DEFAULT 'member'  -- enum('member','contact')
-member_id        VARCHAR(20) NOT NULL
-called_by        INTEGER NULL REFERENCES users(id)   -- NULL = import จาก XLS
-caller_name      VARCHAR(100) NULL
-caller_image     TEXT NULL
-called_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-status           calling_logs_status NOT NULL
-sig_overall      SMALLINT NULL
-sig_location     SMALLINT NULL             -- 1=ต่างประเทศ … 4=ในอำเภอ
-sig_availability SMALLINT NULL             -- 1=ไม่ว่างเลย … 4=ว่างมาก
-sig_interest     SMALLINT NULL             -- 1=ไม่สนใจ … 4=กระตือรือร้น
-sig_reachable    SMALLINT NULL             -- ไม่ใช้ใน UI แต่ column ยังอยู่
-note             TEXT NULL
-extra            TEXT NULL                 -- JSON.stringify จากแอป (column ไม่ใช่ JSON type แล้ว)
-org_id           INTEGER NOT NULL REFERENCES orgs(id)
-created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-```
+> 📋 **คอลัมน์ทั้งตาราง** ดู [`md/reference/DATABASE.md` §calling_logs](../../reference/DATABASE.md#calling-logs) — ที่นั่น generate จาก DB จริง
+> เอาสำเนาคอลัมน์ออกจากที่นี่ 2026-09-19 — มี 2 ชุดเมื่อไหร่ = เพี้ยนกันเองเมื่อนั้น
+
+**คอลัมน์ที่ต้องรู้ความหมาย (DATABASE.md ไม่ได้อธิบาย):**
+- `campaign_id      INTEGER NULL` — 0 = Undefined
+- `contact_type     calling_logs_contact_type NOT NULL DEFAULT 'member'` — enum('member','contact')
+- `called_by        INTEGER NULL REFERENCES users(id)` — NULL = import จาก XLS
+- `sig_location     SMALLINT NULL` — 1=ต่างประเทศ … 4=ในอำเภอ
+- `sig_availability SMALLINT NULL` — 1=ไม่ว่างเลย … 4=ว่างมาก
+- `sig_interest     SMALLINT NULL` — 1=ไม่สนใจ … 4=กระตือรือร้น
+- `sig_reachable    SMALLINT NULL` — ไม่ใช้ใน UI แต่ column ยังอยู่
+- `extra            TEXT NULL` — JSON.stringify จากแอป (column ไม่ใช่ JSON type แล้ว)
 
 - `called_by` เก็บ `users.id` (INT, FK) — ไม่ใช่ discord_id string แล้ว
 - status enum จริง: `answered | no_answer | not_called | met | sms_sent | sms_delivered | sms_failed`  
@@ -169,23 +156,17 @@ created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 
 ### 7. `calling_member_tiers` — tier ปัจจุบัน (ใช้ร่วมกัน)
 
-Schema ปัจจุบัน (Postgres):
 
-```sql
-id              SERIAL PRIMARY KEY
-contact_type    calling_member_tiers_contact_type NOT NULL DEFAULT 'member'  -- enum('member','contact')
-member_id       VARCHAR(20) NOT NULL
-tier            calling_member_tiers_tier NOT NULL         -- enum('A','B','C','D')
-tier_source     calling_member_tiers_tier_source NOT NULL DEFAULT 'auto'  -- enum('auto','manual')
-override_by     INTEGER NULL REFERENCES users(id)
-override_reason TEXT NULL
-custom_fields   TEXT NULL          -- JSON.stringify จากแอป (column ไม่ใช่ JSON type แล้ว)
-flag            VARCHAR(20) NULL   -- flag ต่อ member/contact (ตั้งผ่าน RecordCallModal, ไม่เข้าสูตร tier — db/calling/tiers.js: updateFlag)
-org_id          INTEGER NOT NULL REFERENCES orgs(id)
-updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+> 📋 **คอลัมน์ทั้งตาราง** ดู [`md/reference/DATABASE.md` §calling_member_tiers](../../reference/DATABASE.md#calling-member-tiers) — ที่นั่น generate จาก DB จริง
+> เอาสำเนาคอลัมน์ออกจากที่นี่ 2026-09-19 — มี 2 ชุดเมื่อไหร่ = เพี้ยนกันเองเมื่อนั้น
 
-UNIQUE (member_id, contact_type)
-```
+**คอลัมน์ที่ต้องรู้ความหมาย (DATABASE.md ไม่ได้อธิบาย):**
+- `contact_type    calling_member_tiers_contact_type NOT NULL DEFAULT 'member'` — enum('member','contact')
+- `tier            calling_member_tiers_tier NOT NULL` — enum('A','B','C','D')
+- `tier_source     calling_member_tiers_tier_source NOT NULL DEFAULT 'auto'` — enum('auto','manual')
+- `custom_fields   TEXT NULL` — JSON.stringify จากแอป (column ไม่ใช่ JSON type แล้ว)
+- `flag            VARCHAR(20) NULL` — flag ต่อ member/contact (ตั้งผ่าน RecordCallModal, ไม่เข้าสูตร tier — db/calling/tiers.js: updateFlag)
+- UNIQUE (member_id, contact_type)
 
 - `override_by` เก็บ `users.id` (INT, FK) — ไม่ใช่ discord_id string แล้ว
 - 1 member/contact = 1 record (upsert)
@@ -195,17 +176,12 @@ UNIQUE (member_id, contact_type)
 
 ### 8. `calling_starred` — รายการโปรดต่อผู้ใช้ (ยังไม่มีในเอกสารเดิม)
 
-```sql
-id            SERIAL PRIMARY KEY
-org_id        INTEGER NOT NULL REFERENCES orgs(id)
-user_id       INTEGER NOT NULL REFERENCES users(id)
-member_id     VARCHAR(20) NOT NULL
-contact_type  calling_starred_contact_type NOT NULL DEFAULT 'member'  -- enum('member','contact')
-note          TEXT NULL
-created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+> 📋 **คอลัมน์ทั้งตาราง** ดู [`md/reference/DATABASE.md` §calling_starred](../../reference/DATABASE.md#calling-starred) — ที่นั่น generate จาก DB จริง
+> เอาสำเนาคอลัมน์ออกจากที่นี่ 2026-09-19 — มี 2 ชุดเมื่อไหร่ = เพี้ยนกันเองเมื่อนั้น
 
-UNIQUE (org_id, user_id, member_id, contact_type)
-```
+**คอลัมน์ที่ต้องรู้ความหมาย (DATABASE.md ไม่ได้อธิบาย):**
+- `contact_type  calling_starred_contact_type NOT NULL DEFAULT 'member'` — enum('member','contact')
+- UNIQUE (org_id, user_id, member_id, contact_type)
 
 - ใช้โดย `db/calling/starred.js` + `components/calling/StarredStar.jsx` + `/api/calling/starred`
 - ต่างจาก `calling_assignments`: starred = ผู้ใช้ mark เองรายบุคคล ไม่ผูก campaign ไม่กระทบ scope/permission

@@ -21,7 +21,9 @@ PostgreSQL รองรับ Discord bot + Web (Finance · Calling · Docs · C
 
 ### ⚠️ Gotchas ที่กัดมาแล้ว
 
-- **`contact_type` ต้องใส่เสมอ** — `calling_logs` · `calling_assignments` · `calling_member_tiers` · `calling_starred` ใช้ `member_id` ร่วมกันทั้ง member และ contact โดยที่ id คนละตารางทับกันเต็มๆ (`cache_pple_member.source_id` = 1–169505 · `calling_contacts.id` = 12–601) → ทุก JOIN/WHERE บนตาราง shared ต้องมี `AND contact_type = 'member'` หรือ `'contact'`
+- **`contact_type` ต้องใส่เสมอ** บน 4 ตาราง shared (`calling_logs` · `calling_assignments` ·
+  `calling_member_tiers` · `calling_starred`) — **กฎเต็มอยู่ที่ [`CLAUDE.md` §Calling — `contact_type` ใน SQL ต้องใส่เสมอ](../../CLAUDE.md)**
+  (เอาสำเนาออกจากที่นี่ 2026-09-19 · กฎนี้ต้องอยู่ในไฟล์ที่ถูกอ่านทุก session ไม่ใช่ไฟล์อ้างอิงที่เปิดเมื่อต้องการ)
 - **`txn_at` ห้ามแปลงผ่าน `new Date().toISOString()`** — ค่าจาก form เป็น local Thai time, server รันเป็น UTC → เวลาเพี้ยน +7 ชม. ทุกครั้งที่ save · ส่ง `txn_at || null` ให้ pg จัดการเอง
 - **`_dc_members` คือตารางเก่าที่ archive ไว้** (ก่อน identity split) — โค้ดไม่ใช้แล้ว ยังไม่ drop เพราะเคยใช้กู้ข้อมูลที่ถูกล้าง
 
