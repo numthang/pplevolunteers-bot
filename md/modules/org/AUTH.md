@@ -41,7 +41,7 @@
 ### 🆕 Phone OTP login (web) — **UI ขึ้น prod แล้ว** (verify ด้วย curl 2026-07-08: /login มีปุ่ม "เข้าด้วยเบอร์มือถือ (SMS OTP)")
 
 > ⚠️ **ต้องเช็คด่วน:** prod รัน `migration.sql` (column `phone_verified_at`) แล้วหรือยัง — ถ้ายัง `findOwnerByVerifiedPhone` จะ query column ที่ไม่มี → `/api/auth/phone/request` พัง 500 ทั้งที่ปุ่มโชว์อยู่บน prod
-> ทางเข้าลึก: หน้าแรกไม่มี CTA · ต้องกด text link จางๆ `เข้าสู่ระบบ` บน Nav ([Nav.jsx:694](../web/components/Nav.jsx#L694)) ก่อนถึงเจอปุ่ม OTP
+> ทางเข้าลึก: หน้าแรกไม่มี CTA · ต้องกด text link จางๆ `เข้าสู่ระบบ` บน Nav ([Nav.jsx:694](../../../web/components/Nav.jsx#L694)) ก่อนถึงเจอปุ่ม OTP
 - login เว็บด้วยเบอร์ + SMS OTP สำหรับสมาชิกที่ verify เบอร์ผ่าน Discord แล้ว (เข้า Discord ไม่ได้/ลืมรหัส) · session สิทธิ์เท่า Discord login
 - เบอร์เป็น credential เฉพาะ `phone_verified_at IS NOT NULL` (verifyHandler เซ็ต / แก้เบอร์เองจาก profile → reset) · endpoint ตอบ generic ทุกกรณีกัน enumeration · quota แชร์ `otp_quota` กับ bot
 - **ก่อน deploy prod:** รัน `migration.sql` (column `phone_verified_at`) · เทสต์ happy-path จริง (SMS ยิงจริง)

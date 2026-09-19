@@ -13,20 +13,20 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 
 | Topic | File |
 |---|---|
-| **Discord Bot** | [md/discord/BOT.md](md/discord/BOT.md) |
+| **Discord Bot** | [md/modules/discord/BOT.md](md/modules/discord/BOT.md) |
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
 | **Design Rules (UI)** | [md/DESIGN.md](md/DESIGN.md) |
-| **Finance System** | [md/finance/FINANCE.md](md/finance/FINANCE.md) |
-| **Calling System** | [md/calling/CALLING.md](md/calling/CALLING.md) |
-| **Contacts (CRM)** | [md/calling/CONTACT.md](md/calling/CONTACT.md) |
-| **Auth & Identity** | [md/org/AUTH.md](md/org/AUTH.md) |
+| **Finance System** | [md/modules/finance/FINANCE.md](md/modules/finance/FINANCE.md) |
+| **Calling System** | [md/modules/calling/CALLING.md](md/modules/calling/CALLING.md) |
+| **Contacts (CRM)** | [md/modules/calling/CONTACT.md](md/modules/calling/CONTACT.md) |
+| **Auth & Identity** | [md/modules/org/AUTH.md](md/modules/org/AUTH.md) |
 | **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
 | **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
 | **Cutover org-core→master** | [md/archive/CUTOVER.md](md/archive/CUTOVER.md) |
-| **Case System** | [md/case/CASE.md](md/case/CASE.md) |
-| **Kanban (การบ้าน)** | [md/kanban/KANBAN.md](md/kanban/KANBAN.md) |
-| **Server Wizard** | [md/discord/SERVER_WIZARD.md](md/discord/SERVER_WIZARD.md) |
-| **RAG AI** | [md/discord/RAG.md](md/discord/RAG.md) |
+| **Case System** | [md/modules/case/CASE.md](md/modules/case/CASE.md) |
+| **Kanban (การบ้าน)** | [md/modules/kanban/KANBAN.md](md/modules/kanban/KANBAN.md) |
+| **Server Wizard** | [md/modules/discord/SERVER_WIZARD.md](md/modules/discord/SERVER_WIZARD.md) |
+| **RAG AI** | [md/modules/discord/RAG.md](md/modules/discord/RAG.md) |
 
 ---
 

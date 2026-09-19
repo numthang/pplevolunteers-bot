@@ -294,7 +294,7 @@ web/templates/receipts/
 > มี `เลขที่ {{receipt_no}}` ที่มุมบนขวาด้วย (template อื่นไม่มี)
 
 **3 — แบบรายชื่อผู้เข้าร่วม + ค่าพาหนะ:**
-> ⚠️ ยังไม่ได้ document variables — ดู `md/docs/example/docx/3-แบบรายชื่อฯ.docx` โดยตรง
+> ⚠️ ยังไม่ได้ document variables — ดู `md/modules/docs/example/docx/3-แบบรายชื่อฯ.docx` โดยตรง
 
 #### ส่วน 4 — Footer (ทุก template เหมือนกัน)
 

@@ -208,7 +208,7 @@
 ## 📮 CASES — รอบ 2026-07-28 (ยังไม่ commit)
 > ย้ายมาจาก md/PENDING.md (2026-07-29)
 
-> เข้ามาจากคำถาม "ลบ/แก้ไข case ได้ไหม" แล้วลากไปเจอบั๊ก Discord sync · กลไก sync + ข้อจำกัดเขียนไว้ที่ `md/case/CASE.md` หัวข้อ "🔄 Discord sync"
+> เข้ามาจากคำถาม "ลบ/แก้ไข case ได้ไหม" แล้วลากไปเจอบั๊ก Discord sync · กลไก sync + ข้อจำกัดเขียนไว้ที่ `md/modules/case/CASE.md` หัวข้อ "🔄 Discord sync"
 
 **✅ เสร็จรอบนี้ (ยังไม่ commit / ยังไม่เทสในเบราว์เซอร์):**
 - **แก้บั๊ก watermark sync** (bug-060/061) — insert+เลื่อน watermark เป็น transaction เดียว (เดิม insert พังแต่ที่คั่นเลื่อนต่อ = ข้อความหายถาวร) · optimistic lock กันกดพร้อมกัน · ส่ง timeline เดิมเข้า prompt กัน AI สกัดซ้ำ · cap 500 ข้อความ/ครั้ง
@@ -218,7 +218,7 @@
 - [x] **นำเข้าไฟล์แนบ/รูปจากเธรด Discord ✅ เสร็จ 2026-07-28** — `lib/caseAttachmentSync.js` + watermark เส้นที่ 2 `cases.last_attachment_message_id` (เริ่ม NULL → รอบแรก backfill ทั้งเธรดเอง แก้ปมที่ watermark เส้นแรกเลยรูปเก่าไปแล้ว) · dedup `case_attachments.discord_attachment_id` partial unique index (**verify ด้วย SQL จริงแล้ว**: ยิงซ้ำ→0 rows ไม่ error, แถวฟอร์มเว็บ NULL ยังใส่ซ้ำได้) · โหลด bytes มาเก็บเอง (CDN URL หมดอายุ) ผ่าน `saveCaseBuffer()` ใหม่ · รวมกับปุ่ม refresh timeline เดิม · `failed>0` = ไม่เลื่อน watermark (บทเรียน bug-060) · **ผลพลอยได้: เคสที่เปิดจาก Discord ได้ไฟล์แนบด้วย ไม่ต้องแตะฝั่งบอท**
 - [x] ~~ลบเคส~~ — **เคาะ 2026-07-28: ไม่ทำ** · "ปิดเรื่อง" ด้วยสถานะ `closed`/`rejected` + บังคับเหตุผล + public note ที่มีอยู่เพียงพอแล้ว · เคสร้องเรียนควรเก็บ record ไว้ตลอด ไม่ควรลบทิ้งได้อยู่แล้ว
 
-## 📢 ระบบเรื่องร้องเรียน (Case System) — implement เสร็จ local · ดู `md/case/CASE.md`
+## 📢 ระบบเรื่องร้องเรียน (Case System) — implement เสร็จ local · ดู `md/modules/case/CASE.md`
 > ย้ายมาจาก md/PENDING.md (2026-07-29)
 
 > ยังไม่ deploy prod

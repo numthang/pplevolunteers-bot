@@ -162,4 +162,4 @@ scripts/migration/postgres_fix_sequences.sql ← NEW
 ## วิธีใช้ไฟล์นี้
 
 บอก Claude บน Mac ว่า:
-> "อ่าน `md/HANDOFF_PGSQL.md` ก่อน แล้วช่วยทดสอบและแก้ bug PostgreSQL migration ต่อ"
+> "อ่าน `md/archive/HANDOFF_PGSQL.md` ก่อน แล้วช่วยทดสอบและแก้ bug PostgreSQL migration ต่อ"

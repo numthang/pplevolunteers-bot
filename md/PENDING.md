@@ -142,7 +142,7 @@ user สั่ง "posts ก่อน นอกนั้นจดไว้" — 
 - ⛔ **ห้ามเอา LIMIT ที่ชนได้กลับมา** โดยไม่ย้ายตัวกรอง *พร้อมกับตัวเรียง* ไป SQL · ชนเพดาน
   `CARD_HARD_CAP = 3000` เมื่อไหร่ = ถึงเวลายกทั้งชุดไป SQL ห้ามดันเลขเพดานให้สูงขึ้นเฉยๆ
 - ⛔ **ห้ามยุบ "พักไว้" (`cancelled`) กับ "กรุ" (`archived_at`) เข้าหากัน** และห้ามเปลี่ยนปุ่ม
-  "เก็บเข้ากรุ" กลับเป็น "ลบ" — เหตุผลเต็มใน `md/kanban/KANBAN.md §พักไว้กับกรุ`
+  "เก็บเข้ากรุ" กลับเป็น "ลบ" — เหตุผลเต็มใน `md/modules/kanban/KANBAN.md §พักไว้กับกรุ`
 - ⛔ **ห้ามเอา `guildId` กลับเข้า `services/watermarkPaths.js` / `web/lib/watermarks.js`**
 - ⛔ **ห้ามย้าย/ก๊อป `utils/quoteStyles.js` เข้า `web/`** และห้ามใส่ `@napi-rs/canvas` ใน `web/package.json`
   (root มี canvas 0.1.97 ที่ `loadImage(path)` ใช้ได้ · ของใน `web/` เป็น 1.0.0 ที่พัง)
@@ -614,7 +614,7 @@ user ถามตอนกรอกฟอร์มแก้ไขข้อมู
 
 ## 🗄️ Refactor: API route ยิง SQL ตรง ไม่ผ่าน service layer (พบจาก audit 2026-08-20)
 
-ตรวจ codebase เทียบ checklist ที่ [md/AUDIT.md](AUDIT.md) §2 — ผลตรวจ:
+ตรวจ codebase เทียบ checklist ที่ [md/archive/AUDIT.md](archive/AUDIT.md) §2 — ผลตรวจ:
 
 | ข้อตรวจ | สถานะ | รายละเอียด |
 |---|---|---|
@@ -642,7 +642,7 @@ user ถามตอนกรอกฟอร์มแก้ไขข้อมู
 ## 🗂️ Kanban — ที่เหลือหลังก้อน 3 / 4-5 / ป้าย
 
 > ทั้ง 3 ก้อนขึ้น prod แล้ว (รวม `kanban_boards` · `kanban_card_links` · ป้าย · `BOARDS_UI` เปิด 2026-09-07
-> พร้อมชั้น `teamspace`) · ประวัติ/เหตุผลเต็ม `md/archive/DONE-2026-08.md` · ดีไซน์ `md/kanban/KANBAN.md`
+> พร้อมชั้น `teamspace`) · ประวัติ/เหตุผลเต็ม `md/archive/DONE-2026-08.md` · ดีไซน์ `md/modules/kanban/KANBAN.md`
 
 **🔴 สิทธิ์ — ตะเข็บที่เปิดค้างไว้โดยตั้งใจ (user สั่ง "เห็นได้หมดก่อน ค่อยจำกัดทีหลัง")**
 - [ ] **ถ้าจะกันจุดเดียวก่อน ให้กันการ์ดเคสร้องเรียน 176 ใบ** — เปิดทั้ง org มาตั้งแต่ 2026-09-04
@@ -757,7 +757,7 @@ Production Postgres ลงด้วย `sudo apt install postgresql` ตรง �
 
 ## 🧩 Kanban — custom field + ลิงก์ต้นทางดิสฯ (เคาะ 2026-08-18)
 
-**แผนเต็มอยู่ที่** `~/.claude/plans/reactive-churning-falcon.md` (ไม่ได้อยู่ใน repo — ถ้าหายให้ไล่จาก `md/kanban/CUSTOM-FIELDS.md` §กลับคำ)
+**แผนเต็มอยู่ที่** `~/.claude/plans/reactive-churning-falcon.md` (ไม่ได้อยู่ใน repo — ถ้าหายให้ไล่จาก `md/modules/kanban/CUSTOM-FIELDS.md` §กลับคำ)
 
 user เคาะ: **ทำ custom field เลย ไม่ต้องรอ tripwire** — *"ไม่ต้องรอองค์กรนอกหรอก ผมนี่แหละ จะเริ่มเพิ่มแล้ว"*
 
@@ -774,7 +774,7 @@ user เคาะ: **ทำ custom field เลย ไม่ต้องรอ t
 - `db/kanbanCards.js` + `handlers/kanbanImportHandler.js` เขียนแล้ว · `web/db/kanban/cards.js` COLS + `CardModal.jsx` แสดงลิงก์ "มาจากข้อความในดิสฯ" แล้ว
 - smoke test เขียน+อ่านกลับผ่าน DB จริงแล้ว (ลบทิ้งหลังเทส) · `npm test` 389 ข้อผ่าน · build ผ่าน
 
-**ขั้น 2 เสร็จ local (2026-08-18 รอบเย็น) ยังไม่ deploy** — custom field ครบ 8 ชนิด (text/number/url/date/checkbox/select/multi_select/checklist) เร่งมารวมกับ select/multi_select ตามสกรีนช็อตจริงของ AppFlowy ที่ user ส่งมา + checklist กลับคำจาก "คอลัมน์จริง" → เป็น custom field type (ดู `md/kanban/CUSTOM-FIELDS.md` §กลับคำรอบเย็น)
+**ขั้น 2 เสร็จ local (2026-08-18 รอบเย็น) ยังไม่ deploy** — custom field ครบ 8 ชนิด (text/number/url/date/checkbox/select/multi_select/checklist) เร่งมารวมกับ select/multi_select ตามสกรีนช็อตจริงของ AppFlowy ที่ user ส่งมา + checklist กลับคำจาก "คอลัมน์จริง" → เป็น custom field type (ดู `md/modules/kanban/CUSTOM-FIELDS.md` §กลับคำรอบเย็น)
 - **ไม่มีหน้าแอดมินจัดการ field/option แยกอีกต่อไป** (`/kanban/fields` + `FieldManager.jsx` ถูกลบ) — สร้าง/แก้/ซ่อนทุกอย่างทำจากกล่อง "ข้อมูลของทีม" ในการ์ดตรงๆ ไม่มี `isKanbanAdmin` gate เลยในระบบนี้
 - ไฟล์ใหม่หลัก: `web/lib/kanbanFieldValue.js` (validate/slugifyFieldKey + เทส 30 ข้อ) · `web/db/kanban/fields.js` (field/option/checklist CRUD) · `web/components/kanban/{TagCombobox,ChecklistFieldBox,CardFieldsBox}.jsx`
 - `kanban_card_checklist` เพิ่ม `field_id` แล้ว (0 แถวตอนกลับคำ → replace เต็มๆ ไม่ต้อง migrate) — การ์ดมีได้หลายเช็คลิสต์ถ้า org สร้างหลาย field ชนิดนี้
@@ -818,7 +818,7 @@ local จึงเทสยิงจริงไม่ได้ และกด 
 > ⬜ หลังนิ่งแล้ว rename `01-identity-refactor.sql` → `.applied.sql` กันรันซ้ำ (DESTRUCTIVE)
 
 ## 🔑 Phase 4 identity — บัญชีเดียว หลายช่องทาง login
-> รายละเอียด/ประวัติย้ายไป `md/org/AUTH.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/modules/org/AUTH.md` แล้ว — ที่เหลือคืองานค้าง
 - [ ] **decouple ประตู login เบอร์ออกจาก Discord** — `findOwnerByVerifiedPhone` ยังมี `AND discord_id IS NOT NULL` → คนที่มีแต่เบอร์ยัง login ไม่ได้ (นี่คือตัวปิดจ๊อบ "เบอร์ยืนเดี่ยว")
 - [ ] **เปิดสมัครด้วยเบอร์ (open signup)** — ⛔ ห้าม ship ก่อนมี **rate-limit ต่อเบอร์ + ต่อ IP**
 - [ ] **ทิ้ง `dc_user_config` ให้หมด** (ทำพร้อม decouple เบอร์ข้างบน) — 2026-07-29 prefs ย้ายไป `user_config` แล้ว เหลือแค่ OTP state (`otp_quota`, `otp_verify_<guildId>`) ที่ `db/otpSession.js` ถือไว้ · ย้ายเข้า `auth_nonces` ได้จริง (`user_id` **nullable** — คนที่ยังไม่มี users row เก็บได้) แค่ต้องแต่งคีย์เอง `otp:<guildId>:<discordId>` + payload เก็บ session · ทำแล้ว DROP ตารางได้เลย (ตอนนี้เหลือ 1 แถวค้างจาก 8 ก.ค.)
@@ -831,7 +831,7 @@ local จึงเทสยิงจริงไม่ได้ และกด 
 - [ ] **`/org/login` · `/org/verify` ยังอยู่ใต้ `/org`** ทั้งที่เป็นเรื่องตัวตนไม่ใช่องค์กร — ย้ายต้องทำ redirect เพราะมีคนใช้จริงแล้ว
 
 ## 🔓 ORG_ACCESS_REDESIGN — ที่เหลือหลังขั้น 5
-> รายละเอียด/ประวัติย้ายไป `md/org/ORG_ACCESS_REDESIGN.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/modules/org/ORG_ACCESS_REDESIGN.md` แล้ว — ที่เหลือคืองานค้าง
 - [ ] ขั้น 6 — ลบ `web_roles` + `geography.js` (`roles` เก็บไว้เป็น log) · ทำหลังใช้จริงแล้วนิ่ง
 - [ ] ⬜ **ขั้น 5 ยังไม่ได้เปิดดูจริงในเบราว์เซอร์** — verify ที่ผ่านคือ build + live 7/7 + unit 206/206 เท่านั้น
 - [ ] **ให้พื้นที่ตอนแต่งตั้ง** — ตอนนี้ admin ให้ได้แต่ "ตำแหน่ง" · พื้นที่มาจากเจ้าตัวกรอกที่อยู่เอง (`setSelfDeclaredScope`) เท่านั้น → `/api/org/appoint` ต้องรับ `scopeNodeId` ด้วย
@@ -882,7 +882,7 @@ local จึงเทสยิงจริงไม่ได้ และกด 
 
 > ⚠️ หัวข้อเดิมยาว 292 บรรทัด พาดหัวว่า *"ดีไซน์เคาะครบ ยังไม่เขียนโค้ดสักบรรทัด"* ทั้งที่ `/posts`
 > ใช้งานจริงบน prod มาตั้งแต่ ส.ค. · **build log ทั้งก้อน (ก้อน 1 · 2a · 2b · 4 · คลังภาพ · เครื่องมือแก้รูป ·
-> คลิป · การ์ดคำคม · AI) ย้ายไป `md/archive/DONE-2026-08.md` แล้ว** · spec/ดีไซน์อยู่ `md/posts/POSTS.md`
+> คลิป · การ์ดคำคม · AI) ย้ายไป `md/archive/DONE-2026-08.md` แล้ว** · spec/ดีไซน์อยู่ `md/modules/posts/POSTS.md`
 > (อ่านก่อนเสมอ ห้าม re-derive) · กฎห้ามกลับคำของโซนนี้อยู่ใน §⛔ ข้างบน
 
 **ก้อนที่ยังไม่ได้เริ่ม**
@@ -975,7 +975,7 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 
 > `dc_social_accounts` เป็น org-native แล้วและอยู่บน prod · app creds ย้ายขึ้น `org_config` แล้ว ·
 > แถว creds เก่า 8 แถวใน `dc_guild_config` **ลบไปแล้ว 2026-08-09** (`DELETE 8`) ·
-> ประวัติ + กติกาเต็ม `md/archive/DONE-2026-08.md` และ `md/posts/POSTS.md §Phase 0`
+> ประวัติ + กติกาเต็ม `md/archive/DONE-2026-08.md` และ `md/modules/posts/POSTS.md §Phase 0`
 
 **🔴 X = โควตาโพสต์เป็น per-app รายเดือน (Free 500 · Basic 3,000) ทุกบัญชีในองค์กรกินถังเดียวกัน**
 บัญชี **ส่วนตัว**ของอาสาโพสต์บ่อยกว่าบัญชีทางการมาก แต่กินโควตาก้อนเดียวกัน → อาสาไม่กี่คนก็หมด
@@ -991,7 +991,7 @@ user เคาะ 2026-08-10 ว่า "ยังไม่เกิด ใช้
 - [ ] ทางออกวันที่ org ไหนใหญ่ผิดปกติ: ให้ org นั้นใช้ app id ของตัวเอง — รองรับอยู่แล้ว (creds เป็น org-scoped)
 
 ## 📮 CASES — รอบ 2026-07-28
-> รายละเอียด/ประวัติย้ายไป `md/case/CASE.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/modules/case/CASE.md` แล้ว — ที่เหลือคืองานค้าง
 **⬜ เหลือ:**
 - [ ] **เทสในเบราว์เซอร์** — กดปุ่มแก้ไขจริง + กด refresh timeline บนเคสที่มีเธรด Discord จริง (ที่ verify ไปคือ production build ผ่าน + code review เท่านั้น)
 - [ ] **"โอนเคสข้ามจังหวัด"** เป็น action แยก (admin-only, เช็ค scope ทั้งต้นทาง+ปลายทาง, ลง timeline) — ถ้ามีเคสจัดจังหวัดผิดจริง
@@ -1033,7 +1033,8 @@ user เคาะ 2026-08-10 ว่า "ยังไม่เกิด ใช้
 **ทำก็ได้ไม่ทำก็ได้:** User-Agent 3 จุด (`CaseNewForm.jsx`, `LocationButton.jsx`, `sync-act-events.js`)
 
 ## 🌐 platformfor.org / CivicFlow — identity/tenant migration
-> รายละเอียด/ประวัติย้ายไป `md/civicflow/CIVICFLOW.md` แล้ว — ที่เหลือคืองานค้าง
+> ⚠️ `md/civicflow/CIVICFLOW.md` ที่เคยชี้ไว้ **ถูกลบไปแล้วใน commit `e3833800`** (ลบพร้อมงานอื่น ไม่ได้ตั้งใจ)
+> — กู้ได้ด้วย `git show e3833800^:md/civicflow/CIVICFLOW.md` · ที่เหลือข้างล่างคืองานค้าง
 - [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, commit 6d534fb)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
 - [ ] **⭐ migrate `dc_members.roles` (Discord CSV ชื่อ) → `web_roles` (key)** (user สั่งจด 2026-07-16) — แปลชื่อ Discord → permission key ผ่าน catalog `dc_guild_roles` เขียนลง web_roles → เป้าหมาย **web_roles = แหล่งรวม key ของทุกคน (Discord+email) ที่เดียว** · ⚠️ **decision คู่กัน:** ถ้าจะให้ web_roles เป็น source เดียวจริง ต้องให้ **Discord sync เขียน web_roles ด้วย** (แปล name→key ตอน sync ใน `db/members.js`) + resolveAccess อ่าน web_roles → ไม่งั้น `roles`(name) กับ `web_roles`(key) diverge ทุก sync (sync ทับ `roles` แต่ไม่ทับ `web_roles`)
 - [ ] **④ contract (เหลืออันเดียว)** — `DROP TABLE _dc_members` (7,298 แถว) + คอลัมน์ที่ไม่ใช้ · **ทำหลัง cutover ขึ้น prod แล้วนิ่ง** · ⚠️ `_dc_members` เป็น safety net จริง (2026-07-21 เคยใช้กู้ `member_id` ที่ถูกล้าง) — อย่าเพิ่งรีบลบ
@@ -1047,12 +1048,12 @@ user เคาะ 2026-08-10 ว่า "ยังไม่เกิด ใช้
 - [ ] เทสจริงในเบราว์เซอร์ (dropdown เปิด/สลับ/สร้าง/ออก) — curl เทส trigger+data แล้ว dropdown เป็น client-only
 
 ## 🍳 /cooking — ที่เหลือ
-> รายละเอียด/ประวัติย้ายไป `md/cooking/COOKING.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/modules/cooking/COOKING.md` แล้ว — ที่เหลือคืองานค้าง
 - [ ] **ตอนแยก personal apps ออกไป domain ตัวเอง → เปลี่ยน image serving เป็น API route** (จดไว้ 2026-07-14) — ตอนนี้ cooking + finance upload เขียนลง `public/uploads/` แล้วเสิร์ฟผ่าน **nginx block** (`location ^~ /uploads/` บน prod — ดู DEPLOYMENT.md) ซึ่งผูกกับ server config · ตอนยกเว็บออก ให้เปลี่ยนไปเสิร์ฟผ่าน **API route อ่าน disk สด** แบบ `media-temp`/`docs`/`case` (route `/api/cooking/media/[filename]` + เปลี่ยน URL ที่ upload คืน + จุดแสดงรูป result card/คลังเมนู/preview) → **self-contained ใน repo, ยกออกไม่ต้อง config nginx, dev=prod เหมือนกัน** · แล้วลบ nginx /uploads block ทิ้งได้ · เหตุผลเลือกตอนนี้ยังใช้ nginx (เร็ว/เบา/ทำเสร็จแล้ว) แต่ตอนแยกออก portability คุ้มกว่า
 - [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ, decelerate ~2.3s + animation cookslot) → อยากได้แบบสล็อตจริง (รีลหมุนแนวตั้ง, เสียง/สั่นได้)
 
 ## 📢 ระบบเรื่องร้องเรียน (Case System) — ที่เหลือ
-> รายละเอียด/ประวัติย้ายไป `md/case/CASE.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/modules/case/CASE.md` แล้ว — ที่เหลือคืองานค้าง
 - [ ] **Hamburger — เอา 3 เมนูบนออก** — `menuLinks` ซ้ำกับ app switcher → ซ่อนเมื่ออยู่ home/dashboard
 - [ ] **Detect location → link จังหวัด** — หน้า `/case` ปุ่ม "ใช้ตำแหน่งของฉัน" → reverse geocode (Nominatim/OSM) → redirect `/case/new/[จังหวัด]`
 
@@ -1206,7 +1207,7 @@ user เคาะ 2026-08-10 ว่า "ยังไม่เกิด ใช้
 
 ### กองเงินตามช่วงวันที่ — เสร็จ local 2026-09-18 (`0589c68`) · ยังไม่ deploy prod
 
-migration `1789000000000` · สเปกอยู่ md/finance/FINANCE.md §กองเงิน · ค้าง:
+migration `1789000000000` · สเปกอยู่ md/modules/finance/FINANCE.md §กองเงิน · ค้าง:
 - [ ] `/finance/report` แยกยอดตามกอง (ยังไม่รู้จักกองเลย — ต้องใช้ `effectiveFundSql()` ห้ามใช้ `fund_id` ดิบ)
 - [ ] โอนเงินระหว่างกอง (ปิดกองแล้วเงินเหลือ → ย้ายไปกองอื่น)
 
@@ -1271,7 +1272,7 @@ migration `1789000000000` · สเปกอยู่ md/finance/FINANCE.md §�
 
 ## 📋 PPLE Docs — E-Signature & E-Document
 
-> รายละเอียดทั้งหมดอยู่ที่ [md/docs/DOCS.md](docs/DOCS.md) · shipped v2.15–v2.19: PDF pipeline, `docs_payers` role-based auto+override, security gate, ACT tab + attachment auto-crop, province filter, member_discord_id nullable, ระบบร่างหนังสือร้องเรียน (AI + PDF)
+> รายละเอียดทั้งหมดอยู่ที่ [md/modules/docs/DOCS.md](modules/docs/DOCS.md) · shipped v2.15–v2.19: PDF pipeline, `docs_payers` role-based auto+override, security gate, ACT tab + attachment auto-crop, province filter, member_discord_id nullable, ระบบร่างหนังสือร้องเรียน (AI + PDF)
 
 - **Docs self-fill (ผู้รับเงินนอก roster) — ✅ implement เสร็จ local 2026-07-07 · ยังไม่ deploy prod**
   - หน้าเซ็น: ค้น ngs เป็นทางหลักเหมือนเดิม + ลิงก์ "ไม่พบชื่อในทะเบียน? กรอกข้อมูลเอง" → ฟอร์ม ชื่อ/นามสกุล/เลขบัตร 13 หลัก/ที่อยู่ 6 ช่องตามบัตร
@@ -1284,7 +1285,7 @@ migration `1789000000000` · สเปกอยู่ md/finance/FINANCE.md §�
 
 - **ค่าเบี้ยเลี้ยง กิจกรรมสัญจร — ยังไม่ implement**
   - กฎ: เบิกได้สูงสุด 5 คน คนละ 300 บาท · เงื่อนไข กิจกรรมต้องจัดมากกว่า 3 ชั่วโมง
-  - ต้องเพิ่ม item type ใหม่ใน `web/config/fund69-rules.js` (`ALLOWED_ITEMS_BY_TYPE.mobile` ยังไม่มี `per_diem`) — ดู [md/docs/DOCS.md](docs/DOCS.md) หัวข้อ "กิจกรรมสัญจร"
+  - ต้องเพิ่ม item type ใหม่ใน `web/config/fund69-rules.js` (`ALLOWED_ITEMS_BY_TYPE.mobile` ยังไม่มี `per_diem`) — ดู [md/modules/docs/DOCS.md](modules/docs/DOCS.md) หัวข้อ "กิจกรรมสัญจร"
 
 - **Docs token consolidation — ✅ implement เสร็จ local 2026-07-05 · ยังไม่ deploy prod**
   - `project_token` ตัวเดียวแทน `pdf_token`/`export_token` · แยกเอกสารด้วย path `/receipt` vs `/registration`
@@ -1352,7 +1353,7 @@ migration `1789000000000` · สเปกอยู่ md/finance/FINANCE.md §�
 
 ## 🧙 Server Setup Wizard
 
-> รายละเอียดที่ [md/discord/SERVER_WIZARD.md](discord/SERVER_WIZARD.md)
+> รายละเอียดที่ [md/modules/discord/SERVER_WIZARD.md](modules/discord/SERVER_WIZARD.md)
 
 - [ ] **Wizard สร้าง Discord server สำเร็จรูป** — ตอบ 1–N คำถาม → ได้ server พร้อมใช้ + service pack
   - Wizard อยู่ที่ไหน (web/Discord DM) — ยังไม่เคาะ
@@ -1594,7 +1595,7 @@ migration `1789000000000` · สเปกอยู่ md/finance/FINANCE.md §�
    | แพตเทิร์นโค้ด — URL filter state · server component+DB · form · check access | ~100 | `rules/CODE.md` |
    | Finance เฉพาะโมดูล — DB tables · access control · UX rules | ~39 | `modules/finance/FINANCE.md` (ซึ่งมี `## Access Control (RBAC)` + `## UX Requirements` อยู่แล้ว = ซ้ำจริง) |
 
-2. **กฎเดียวเขียน 3 ที่** — กฎ `contact_type` อยู่ทั้ง `CLAUDE.md` · `md/DATABASE.md:24` · `md/calling/CALLING.md:108`
+2. **กฎเดียวเขียน 3 ที่** — กฎ `contact_type` อยู่ทั้ง `CLAUDE.md` · `md/DATABASE.md:24` · `md/modules/calling/CALLING.md:108`
 3. **schema ซ้ำ** — `calling_logs` อธิบายทั้ง `DATABASE.md:675` และ `CALLING.md:137` (finance/bot ก็แบบเดียวกัน)
 4. **`PENDING.md` บวม 2,656 บรรทัด** — ปน 3 อย่าง: งานค้างจริง · บันทึกงานที่เสร็จแล้ว · spec ฟีเจอร์
 5. **ไฟล์ scratch ของ session เก่าค้างใน `md/`** — `kanban/NEXT-SESSION.md` · `kanban/DEPLOY-2026-08-19.md` ·

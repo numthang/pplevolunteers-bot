@@ -43,7 +43,7 @@ build ผ่าน · lint 0 error · test 432 ผ่าน · smoke `kanbanCard
 
 ## 🚀 Deploy — มี runbook แยกแล้ว
 
-**[`md/kanban/DEPLOY-2026-08-19.md`](DEPLOY-2026-08-19.md)** — 8 ขั้น ครบตั้งแต่ push ถึงตรวจงาน + วิธีย้อน
+**[`md/archive/DEPLOY-2026-08-19.md`](DEPLOY-2026-08-19.md)** — 8 ขั้น ครบตั้งแต่ push ถึงตรวจงาน + วิธีย้อน
 user เคาะแล้วว่าการ์ดบน prod ทิ้งได้ → **ไม่ต้องรัน `kanbanLabelsToFields.mjs` บน prod**
 DDL ที่ค้างอยู่หลัง marker ใน `scripts/migration/migration.sql` ตามปกติ — ห่อ `BEGIN/COMMIT` ไว้ให้แล้ว
 (ซ้อมบนฐานจำลองผ่าน 2 รอบ รันซ้ำได้)
@@ -214,8 +214,8 @@ user ยังไม่ได้กดเทสหลังรอบสุดท
 
 ## เอกสารที่ต้องอ่านก่อนแตะโค้ด
 
-- `md/kanban/KANBAN.md` §ลบถาวร · §ทำสำเนาการ์ด · §"พักไว้" กับ "กรุ" (ห้ามยุบเข้าหากัน)
-- `md/kanban/CUSTOM-FIELDS.md` §กลับคำรอบเย็น
+- `md/modules/kanban/KANBAN.md` §ลบถาวร · §ทำสำเนาการ์ด · §"พักไว้" กับ "กรุ" (ห้ามยุบเข้าหากัน)
+- `md/modules/kanban/CUSTOM-FIELDS.md` §กลับคำรอบเย็น
 - `.wolf/cerebrum.md` §Do-Not-Repeat 2026-08-18/19
 - `web/components/kanban/FieldRow.jsx` — **ของระบบกับ custom field ใช้แถวตัวนี้ตัวเดียวกัน ห้ามเขียน grid ซ้ำ**
 - `web/components/kanban/TagCombobox.jsx` — 3 โหมด (`field`/`static`/`search`) · โหมด field คือเส้นเดิม **ห้ามแตะ**

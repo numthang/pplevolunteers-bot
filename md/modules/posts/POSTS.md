@@ -11,7 +11,7 @@
 > **ก้อน 4 เสร็จ 2026-07-30** — `services/publishPipeline.js` (ท่อร่วมกับตะกร้าดิสฯ) · `publishWorker` (คิว+retry+stale+backlink กลับห้อง) · ประวัติรวมที่ `post_social_history` (drop `dc_media_history`) · API `/publish` `/jobs` + UI กล่องเผยแพร่ · e2e ผ่าน
 > **ก้อน 2b (Video/Quote Generator Modal) — ดีไซน์เคาะแล้ว 2026-07-31 ยังไม่เขียนโค้ด** (ดู §🎬 Media Section — Video/Quote Generator Modal) · ⚠️ ยังไม่รัน `/scrutinize` ตามกฎ CLAUDE.md — **ต้องรันก่อน implement รอบหน้า**
 > **ก้อน A (อัปคลิปจากเว็บ) เสร็จ 2026-08-09** — ดู §🎬 คลิป: อัปจากเว็บ · ⏳ deploy prod ต้องตั้ง nginx `client_max_body_size` ก่อน
-> ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/posts/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (implement ตามดีไซน์ด้านล่าง)
+> ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/archive/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (implement ตามดีไซน์ด้านล่าง)
 
 ---
 
@@ -196,7 +196,7 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 | ตาราง | คอลัมน์หลัก |
 |---|---|
 | `post_episodes` | `org_id` · **`created_by`** (คนสร้าง — เดิมชื่อ `owner_user_id` เปลี่ยน 2026-09-03 เฟส C · ⛔ ไม่ใช่ผู้รับผิดชอบ) · `visibility` (`personal`/`org`) · **`category`** (varchar ว่างได้ = ยังไม่จัดหมวด) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote`) · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "ร่างใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `last_edited_by` · `updated_at` (ใช้ทำ optimistic lock) · archived_at |
-| `post_assignees` | **ผู้รับผิดชอบงานสื่อ** (เฟส C 2026-09-03) · `org_id` · `episode_id` · `user_id` · `assigned_at` · PK `(episode_id, user_id)` — หลายคน ไม่มีหัวหน้า ทุกคนเท่ากัน · ⛔ เขียนผ่าน `web/lib/postAssign.js` ทางเดียว (ต้อง sync สำเนาลง `kanban_card_assignees` ทุกครั้ง) · ร่าง `personal` ไม่มีแถวในตารางนี้เลย · กติกาเต็มที่ `md/kanban/KANBAN.md §กติกา "คน"` |
+| `post_assignees` | **ผู้รับผิดชอบงานสื่อ** (เฟส C 2026-09-03) · `org_id` · `episode_id` · `user_id` · `assigned_at` · PK `(episode_id, user_id)` — หลายคน ไม่มีหัวหน้า ทุกคนเท่ากัน · ⛔ เขียนผ่าน `web/lib/postAssign.js` ทางเดียว (ต้อง sync สำเนาลง `kanban_card_assignees` ทุกครั้ง) · ร่าง `personal` ไม่มีแถวในตารางนี้เลย · กติกาเต็มที่ `md/modules/kanban/KANBAN.md §กติกา "คน"` |
 | `post_episode_media` | `episode_id` · `kind` (`upload`/`quote`) · `path` · `sort_order` · **`quote_text` · `quote_style` · `bg_path`** (เก็บ params ไม่ใช่แค่ PNG → แก้ข้อความแล้ว render ใหม่ได้) · added_by |
 | `post_revisions` | `episode_id` · title · body · `edited_by_user_id` (NULL = คนที่เข้ามาทางลิงก์) · `edited_by_name` |
 | `post_review_links` | `token` (≥32 bytes) · **`episode_id`** (1 ลิงก์ = 1 ตอน — แก้จาก series_id 2026-07-29) · created_by · `can_edit` · expires_at · revoked_at · uses |
@@ -274,7 +274,7 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 | `/api/social/accounts`, `/api/meta/oauth/*` | ผูกบัญชีโซเชียลรายองค์กร |
 | `services/aiSummarize.js`, `aiLayout.js` | AI infra ที่มีอยู่แล้ว |
 
-**ข้อจำกัดตั้งเวลาที่รู้อยู่แล้ว** (จาก `md/discord/BOT.md`): FB ✅ · IG/Threads ❌ · X ❌ (ต้อง custom scheduler)
+**ข้อจำกัดตั้งเวลาที่รู้อยู่แล้ว** (จาก `md/modules/discord/BOT.md`): FB ✅ · IG/Threads ❌ · X ❌ (ต้อง custom scheduler)
 
 ### 🌉 เว็บจะสั่งโพสต์ยังไง (ท่อไม่ผูกกับ Discord จริง)
 

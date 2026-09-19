@@ -112,10 +112,10 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 
 **แยก 2 อย่าง — static ไม่เข้า DB, mutable เข้า DB:**
 
-- **เมนู + ลิสต์วัตถุดิบ = static JSON** `md/cooking/menus.seed.json` (121 เมนู เสร็จแล้ว) — 121 แถวนิ่ง query ไม่ได้ประโยชน์ แถม versioned/diff ง่าย → โหลดเข้า memory ตอนรัน, match แบบ **deterministic** เร็ว ฟรี ไม่พึ่ง AI
+- **เมนู + ลิสต์วัตถุดิบ = static JSON** `md/modules/cooking/menus.seed.json` (121 เมนู เสร็จแล้ว) — 121 แถวนิ่ง query ไม่ได้ประโยชน์ แถม versioned/diff ง่าย → โหลดเข้า memory ตอนรัน, match แบบ **deterministic** เร็ว ฟรี ไม่พึ่ง AI
   - แต่ละเมนู: `{ id, name, food_groups[], protein[] (แทนกันได้), method, cuisine, flavor[], carb_in_dish, ingredients{core[],optional[]}, staples_used[], steps[], source(A/B), image{emoji,url}, gates{protein[],key[]} }`
   - **`gates` = ตัวใช้ match จริง** (ไม่ใช่ ingredients ดิบ 253 ตัว): `gates.protein` = โปรตีน enum · `gates.key` = ของเฉพาะที่เป็นตัวตัดสิน 0-3 ตัว (กะทิ/ชีส/ผงกะหรี่/ผักหวานป่า...) · ของโรย+ผักจิปาถะ+staples ไม่ gate
-- **`md/cooking/canonical.json`** = checklist 44 ช่อง (protein 7 + veg 20 + special 17) แต่ละช่องมี `tier: regular`(ของประจำ) `/ occasional`(นานๆ ที) — tier 3 (staple) เพิ่มทีหลังได้
+- **`md/modules/cooking/canonical.json`** = checklist 44 ช่อง (protein 7 + veg 20 + special 17) แต่ละช่องมี `tier: regular`(ของประจำ) `/ occasional`(นานๆ ที) — tier 3 (staple) เพิ่มทีหลังได้
 - **state ต่อผู้ใช้ = Postgres** `cooking_*` (ไม่มี FK ผูกตาราง org → bounded):
 
 | ตาราง | ใช้ทำอะไร |
@@ -240,7 +240,7 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 ## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ + เทสเบราว์เซอร์ผ่านแล้ว (2026-07-14) รอ commit + deploy
 > ย้ายมาจาก md/PENDING.md (2026-07-29)
 
-> spec หลัก: `md/cooking/COOKING.md` · 2 Sonnet subagent เขียน 2026-07-11 · build ผ่าน ยังไม่ commit ยังไม่เปิดจริงในเบราว์เซอร์
+> spec หลัก: `md/modules/cooking/COOKING.md` · 2 Sonnet subagent เขียน 2026-07-11 · build ผ่าน ยังไม่ commit ยังไม่เปิดจริงในเบราว์เซอร์
 
 - [x] **เพิ่มของในครัว — ตัด dropdown เลือกหมวดหมู่** → single-add เรียก AI (`guessGroupViaAI` → `/api/cooking/ingredients/bulk` ส่ง 1 รายการ) เดาหมวดให้ · fallback `seasoning` · bulk-confirm ยังส่ง grp เอง bypass AI
 - [x] **ย้ายแก้ไข/ลบ ingredient ไปหน้าใหม่ `/cooking/ingredients`** — chip ในหน้า /cooking เหลือแค่แตะสลับมี/หมด · หน้าใหม่ = CRUD wiki (group 5 หมวด, modal add/edit, delete + คำเตือน gate เมนู) `IngredientsClient.jsx` · ลิงก์ "จัดการวัตถุดิบ →" ที่หัวการ์ดของในครัว

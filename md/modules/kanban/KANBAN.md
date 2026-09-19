@@ -244,7 +244,7 @@ user ไม่เคยใช้ "ยกเลิก" เลย (0 ใบ — �
   เหตุผล: ลบการ์ดทิ้งแล้ว `reconcileEntityCards()` สร้างใบใหม่ **เลข K ใหม่** — checklist/field/คนช่วยหายเปล่า
   ⚠️ `can.restore` **ไม่** ติดเงื่อนไขนี้ ไม่งั้นการ์ดที่เผลอเก็บเข้ากรุไว้ก่อนหน้านี้ค้างในกรุถาวร
 - ⭐ **คนบนการ์ดที่ผูกเคส = `case_assignees`** — รับงาน/มอบหมาย/เพิ่มคนช่วย/ถอด เขียนลงต้นทางผ่าน
-  `web/lib/caseAssign.js` แล้ว mirror กลับด้วย `syncCaseCardPeople()` (ดู `md/case/CASE.md` §ผู้รับผิดชอบ)
+  `web/lib/caseAssign.js` แล้ว mirror กลับด้วย `syncCaseCardPeople()` (ดู `md/modules/case/CASE.md` §ผู้รับผิดชอบ)
 
 ### 🗑️ ลบถาวร — มีแล้วตั้งแต่ 2026-08-18 (เดิมเขียนว่า "โมดูลนี้ไม่มี hard delete เลย")
 
@@ -406,7 +406,7 @@ kanban_card_labels       card_id · label_id
 | ส่งตรวจแล้ว (`review` / `approved` / เผยแพร่) | **posts** | ❌ ต้องไปทำที่ `/posts` |
 | เคสทุกสถานะ | **cases** | ❌ ยังล็อกทั้งหมด (write-through ยังไม่ทำ) |
 
-จุดแก้: [`statusSql.js`](../../web/db/kanban/statusSql.js) `POST_STATUS` + [`kanbanAccess.js`](../../web/lib/kanbanAccess.js) `POST_DRAFT_PHASE` / `isDraggableCard()` / `statusOptionsFor()`
+จุดแก้: [`statusSql.js`](../../../web/db/kanban/statusSql.js) `POST_STATUS` + [`kanbanAccess.js`](../../../web/lib/kanbanAccess.js) `POST_DRAFT_PHASE` / `isDraggableCard()` / `statusOptionsFor()`
 ⛔ **ห้ามเติม `ELSE 'doing'` กลับเข้า `POST_STATUS`** — กอง "รอทำ" ตายทันที
 ⛔ **UI ห้ามเขียนเงื่อนไข draggable เอง** ต้องเรียก `isDraggableCard()` ไม่งั้นลากได้แต่ API ปฏิเสธ
 
@@ -437,7 +437,7 @@ kanban_card_labels       card_id · label_id
 > ทุกบอร์ด ทุกการ์ด เหมือนกันหมดก่อนได้เลย ค่อยจำกัดสิทธิ์ทีหลัง"* → รอบนั้นจึง**ไม่มีด่านใดๆ**
 > และไม่มีสวิตช์ "ปิดทีม/ปิดบอร์ด" ในหน้าจอ · ทำครึ่งเดียว (ซ่อนชื่อแต่การ์ดยังหลุด) = ความเป็นส่วนตัวปลอม
 >
-> **วันที่จะกันจริง แก้ที่เดียว:** [`web/db/kanban/scopeSql.js`](../../web/db/kanban/scopeSql.js) →
+> **วันที่จะกันจริง แก้ที่เดียว:** [`web/db/kanban/scopeSql.js`](../../../web/db/kanban/scopeSql.js) →
 > `teamspaceScopeSql()` (วันนี้คืน `TRUE` เสมอ) แล้ววางลงพร้อมกัน 3 จุดที่ไฟล์นั้นระบุไว้:
 > `canViewTeamspace` (lib/kanbanAccess.js) · `listCards` · `getCardForViewer` (db/kanban/cards.js)
 >
@@ -467,7 +467,7 @@ kanban_card_labels       card_id · label_id
 
 ### ⛔ ด่านที่ 2 — optimistic lock ของโพสต์ (เจอตอน `/scrutinize`)
 
-[`setPostStatus`](../../web/db/posts/episodes.js#L274) เขียน `updated_at = now()` **โดยไม่เช็ค lock** และ `updated_at` คือ lock token ของ autosave ([บรรทัด 15](../../web/db/posts/episodes.js#L15))
+[`setPostStatus`](../../../web/db/posts/episodes.js#L274) เขียน `updated_at = now()` **โดยไม่เช็ค lock** และ `updated_at` คือ lock token ของ autosave ([บรรทัด 15](../../../web/db/posts/episodes.js#L15))
 
 ```
 พี่เอกำลังพิมพ์โพสต์อยู่ /posts       (ถือ lockToken = T1)
@@ -529,10 +529,10 @@ kanban_card_labels       card_id · label_id
 
 | # | เคส | คำตอบ + หลักฐาน |
 |---|---|---|
-| 1 | โพสต์ถูก archive / ลบ | **มี 2 ทางและต้องรับมือคนละแบบ** · `archivePost` = soft (`archived_at`) → **ซ่อนการ์ด** ไม่ใช่ขึ้น "ยกเลิก" · `deletePost` = **ลบถาวรจริง** `DELETE FROM post_episodes` ([episodes.js:334](../../web/db/posts/episodes.js#L334) เรียกจาก [api/posts/[id]:91](../../web/app/api/posts/[id]/route.js#L91)) → `kanban_card_links` ต้อง `ON DELETE CASCADE` + ลบการ์ด auto ทิ้ง ไม่งั้นเหลือการ์ดกำพร้าที่เปิดแล้ว error · **เคสมี hard delete แล้วตั้งแต่ 2026-08-31** (`deleteCase` → `deleteCardForEntity('case', id)` ก่อนลบเสมอ) · เคส archive (`cases.archived_at`) = ซ่อนการ์ดผ่าน `visibleLinkSql` ทรงเดียวกับโพสต์ |
+| 1 | โพสต์ถูก archive / ลบ | **มี 2 ทางและต้องรับมือคนละแบบ** · `archivePost` = soft (`archived_at`) → **ซ่อนการ์ด** ไม่ใช่ขึ้น "ยกเลิก" · `deletePost` = **ลบถาวรจริง** `DELETE FROM post_episodes` ([episodes.js:334](../../../web/db/posts/episodes.js#L334) เรียกจาก [api/posts/[id]:91](../../../web/app/api/posts/[id]/route.js#L91)) → `kanban_card_links` ต้อง `ON DELETE CASCADE` + ลบการ์ด auto ทิ้ง ไม่งั้นเหลือการ์ดกำพร้าที่เปิดแล้ว error · **เคสมี hard delete แล้วตั้งแต่ 2026-08-31** (`deleteCase` → `deleteCardForEntity('case', id)` ก่อนลบเสมอ) · เคส archive (`cases.archived_at`) = ซ่อนการ์ดผ่าน `visibleLinkSql` ทรงเดียวกับโพสต์ |
 | 2 | 2 บอร์ดรับหมวดเดียวกัน | **ยอมรับได้** — เป็นโพสต์ใบเดียว สถานะคำนวณสดจาก entity เดียวกัน ลากที่ไหนก็ตรงกันทั้งคู่ |
 | 3 | บอร์ดไม่มีช่องประเภทที่ต้องการ | **ห้ามให้การ์ดหาย** — ต้องมีช่องระบบ "ตกหล่น" รับไว้ + ขึ้นเตือนบนหัวบอร์ดว่าตั้งช่องไม่ครบ |
-| 4 | เปลี่ยนหมวดโพสต์ | **ย้ายการ์ด (`UPDATE board_id`) ห้ามลบแล้วสร้างใหม่** ไม่งั้นคอมเมนต์/checklist หาย · ⚠️ `setPostCategory` ([episodes.js:287](../../web/db/posts/episodes.js#L287)) **เป็น dead code ไม่มีใครเรียก** → แขวน hook ที่นั่นอย่างเดียวไม่พอ ต้องดักที่ทางที่ใช้จริงด้วย |
+| 4 | เปลี่ยนหมวดโพสต์ | **ย้ายการ์ด (`UPDATE board_id`) ห้ามลบแล้วสร้างใหม่** ไม่งั้นคอมเมนต์/checklist หาย · ⚠️ `setPostCategory` ([episodes.js:287](../../../web/db/posts/episodes.js#L287)) **เป็น dead code ไม่มีใครเรียก** → แขวน hook ที่นั่นอย่างเดียวไม่พอ ต้องดักที่ทางที่ใช้จริงด้วย |
 | 5 | การ์ดไม่มีผู้รับผิดชอบ | บังคับอยู่ `backlog`/`cancelled` เท่านั้น · ลากออกโดยยังไม่มีคนรับ = เด้งกลับ + ให้เลือกคนก่อน (`needAssignee`) |
 | 6 | reconcile โพสต์ ↔ การ์ด | hook อย่างเดียว**ไม่พอ** — โพสต์ถูก insert ตรงจากบอทได้ (ตะกร้าดิสฯ) → ต้องมี **cron กวาดกลางคืน** เป็นตาข่ายรอง |
 
@@ -567,7 +567,7 @@ kanban_card_labels       card_id · label_id
 | **2** | 🔄 context menu `📌 สร้างเป็นการบ้าน` ✅ เขียนเสร็จ **แต่ยังไม่เคยกดจริงในดิสฯ** (ต้อง deploy-commands + restart บอท) · ⬜ DM สรุปเช้า · ⬜ ปุ่มในแชท |
 | — | 🚦 **จุดตัดสินใจ: ถ้าก้อน 1-2 ไม่มีคนใช้ หยุดตรงนี้** ไม่ต้องจ่ายค่ากระดาน |
 | **3** | ✅ **เสร็จ 2026-08-24** `kanban_boards` + สิทธิ์ + ลาก · ⛔ **แต่ UI ถูกซ่อนทันทีในวันเดียวกัน** (ดู §กลับคำ) · ⛔ ไม่มี `kanban_columns` (ตั้งใจ) |
-| **4** | ✅ **เสร็จ 2026-08-24** `kanban_card_links` + สถานะ/ชื่ออ่านสด + ด่านการมองเห็น + ล็อกการลาก · [statusSql.js](../../web/db/kanban/statusSql.js) |
+| **4** | ✅ **เสร็จ 2026-08-24** `kanban_card_links` + สถานะ/ชื่ออ่านสด + ด่านการมองเห็น + ล็อกการลาก · [statusSql.js](../../../web/db/kanban/statusSql.js) |
 | **5** | ✅ **เสร็จ 2026-08-24** auto-mirror — hook ตอนสร้าง + `reconcileEntityCards()` + สคริปต์ backfill · ⛔ **ไม่ใช้ `kanban_board_sources`** (ตกไปพร้อมบอร์ดเดียว) |
 | **6** | ป้าย · คอมเมนต์ · ประวัติ · หน้าตั้งค่าบอร์ดเต็ม · ผูกห้อง Discord |
 
@@ -663,7 +663,7 @@ status:      draft 28 · review 1 · approved 0
 
 | เจอ | แก้เป็น |
 |---|---|
-| `NULL` ชนกัน — ดีไซน์ใช้ `category NULL` = "ทุกหมวด" แต่ [episodes.js:56](../../web/db/posts/episodes.js#L56) ใช้ = "ยังไม่จัดหมวด" | `kanban_board_sources.match_mode` enum ชัดเจน ห้าม NULL สื่อความหมาย |
+| `NULL` ชนกัน — ดีไซน์ใช้ `category NULL` = "ทุกหมวด" แต่ [episodes.js:56](../../../web/db/posts/episodes.js#L56) ใช้ = "ยังไม่จัดหมวด" | `kanban_board_sources.match_mode` enum ชัดเจน ห้าม NULL สื่อความหมาย |
 | ลากการ์ด → `setPostStatus` bump `updated_at` = lock token → เตะคนที่กำลังพิมพ์ให้เซฟไม่ได้ (409) | เพิ่ม §ด่านที่ 2 — optimistic lock |
 | โพสต์ถูกลบถาวรได้จริง (`deletePost`) | ช่องโหว่ข้อ 1 — ต้อง `ON DELETE CASCADE` |
 | เริ่มด้วย 14 ตารางก่อนรู้ว่ามีคนใช้ | สลับลำดับก้อน — "การบ้านของฉัน" (3 ตาราง) ออกก่อน + จุดตัดสินใจ |

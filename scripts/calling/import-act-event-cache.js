@@ -7,7 +7,7 @@ const crypto = require('crypto')
 const XLSX = require('xlsx')
 const pool = require('../../db')
 
-const XLSX_PATH = path.join(__dirname, '../../md/docs/act_event_register.xlsx')
+const XLSX_PATH = path.join(__dirname, '../../md/modules/docs/act_event_register.xlsx')
 const CAMPAIGN_ID = 146354
 const GUILD_ID = '1'
 

@@ -719,7 +719,7 @@ PRIMARY KEY (id)
 UNIQUE INDEX (member_id, contact_type)
 ```
 
-> tier คำนวณอัตโนมัติจาก avg signal ของทุก answered call (สูตรใน `md/calling/CALLING.md`)
+> tier คำนวณอัตโนมัติจาก avg signal ของทุก answered call (สูตรใน `md/modules/calling/CALLING.md`)
 > A ≥ 3.5 · B ≥ 2.5 · C ≥ 1.5 · D < 1.5
 
 

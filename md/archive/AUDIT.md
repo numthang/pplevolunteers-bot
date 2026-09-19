@@ -1,6 +1,6 @@
 # AUDIT — Vendor Lock-in & DB Connection Architecture
 
-สรุปจาก chat กับ AI ตัวอื่นเรื่องความเสี่ยง Vercel+Supabase lock-in — ใช้เป็น **prompt/checklist สำหรับตรวจซ้ำได้ในอนาคต** (ไม่ใช่ที่จดผล audit — ผลตรวจจริงของโปรเจกต์นี้อยู่ที่ [PENDING.md](PENDING.md))
+สรุปจาก chat กับ AI ตัวอื่นเรื่องความเสี่ยง Vercel+Supabase lock-in — ใช้เป็น **prompt/checklist สำหรับตรวจซ้ำได้ในอนาคต** (ไม่ใช่ที่จดผล audit — ผลตรวจจริงของโปรเจกต์นี้อยู่ที่ [PENDING.md](../PENDING.md))
 
 ---
 

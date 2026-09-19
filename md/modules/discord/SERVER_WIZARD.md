@@ -188,8 +188,8 @@ _เพิ่ม requirement ตามลำดับเวลา — ไม่�
 
 ## 🔗 Related
 
-- [md/WEB.md](WEB.md) — web conventions
-- [md/DATABASE.md](DATABASE.md) — schema reference
+- [md/WEB.md](../../WEB.md) — web conventions
+- [md/DATABASE.md](../../DATABASE.md) — schema reference
 - `dc_guild_config` — feature toggles per guild
 - `dc_guild_roles` — role catalog per guild
 - `dc_guild_role_groups` — role group (picker) per guild
