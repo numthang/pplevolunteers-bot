@@ -350,7 +350,7 @@ user ทัก: "layout พังๆ เวลาดูบนมือถือ�
 ### migration
 `scripts/migration/migration.sql` มี 3 ก้อนเก่า — 2026-08-25 ตารางคนนอก+view · 2026-08-26 backfill `org_members.member_id` · 2026-08-26 ล้าง `token_expires_at` — **user ยืนยัน 2026-08-30 ว่ารันครบทั้ง dev และ prod แล้ว**
 
-**เปลี่ยนมาใช้ node-pg-migrate แล้ว (2026-08-30)** — `migrations/` + `npm run migrate up/down/create`, track state ในตาราง `pgmigrations` อัตโนมัติ (setup+ทดสอบ up/down บน dev ผ่านแล้ว) ดู `md/DEPLOYMENT.md` §Run DB Migration
+**เปลี่ยนมาใช้ node-pg-migrate แล้ว (2026-08-30)** — `migrations/` + `npm run migrate up/down/create`, track state ในตาราง `pgmigrations` อัตโนมัติ (setup+ทดสอบ up/down บน dev ผ่านแล้ว) ดู `md/reference/DEPLOYMENT.md` §Run DB Migration
 **เหลือ: deploy commit นี้ขึ้น prod แล้ว fake-baseline บน prod** (`sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && npm run migrate up -- --fake'`) — schema prod ตรงกับ baseline แล้วตาม user เคาะ
 
 ## 🔍 Docs — ต้นตอร่วมของบั๊กชุด 2026-08-26 + สิ่งที่ยังไม่ได้ตรวจ
@@ -1595,7 +1595,7 @@ migration `1789000000000` · สเปกอยู่ md/modules/finance/FINANCE
    | แพตเทิร์นโค้ด — URL filter state · server component+DB · form · check access | ~100 | `rules/CODE.md` |
    | Finance เฉพาะโมดูล — DB tables · access control · UX rules | ~39 | `modules/finance/FINANCE.md` (ซึ่งมี `## Access Control (RBAC)` + `## UX Requirements` อยู่แล้ว = ซ้ำจริง) |
 
-2. **กฎเดียวเขียน 3 ที่** — กฎ `contact_type` อยู่ทั้ง `CLAUDE.md` · `md/DATABASE.md:24` · `md/modules/calling/CALLING.md:108`
+2. **กฎเดียวเขียน 3 ที่** — กฎ `contact_type` อยู่ทั้ง `CLAUDE.md` · `md/reference/DATABASE.md:24` · `md/modules/calling/CALLING.md:108`
 3. **schema ซ้ำ** — `calling_logs` อธิบายทั้ง `DATABASE.md:675` และ `CALLING.md:137` (finance/bot ก็แบบเดียวกัน)
 4. **`PENDING.md` บวม 2,656 บรรทัด** — ปน 3 อย่าง: งานค้างจริง · บันทึกงานที่เสร็จแล้ว · spec ฟีเจอร์
 5. **ไฟล์ scratch ของ session เก่าค้างใน `md/`** — `kanban/NEXT-SESSION.md` · `kanban/DEPLOY-2026-08-19.md` ·

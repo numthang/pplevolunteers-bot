@@ -486,7 +486,7 @@ WEB_BASE_URL=https://pplevolunteers.org   # ใช้สร้าง public URL 
 
 ## SMS Forwarder (Tasker → smsWebhook)
 
-รายรับ KBank เข้าระบบทาง SMS เท่านั้น (ไม่มี email แจ้งเงินเข้า) — มือถือรัน Tasker forward SMS → HTTP POST เข้า [smsWebhook.js](../services/smsWebhook.js) พอร์ต `3099`
+รายรับ KBank เข้าระบบทาง SMS เท่านั้น (ไม่มี email แจ้งเงินเข้า) — มือถือรัน Tasker forward SMS → HTTP POST เข้า [smsWebhook.js](../../services/smsWebhook.js) พอร์ต `3099`
 
 ### ตั้งค่า Tasker (Android)
 

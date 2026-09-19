@@ -154,7 +154,7 @@ scripts/migration/postgres_fix_sequences.sql ← NEW
 
 1. ลบไฟล์นี้หรือ archive ไว้
 2. Tag `v2.7.0` (stable)
-3. Deploy production ตาม `md/DEPLOYMENT.md`
+3. Deploy production ตาม `md/reference/DEPLOYMENT.md`
 4. Feature freeze ยกเลิกได้
 
 ---

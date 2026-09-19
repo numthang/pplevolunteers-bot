@@ -1106,4 +1106,4 @@ UNIQUE INDEX (email) WHERE (email IS NOT NULL)
 
 ## Backups
 
-Backups อยู่ที่ `backups/` · production ทำอัตโนมัติผ่าน cron (ดู `md/DEPLOYMENT.md`)
+Backups อยู่ที่ `backups/` · production ทำอัตโนมัติผ่าน cron (ดู `md/reference/DEPLOYMENT.md`)

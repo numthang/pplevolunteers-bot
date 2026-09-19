@@ -15,13 +15,13 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 |---|---|
 | **Discord Bot** | [md/modules/discord/BOT.md](md/modules/discord/BOT.md) |
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
-| **Design Rules (UI)** | [md/DESIGN.md](md/DESIGN.md) |
+| **Design Rules (UI)** | [md/rules/DESIGN.md](md/rules/DESIGN.md) |
 | **Finance System** | [md/modules/finance/FINANCE.md](md/modules/finance/FINANCE.md) |
 | **Calling System** | [md/modules/calling/CALLING.md](md/modules/calling/CALLING.md) |
 | **Contacts (CRM)** | [md/modules/calling/CONTACT.md](md/modules/calling/CONTACT.md) |
 | **Auth & Identity** | [md/modules/org/AUTH.md](md/modules/org/AUTH.md) |
-| **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
-| **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
+| **Database Schema** | [md/reference/DATABASE.md](md/reference/DATABASE.md) |
+| **Production Deployment** | [md/reference/DEPLOYMENT.md](md/reference/DEPLOYMENT.md) |
 | **Cutover org-core→master** | [md/archive/CUTOVER.md](md/archive/CUTOVER.md) |
 | **Case System** | [md/modules/case/CASE.md](md/modules/case/CASE.md) |
 | **Kanban (การบ้าน)** | [md/modules/kanban/KANBAN.md](md/modules/kanban/KANBAN.md) |
@@ -125,7 +125,7 @@ pple-volunteers/
 
 **ทุกครั้งก่อนเขียนหรือแก้ code ใน `web/` ต้องอ่านก่อนเสมอ:**
 1. `md/WEB.md` — CSS conventions, dark mode classes, component patterns
-2. `md/DESIGN.md` — กฎการวางของ: กายวิภาคการ์ด · ปุ่มโผล่ตอน hover · ป้ายสถานะ · ปุ่มลบ
+2. `md/rules/DESIGN.md` — กฎการวางของ: กายวิภาคการ์ด · ปุ่มโผล่ตอน hover · ป้ายสถานะ · ปุ่มลบ
 3. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
 
 **⚠️ สร้าง component ใหม่ใน `web/` — ห้าม write โดยไม่อ่าน sibling ก่อน:**

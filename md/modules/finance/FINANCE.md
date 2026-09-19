@@ -1,6 +1,6 @@
 # Finance System — RBAC, Schema & UX
 
-👉 See [md/DATABASE.md](../../DATABASE.md) for full table schemas
+👉 See [md/reference/DATABASE.md](../../reference/DATABASE.md) for full table schemas
 
 ---
 

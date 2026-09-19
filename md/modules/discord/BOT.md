@@ -127,7 +127,7 @@ score = messages × 10 + voiceSeconds + mentions × 30
 
 ## Database Tables (Bot)
 
-👉 See [md/DATABASE.md](../../DATABASE.md) for schema
+👉 See [md/reference/DATABASE.md](../../reference/DATABASE.md) for schema
 
 ```
 dc_members             Users & metadata
@@ -368,7 +368,7 @@ Code เสร็จ + mock smoke test ผ่าน (7 เคส) — ยัง�
 
 ## Deployment
 
-👉 See [md/DEPLOYMENT.md](../../DEPLOYMENT.md) for production VPS setup
+👉 See [md/reference/DEPLOYMENT.md](../../reference/DEPLOYMENT.md) for production VPS setup
 
 ## 📢 Social share → ห้องข่าวสาร + Discord Event — implement เสร็จ local (2026-07-08)
 > ย้ายมาจาก md/PENDING.md (2026-07-29)
