@@ -192,6 +192,9 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 
 ## Theming & CSS Conventions
 
+> 📐 **ไฟล์นี้ = "ใช้คลาสอะไร"** · ส่วน **"วางตรงไหน ทำไม"** (กายวิภาคการ์ด · ปุ่ม hover · ป้ายสถานะ · ปุ่มลบ)
+> อยู่ที่ [md/DESIGN.md](DESIGN.md) — อ่านคู่กันก่อนทำ UI ใหม่
+
 ### CSS Variables (`web/app/globals.css`)
 
 ```css
@@ -277,7 +280,7 @@ node scripts/dev/mobileAudit.mjs --all                    # กวาดทุ�
 | ตัวควบคุมบนมือถือกว้างครึ่งๆ กลางๆ | **มือถือให้เต็มความกว้าง** — กล่องครอบ `w-full sm:w-auto` · `<select>`/ช่องค้นหา `flex-1 min-w-0` · ป้ายที่ไม่จำเป็น `hidden sm:inline` (ย้ายไป `aria-label` แทน) |
 | กริดสองคอลัมน์ความกว้างตายตัวทุกจอ | `grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)]` (`FieldRow.jsx:25`) |
 | `p-6` / `px-6` ในโมดัล | `p-4 sm:p-6` — คืนพื้นที่ 16px ที่จอ 375 |
-| `opacity-0 group-hover:opacity-100` เป็นทางเดียวที่เข้าถึงปุ่ม | `opacity-100 sm:opacity-0 sm:group-hover:opacity-100` — **จอสัมผัสไม่มี hover** ปุ่มจะกดไม่ได้เลย |
+| `opacity-0 group-hover:opacity-100` เป็นทางเดียวที่เข้าถึงปุ่ม | `opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100` — **จอสัมผัสไม่มี hover** (⛔ `sm:` ใช้ไม่ได้ วัดความกว้างจอ ไม่ได้วัด hover — iPad แนวนอนกว้างเกิน `sm` แต่ hover ไม่ได้) · ท่าเต็ม + เหตุผลอยู่ [md/DESIGN.md §2](DESIGN.md) |
 | ปัดแนวนอน (`overflow-x-auto` เป็นทางแก้) | user เกลียดการปัด — ให้ซ้อนลงมาแล้วพับได้แทน (กระดาน kanban `flex-col … xl:grid`) |
 | แถว flex ที่ลูกไม่มี `min-w-0` / ปุ่มไอคอนไม่มี `shrink-0` | ปุ่มไอคอน `h-9 w-9` ต้อง `shrink-0` เสมอ ไม่งั้นโดนบีบจนไม่เป็นสี่เหลี่ยม |
 

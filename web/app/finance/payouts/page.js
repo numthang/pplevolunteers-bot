@@ -102,27 +102,36 @@ export default function PayoutsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {rounds.map(r => {
-          // ป้ายอยู่ "ใต้" ข้อความ ไม่ใช่ท้ายแถว — ที่ 375px แถวเดียวเหลือให้ชื่อรอบแค่ ~100px
+          // ป้ายสถานะต้องไม่อยู่ "ท้ายแถวเดียวกับชื่อ" — ที่ 375px แถวเดียวเหลือให้ชื่อรอบแค่ ~100px
           // แล้วชื่อโดน truncate แทบทุกอัน (user ทัก 2026-09-19 "เอาสถานะไปเบียดรายละเอียด")
+          // → ป้ายไป "ต่อท้ายยอดเงิน บรรทัดเดียวกัน" (user เคาะ 2026-09-19 หลังลองครบ 4 ท่า)
+          //   ⛔ ห้ามย้ายกลับไปแถวเดียวกับชื่อรอบ นั่นคือท่าที่โดนทักตั้งแต่แรก
           const stage = roundStage(r)
           return (
-          <div key={r.id} className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-4 py-3 flex items-center gap-3">
+          <div key={r.id} className="group relative rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-4 py-3 flex items-center gap-3">
             <BankBadge bank={r.account_bank} size={40} />
             <Link href={`/finance/payouts/${r.id}`} className="min-w-0 flex-1">
-              <p className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">{r.title}</p>
+              {/* pr-10 เผื่อที่ให้ถังขยะเฉพาะอุปกรณ์ที่ไม่มี hover (ปุ่มโชว์ถาวร) —
+                  จอที่ hover ได้ปุ่มซ่อนอยู่ จึงคืนความกว้างเต็มให้ชื่อรอบ ไม่เบียดอะไรเลย */}
+              <p className="text-base font-semibold text-warm-900 dark:text-disc-text truncate pr-10 [@media(hover:hover)]:pr-0">{r.title}</p>
               <p className="text-sm text-warm-500 dark:text-disc-muted truncate">
                 {r.account_name}{r.account_province ? ` · ${r.account_province}` : ''}
               </p>
+              {/* ป้ายสถานะต่อท้ายยอดเงิน "บรรทัดเดียวกัน" (user เคาะ 2026-09-19)
+                  บรรทัดนี้สั้นที่สุดในการ์ด ("2 คน · 800 บาท") จึงเหลือที่ให้ป้ายโดยไม่แย่งใคร
+                  ไม่มี truncate — ป้ายยาวเกินให้ตกลงบรรทัดใหม่เอง ดีกว่าโดนตัดจนอ่านไม่ออก */}
               <p className="text-sm text-warm-500 dark:text-disc-muted mt-0.5">
                 {t('payouts.summary', { count: r.item_count, total: Number(r.total_amount).toLocaleString('th-TH') })}
+                <span className={`inline-block align-middle ml-1.5 px-2.5 py-0.5 text-sm font-medium rounded-full ${TONE_CLS[stage.tone]}`}>
+                  {t(`payouts.stage.${stage.key}`, { paid: stage.paid ?? 0, count: stage.count ?? 0 })}
+                </span>
               </p>
-              <span className={`inline-block mt-1.5 px-2.5 py-0.5 text-sm font-medium rounded-full ${TONE_CLS[stage.tone]}`}>
-                {t(`payouts.stage.${stage.key}`, { paid: stage.paid ?? 0, count: stage.count ?? 0 })}
-              </span>
             </Link>
+            {/* ถังขยะลอยมุมขวาบน โผล่ตอน hover — มือถือไม่มี hover จริงจึงโชว์ถาวร
+                (ครอบ [@media(hover:hover)] ไม่ใช่ sm: — iPad แนวนอนกว้างเกิน sm แต่ยัง hover ไม่ได้) */}
             {r.status !== 'paid' && (
-              <button onClick={() => remove(r)} aria-label={t('payouts.deleteAria')}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
+              <button onClick={() => remove(r)} aria-label={t('payouts.deleteAria')} title={t('payouts.deleteAria')}
+                className="absolute top-1.5 right-1.5 h-8 w-8 shrink-0 flex items-center justify-center rounded-lg transition bg-card-bg text-warm-400 dark:text-disc-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100">
                 <Trash2 size={16} />
               </button>
             )}

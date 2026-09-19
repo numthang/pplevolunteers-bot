@@ -15,6 +15,7 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 |---|---|
 | **Discord Bot** | [md/discord/BOT.md](md/discord/BOT.md) |
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
+| **Design Rules (UI)** | [md/DESIGN.md](md/DESIGN.md) |
 | **Finance System** | [md/finance/FINANCE.md](md/finance/FINANCE.md) |
 | **Calling System** | [md/calling/CALLING.md](md/calling/CALLING.md) |
 | **Contacts (CRM)** | [md/calling/CONTACT.md](md/calling/CONTACT.md) |
@@ -124,7 +125,8 @@ pple-volunteers/
 
 **ทุกครั้งก่อนเขียนหรือแก้ code ใน `web/` ต้องอ่านก่อนเสมอ:**
 1. `md/WEB.md` — CSS conventions, dark mode classes, component patterns
-2. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
+2. `md/DESIGN.md` — กฎการวางของ: กายวิภาคการ์ด · ปุ่มโผล่ตอน hover · ป้ายสถานะ · ปุ่มลบ
+3. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
 
 **⚠️ สร้าง component ใหม่ใน `web/` — ห้าม write โดยไม่อ่าน sibling ก่อน:**
 - อ่านไฟล์อื่นในโฟลเดอร์เดียวกันอย่างน้อย 1 ไฟล์เพื่อ copy CSS class pattern ที่ถูกต้อง

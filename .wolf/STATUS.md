@@ -84,6 +84,23 @@ user เคาะ: **DM Discord อย่างเดียว** (ไม่ท�
 `NEXT_DIST_DIR=.next-verify npm run build` ผ่าน · `mobileAudit /finance/payouts,/finance/payouts/1` ✓ (มีข้อมูล render จริงแล้ว)
 **ยังไม่ได้ทำ:** ยังไม่เคยกดปุ่ม "แจ้งทุกคน" จริง · ยังไม่ commit · ยังไม่ deploy
 
+## ✅ เสร็จรอบสี่: ถังขยะ hover + `md/DESIGN.md` (**ยังไม่ commit**)
+
+- `web/app/finance/payouts/page.js` — ถังขยะย้ายไปลอยมุมขวาบน `absolute` โผล่ตอน hover
+  (`[@media(hover:hover)]:` ไม่ใช่ `sm:` · มือถือโชว์ถาวร + `pr-10` เฉพาะจอที่ไม่มี hover)
+  · ป้ายสถานะ **ต่อท้ายบรรทัดยอดเงิน บรรทัดเดียวกัน** — user ลองครบ 4 ท่าในวันเดียวแล้วเคาะท่านี้
+  ⛔ ห้ามย้ายป้ายกลับไปแถวเดียวกับชื่อรอบ (ทั้งหน้าและหลัง) และห้ามแยกเป็นบรรทัดของตัวเอง (การ์ดสูงขึ้นทุกใบ)
+  ตารางเทียบทั้ง 4 ท่าพร้อมตัวเลขอยู่ `md/DESIGN.md §1`
+- **`md/DESIGN.md` (ใหม่ 166 บรรทัด)** — กฎ "วางตรงไหน ทำไม" คนละชั้นกับ `md/WEB.md` ("ใช้คลาสอะไร")
+  กายวิภาคการ์ด · ท่า hover-reveal · ปุ่มทำลาย · ขนาดปุ่มไอคอน · ป้ายสถานะ · เช็คลิสต์ปิดงาน
+  ท้ายไฟล์มีหนี้ค้าง 3 จุดที่ยังไม่ตรงกฎ (kanban:290 · payouts/[id] · AccountCard)
+- `md/WEB.md:280` — แก้กฎ hover ที่จดผิด (`sm:` → `[@media(hover:hover)]:`) + ลิงก์ไป DESIGN.md
+- `CLAUDE.md` — เพิ่ม DESIGN.md ใน Quick Links + Required Reading
+- ลบ `web/.next-verify` ที่ค้าง (ทำให้ `lint:all` ขึ้น 1288 error หลอกๆ ตามที่เตือนไว้ใน §Context)
+
+**Verify:** `lint:all` 0 error · `npm test` 573 ผ่าน · `mobileAudit /finance/payouts` ✓ ไม่ล้น
+**ยังไม่ได้ทำ:** ยังไม่ commit
+
 ## 🚀 Next quest
 
 1. **user กดปุ่มกระดิ่ง + ปุ่ม "แจ้งทุกคนที่จ่ายแล้ว (2 คน)" ที่ `/finance/payouts/1`**
