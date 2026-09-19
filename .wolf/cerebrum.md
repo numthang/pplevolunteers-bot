@@ -901,6 +901,17 @@ sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git pull -q origin maste
   ไว้ใน `scripts/dev/mobileAudit.routes.mjs` แล้ว
 
 ## Do-Not-Repeat
+- **ห้ามเชื่อป้าย "เสร็จ local · ยังไม่ push/deploy" ใน `md/PENDING.md` โดยไม่เทียบกับ prod** (2026-09-19)
+  — ป้ายพวกนี้จริงตอนจด แต่ตายทันทีที่ deploy ถัดไป และไม่มีใครกลับมาลบ · ตอนกวาดพบว่า **20 หัวข้อ
+  ของ ก.ค.–ส.ค. ขึ้น prod ไปหมดแล้ว** รวมหัวข้อ POSTS 292 บรรทัดที่ยังพาดหัวว่า "ยังไม่เขียนโค้ดสักบรรทัด"
+  ทั้งที่ `/posts` ใช้งานจริงมาเป็นเดือน
+  **วิธีเช็กที่ถูก (3 คำสั่ง จบใน 1 นาที):**
+  `ssh tee@… 'sudo -u www bash -c "cd /www/wwwroot/pple-volunteers && git log -1"'` เทียบกับ `origin/master` ·
+  `git status --porcelain` ดูว่ามีโค้ดค้างจริงไหม ·
+  `grep -n "production ทำถึงตรงนี้" scripts/migration/migration.sql` — marker อยู่บรรทัด 1959/1964
+  แปลว่าบล็อก SQL มือท้ายไฟล์นั้น **รันบน prod ครบแล้ว** (ทุกหัวข้อที่เขียนว่า "migration ยังไม่รันบน prod"
+  โดยอ้างบล็อกในไฟล์นี้ = ตายแล้ว) · งานใหม่ตั้งแต่ 2026-09-03 อยู่ `migrations/` (node-pg-migrate) แทน
+  ⛔ **และห้ามตอบ user ว่า "ไม่มีอะไรต้องเคลียร์" โดยดูแค่หัวข้อของวันนั้น** — เคยพลาดมาแล้ว user ต้องทักเอง
 - **ห้ามเชื่อ `track.getSettings()` ว่าคือสัดส่วนภาพจริง** (เสียเวลาไปทั้ง session · 2026-09-09)
   — บน iOS มันรายงาน**พิกัดเซนเซอร์ที่ยังไม่หมุนตามการถือเครื่อง** อ้าง 1080×1920 แนวตั้ง
   ทั้งที่เฟรมจริงที่ `<video>` ได้รับเป็น**แนวนอน** · ตัวจริงคือ `video.videoWidth/videoHeight`
@@ -2217,6 +2228,8 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
 
 - [2026-09-17] กฎ "query อยู่ใน db/ เท่านั้น" — allowlist `eslint.db-allowlist.mjs` (ลบได้อย่างเดียว) + hook `.claude/hooks/block-direct-db.js` · gotchas: (1) ชื่อไฟล์ Next `[id]` ใน ESLint `ignores` ต้อง escape เป็น `\[id\]` ไม่งั้นเป็น character class (2) esquery selector regex ห้ามมี `/` → ใช้ `\x2F` (3) `cd web && npx eslint .` พังหมื่นตัวเพราะกวาด `.next-*`/`tmp/` ในเครื่อง (ไม่ใช่โค้ดจริง) — ตรวจ source ด้วย `npx eslint app components db lib i18n middleware.js`
 
+- [2026-09-19] **วิธีเช็คว่า dev server รันอยู่ไหม — `lsof -ti:3000` เฉยๆ ตอบผิด** มันนับ**ทุก** process ที่แตะพอร์ตนั้น รวม**เบราว์เซอร์ที่เปิดแท็บค้างไว้** (เจอจริง: pid 755 = Brave network service ไม่ใช่ dev server เลย แล้วสรุปผิดว่า "ทำ dev server ของ user พัง") → ต้องใช้ `lsof -iTCP -sTCP:LISTEN -P -n | grep :3000` หรือ `ps -eo pid,lstart,command | grep "next dev"` ถึงจะเห็นตัวที่ listen จริง
+- [2026-09-19] **ถ้าจำเป็นต้องรัน dev server ของตัวเองจริงๆ ใช้ `NEXT_DIST_DIR=.next-test npx next dev -p 3100`** — `web/next.config.js:12` รองรับ `NEXT_DIST_DIR` ไว้แล้วเพื่อการนี้ · แยกพอร์ตอย่างเดียวไม่พอเพราะยังแชร์ `.next` · และ **`npm run build` ยังห้ามรันอยู่ดีถ้า dev ของ user รันอยู่** (build เขียนทับ `.next` ที่ dev กำลังใช้ → หน้าเว็บ 500 ด้วย error เรื่อง `/_not-found` ซึ่งดูเหมือนโค้ดพังแต่ไม่ใช่ · แก้ด้วย `rm -rf web/.next` แล้ว restart dev)
 - [2026-09-19] **ห้ามรัน `npm run build` ตอน `next dev` ของ user รันอยู่** — dev กับ build ใช้ `web/.next` โฟลเดอร์เดียวกัน ชนกันแล้ว build พังด้วย `Cannot find module for page: /_not-found` **และ dev server ของ user 500 ไปด้วย** (เกิดจริงวันนี้ pid 755 พอร์ต 3000) · error นี้หน้าตาเหมือนโค้ดพัง แต่ไม่ใช่ — lint/test ผ่านสะอาด อย่าไปไล่แก้โค้ด · เช็ค `lsof -ti:3000` ก่อนเสมอ · การตั้ง dev server ตัวเองที่พอร์ต 3100 **ไม่ช่วย** เพราะยังแชร์ `.next` · ปิด process ของ user ต้องขออนุญาตก่อน
 - [2026-09-19] **finance payouts — ปิดรอบจ่ายทำได้ครั้งเดียว ย้อนไม่ได้เลย:** `web/app/api/finance/payouts/_guard.js` ตอบ 409 กับ**ทุก**คำสั่งเขียนเมื่อ `status='paid'` รวมถึงคำสั่งที่จะเปลี่ยน status กลับเอง → แก้ได้ทางเดียวคือยิง DB ตรง · ผลตามมา: **ห้ามผูกงานที่ต้องทำซ้ำได้ (เช่น แจ้งโอนให้ผู้รับ) ไว้กับจังหวะปิดรอบ**
 - [2026-09-19] **ห้ามให้แก้ `account_id` ของรอบจ่ายย้อนหลัง** — ถอดออกจาก whitelist `updateRound` (`web/db/finance/payouts.js`) แล้วโดยตั้งใจ 2 เหตุผล: (1) `_guard` เช็ค `canEditAccount` จากบัญชี**ปัจจุบัน**เท่านั้น ย้ายไปบัญชีที่ตัวเองไม่มีสิทธิ์ก็ผ่าน (2) exporter เขียนบัญชีต้นทางลงไฟล์ (`web/lib/payoutExport/genericCsv.js`) แก้หลัง export = ระบบขัดกับไฟล์ที่ส่งแบงก์ไปแล้ว และโมดูลนี้ไม่มี audit log · บัญชีผิดจริง = ลบรอบ draft สร้างใหม่ (มี "ลอกรายชื่อจากรอบก่อน") · **ปิดรูสิทธิ์ด้วยการลบความสามารถ ถูกกว่าเพิ่มด่านตรวจ**
@@ -2230,6 +2243,15 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
 - [2026-09-19] **mobileAudit บน Mac ต้องส่ง `CHROME_PATH`** — สคริปต์ default `/usr/bin/google-chrome` (Linux) · บน Mac: `CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"` · รอบแรกมักตาย "Chrome ไม่ยอมเปิด debugging port ภายใน 10 วิ" เพราะ cold start โปรไฟล์ใหม่ — **รันซ้ำอีกครั้งผ่านเอง อย่าไปแก้สคริปต์**
 - [2026-09-19] **vitest ในโปรเจกต์นี้ไม่เปิด `globals`** — เทสใหม่ต้อง `import { describe, it, expect } from 'vitest'` ไม่งั้นได้ `ReferenceError: describe is not defined` · และ `console.log` ในเทสไม่โผล่ใน reporter → อยาก preview ผลลัพธ์ให้ `writeFileSync` ลงไฟล์แล้ว cat
 - [2026-09-19] ⚠️ **`NEXT_DIST_DIR=.next-verify npm run build` แล้วต้อง `rm -rf web/.next-verify` ทุกครั้ง** — ไม่งั้น `npm run lint:all` รอบถัดไปพังด้วย error พันกว่าตัว (`'i' is already defined` no-redeclare ฯลฯ) จากไฟล์ bundle ที่ minify แล้ว ไม่ใช่โค้ดจริงสักตัว · `.gitignore` มี `.next*` แต่ ESLint ไม่ได้อ่าน gitignore · อาการหลอกมาก: lint ก่อน build ผ่าน 0 error → build ผ่าน → lint หลัง build พัง 1288 error ทั้งที่ไม่ได้แตะโค้ดเลย
+
+### finance/payouts — ปิดโซนด้วย capability `viewPayouts` (2026-09-19)
+
+- **`web/app/api/finance/payouts/_guard.js` `requireSession()` = ด่านสิทธิ์ของทั้งโซน** — route ทุกตัวใต้ `/api/finance/payouts` วิ่งผ่านมันหมด (`requireRound` ก็เรียกต่อจากตรงนี้) → เพิ่ม route ใหม่ไม่ต้องจำมาเช็คสิทธิ์ซ้ำ
+- **รูที่ปิดไป:** `GET /api/finance/payouts/payees?q=` เคยมีแค่ `requireSession` ไม่เช็คสิทธิ์เลย → สมาชิกคนไหนก็ยิงคำค้น 2 ตัวอักษรแล้วกวาด `bank_code/account_no/promptpay_id` ของสมาชิกทั้ง org + payee คนนอกทั้งทะเบียน (`searchPayees`) · เทียบ `/api/docs/external-payees` + `/api/docs/members` ที่กั้นด้วย `canManageDocs` ทั้งคู่ — เส้นนี้เป็นตัวเดียวที่หลุด
+- `viewPayouts` = admin · เลขาธิการ · **ผอ.ภาค** · เหรัญญิก · ผอ.จังหวัด · กรรมการจังหวัด (user เคาะให้ ผอ.ภาค ใช้งานได้ด้วย) → **รายชื่อตรงกับ `viewInternal` เป๊ะ** แต่แยก key ไว้ตั้งใจ ให้โซนรอบจ่ายปรับแยกจากการเงินโซนอื่นได้ · **ห้ามรวบไปใช้ `can('viewInternal')` แทน** · กั้นแค่ "เข้าโซนได้ไหม" — เห็นรอบไหนยังกรองด้วย `canViewAccount`/`canEditAccount` ตามเดิม · ของจริงที่กันได้คือ **สมาชิกทั่วไป/บรรณาธิการ/Moderator** ที่เคยเห็นทุกอย่างเมื่อบัญชีต้นทางเป็น `public`
+- ⚠️ **`web/components/Nav.jsx` เคยอ่าน access แบบ guild-based** (`useEffectiveRoles(session)` ไม่ส่ง scope) ทั้งที่ API ที่เมนูกั้นอยู่ (finance/docs/cases) ใช้ `getEffectiveOrgIdentity` หมด ซึ่ง**เติม `admin` ให้ owner ของ org** (`orgAccess.js`) — ต่างกันตรงนั้นจุดเดียว แต่พอเอา capability มา gate เมนู เจ้าของ org ที่ไม่ได้ถือยศจะไม่เห็นเมนูทั้งที่เข้าหน้าได้จริง → เปลี่ยนเป็น `{ scope: 'org' }` แล้ว (2026-09-19)
+- Nav มีกลไก `capability:` ใน link object อยู่แล้ว (`visibleLinks` filter) — gate เมนูใหม่ไม่ต้องเขียน filter เพิ่ม
+- **เพิ่ม capability = แตะสมการ `canAppoint`** (`capabilitiesOf()` เป็น inverse ของ `CAPABILITIES` แล้ว `canAppoint` ใช้เป็นเพดานการแต่งตั้ง) → ต้องรัน `lib/__tests__/permissions.test.js` ทุกครั้งที่เพิ่ม key ใน `CAPABILITIES` ห้ามเดาว่าไม่กระทบ
 
 ### finance/payouts — ป้ายสถานะรอบจ่าย + ปุ่มแจ้งทุกคน (2026-09-19)
 
@@ -2246,3 +2268,33 @@ process.env อยู่แล้ว → สคริปต์ทุกตัว
   → เวลา user เรียกไอคอนว่า "สีแดง/ส้ม" มักหมายถึงคลาส `teal` นี่แหละ อย่าไปไล่แก้เป็นสีอื่น
 - **mobileAudit กับหน้าที่ fetch หลัง mount ต้องมี `steps: [{ wait: 2500 }]`** ไม่งั้นวัดตอนหน้ายัง "กำลังโหลด…"
   แล้วรายงาน "ผ่าน" ทั้งที่ไม่เคยเห็นการ์ดสักใบ (เจอเอง: `/finance/payouts` ตรวจผ่านตอน list ว่างเปล่า)
+
+### mobileAudit — เกณฑ์ของกฎ N/P/Q ตั้งจากการวัดจริง ห้ามปรับมั่ว (2026-09-19)
+- **เคสทดสอบที่อ้างอิงหน้าจริงเน่าเร็วมาก** — โจทย์ระบุ 3 เคสไว้ พอลงมือจริงหายหมดเพราะ UI ถูกแก้ไปก่อน
+  (commit d08408a8) ⇒ เคสทดสอบของเครื่องมือตรวจต้องอยู่ใน fixture ที่คุมความกว้างเอง
+  (`scripts/dev/mobileAudit.fixture.html` + `--selftest`) และ**ต้องมีทั้งเคสที่ต้องยิงและต้องเงียบ**
+  ไม่งั้นแยกไม่ออกว่า "ไม่เจอปัญหา" = หน้าดีขึ้น หรือกฎตายสนิท
+- **เกณฑ์แบบ "หรือ" ที่มีค่าคงที่เป็น px ชอบสร้าง cliff** — `clientWidth < 120px` เดี่ยวๆ ทำให้ข้อความ
+  ที่โชว์ตั้ง 70% ในกล่อง 119px กลายเป็น error ทั้ง `/` และ `/dashboard` · เงื่อนไข px ต้องคู่กับสัดส่วนเสมอ
+- **สัดส่วนต้องเทียบกับ "ส่วนแบ่งที่ควรได้" ไม่ใช่ค่าคงที่** — แถวที่มีลูก flex-grow หลายตัว (segmented
+  control 30/60/90/180/365 ที่ /team) ทุกตัวได้ 15% ตามตั้งใจ ถ้าใช้ 45% ตายตัวจะยิงรัวทั้งแถว
+- **`getComputedStyle(el).minWidth === '0px'` ใช้เป็นสัญญาณ "min-w-0 ของ Tailwind" ไม่ได้** —
+  Chrome คืน 0px ให้ element ทั่วไปเพียบ ต้องดู `flexGrow`/`flexShrink` แทน
+- กองชิปตัวกรอง (77 จังหวัดที่ /docs) บรรทัดสุดท้ายแหว่งเป็นเรื่องปกติ ไม่ใช่ "ปุ่มไม่ fluid"
+  → กฎ Q จำกัดเฉพาะแถวที่มี 2-5 ปุ่ม
+- ⚠️ `PROBE` เป็น template literal — **backtick และ `${}` ที่เขียนเพิ่มข้างในต้อง escape เสมอ**
+  ทั้งในโค้ดและในคอมเมนต์ ไม่งั้น template ขาดกลาง แล้ว node ฟ้อง SyntaxError ที่บรรทัดคอมเมนต์ภาษาไทย
+
+### design system — primitive ชั้นแรกของโปรเจกต์ (2026-09-19)
+- `components/ui/{Button,Field,Textarea,Card,Badge}` + หน้า `/styleguide` ที่ **import ของจริง**
+  ไม่ใช่ลอกคลาสมาแปะ · กฎยังอยู่ที่ md/WEB.md (คลาส) + md/DESIGN.md (ตำแหน่ง) — หน้า styleguide
+  ไม่ใช่แหล่งอ้างอิงใหม่ ห้ามเขียนกฎเพิ่มที่นั่น
+- **เอกสารอย่างเดียวบังคับอะไรไม่ได้** — วัด 2026-09-19: กฎ dark mode ที่มีเครื่องบังคับ ละเมิด 0 จาก 2,845 จุด
+  ส่วนกฎที่มีแต่ข้อความ ละเมิด 16-403 จุดทุกข้อ (text-xs 403 · rounded-xl 160 · ปุ่มนอกสเกล 51)
+- ⚠️ **ใน PROBE ของ mobileAudit ต้อง escape `\\` ด้วย ไม่ใช่แค่ backtick กับ `${}`** — เขียน `/[\s,]+/`
+  ในไฟล์ พอประกอบเป็น template literal จะเหลือ `/[s,]+/` = แยกคำด้วยตัวอักษร s ⇒ `data-audit-ok="buttons"`
+  กลายเป็น `["button"]` แล้วการยกเว้นเงียบไปเฉยๆ ไม่มี error (เจอตอนเอากฎมาตรวจหน้า /styleguide เอง)
+- **เอาเครื่องมือตรวจมาตรวจงานตัวเองเจอบั๊กจริง** — กฎ Q ยิงแถวปุ่มไอคอน ซึ่งขัดกับ DESIGN.md §8
+  ที่เขียนเองว่าปุ่มไอคอนจัตุรัสห้ามยืด ⇒ ยกเว้นแถวที่ลูกทุกตัวกว้าง≈สูงแล้ว
+- ⚠️ **`next dev` หลายตัวพร้อมกัน = `.next` พังเงียบๆ** (ENOENT routes-manifest / page.js หาย → 404 ทั้งเว็บ)
+  เช็ค `ps aux | grep "[n]ext dev"` ก่อนเสมอ · เจอ 3-6 ตัวค้างในเครื่องระหว่าง session นี้
