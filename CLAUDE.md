@@ -14,7 +14,8 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 | Topic | File |
 |---|---|
 | **Discord Bot** | [md/modules/discord/BOT.md](md/modules/discord/BOT.md) |
-| **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
+| **Web App — ภาพรวม** | [md/reference/ARCHITECTURE.md](md/reference/ARCHITECTURE.md) |
+| **Code Rules (แพตเทิร์น)** | [md/rules/CODE.md](md/rules/CODE.md) |
 | **Design Rules (UI)** | [md/rules/DESIGN.md](md/rules/DESIGN.md) |
 | **Finance System** | [md/modules/finance/FINANCE.md](md/modules/finance/FINANCE.md) |
 | **Calling System** | [md/modules/calling/CALLING.md](md/modules/calling/CALLING.md) |
@@ -124,8 +125,8 @@ pple-volunteers/
 ## 📖 Required Reading Before Coding
 
 **ทุกครั้งก่อนเขียนหรือแก้ code ใน `web/` ต้องอ่านก่อนเสมอ:**
-1. `md/WEB.md` — CSS conventions, dark mode classes, component patterns
-2. `md/rules/DESIGN.md` — กฎการวางของ: กายวิภาคการ์ด · ปุ่มโผล่ตอน hover · ป้ายสถานะ · ปุ่มลบ
+1. `md/rules/DESIGN.md` — กฎหน้าตาทั้งชุด: คลาส · dark mode · type scale · มือถือ · component patterns
+2. `md/rules/CODE.md` — แพตเทิร์นโค้ด: URL filter state · server component + DB · ฟอร์ม · i18n
 3. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
 
 **⚠️ สร้าง component ใหม่ใน `web/` — ห้าม write โดยไม่อ่าน sibling ก่อน:**
@@ -139,7 +140,7 @@ pple-volunteers/
 node scripts/dev/mobileAudit.mjs --routes /หน้าที่แก้     # exit 1 = ยังล้น ห้ามปิดงาน
 ```
 user ทัก: "ผมต้องมาเจอเองแล้วต้องบอกให้คุณไล่แก้หมดเลย เหนื่อยอ่ะ" — งานหา "จุดไหนล้น" เป็นของเครื่อง ไม่ใช่ของ user
-กฎ layout มือถือทั้งชุดอยู่ `md/WEB.md §จอมือถือ` (อ่านก่อนแก้ ไม่ใช่หลังโดนทัก)
+กฎ layout มือถือทั้งชุดอยู่ `md/rules/DESIGN.md §จอมือถือ` (อ่านก่อนแก้ ไม่ใช่หลังโดนทัก)
 
 ## ⚡ Token / Model — Claude บริหารเอง (user ไม่ต้องสั่ง)
 

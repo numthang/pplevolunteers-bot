@@ -228,7 +228,7 @@ Meta kill session = **ตายพร้อมกันทุกเพจทุ�
 ## 📱 Mobile layout — ผลสแกนทุกโซนที่ 375px (2026-08-31 · แก้แล้วเฉพาะ /kanban)
 
 user ทัก: "layout พังๆ เวลาดูบนมือถือที่มันแหกจากเกินหน้าจอ ผมต้องมาเจอเองแล้วต้องบอกให้คุณไล่แก้หมดเลย เหนื่อยอ่ะ"
-→ ทำตัวตรวจถาวรแล้ว: `node scripts/dev/mobileAudit.mjs --all` (กฎทั้งชุดอยู่ `md/WEB.md §จอมือถือ`)
+→ ทำตัวตรวจถาวรแล้ว: `node scripts/dev/mobileAudit.mjs --all` (กฎทั้งชุดอยู่ `md/rules/DESIGN.md §จอมือถือ`)
 
 **ผลสแกน 16 โซน — เจอ 4 หน้า · แก้แล้ว 1 (kanban) · เหลือ 3 ก้อนข้างล่าง**
 
@@ -245,7 +245,7 @@ user ทัก: "layout พังๆ เวลาดูบนมือถือ�
 
 2.5 **`E · ไม่เต็มความกว้าง` (คำแนะนำ ไม่ใช่ข้อผิดพลาด) — เจอ 3 จุด**
    - `/posts` การ์ด `bg-card-bg … rounded-xl p-4` เหลือที่ว่างท้ายแถว **330px** (แถวในการ์ดสั้นกว่าการ์ดมาก)
-     ⚠️ การ์ดนี้ใช้ `rounded-xl` ด้วย ซึ่งผิดกฎ `md/WEB.md` (การ์ดทั้งโปรเจกต์เป็น `rounded-lg`)
+     ⚠️ การ์ดนี้ใช้ `rounded-xl` ด้วย ซึ่งผิดกฎ `md/rules/DESIGN.md` (การ์ดทั้งโปรเจกต์เป็น `rounded-lg`)
    - `/posts` แถว `flex flex-wrap items-center gap-2` เหลือ 33px (เฉียดเกณฑ์ อาจไม่ต้องแก้)
    - `/integrations` อีก 1 จุด
 
@@ -599,7 +599,7 @@ user ถามตอนกรอกฟอร์มแก้ไขข้อมู
 
 **สถานะตอนนี้ (ตรวจ 2026-08-20):** สี `teal`/`warm-*`/`disc-*` อยู่ใน `tailwind.config.js` (เปลี่ยนที่เดียวได้แต่ต้อง rebuild) มีแค่ `--card-bg` ตัวเดียวที่เป็น CSS variable จริงใน `globals.css` — ไม่มี component class (`.btn`, `.card`) เลย ต้องก็อป Tailwind string เต็มทุกไฟล์
 
-**ตรวจ compliance กับกฎเดิมใน WEB.md แล้วพบว่าต่ำกว่าที่คิด** (จาก 196 ไฟล์ component/page ใน `web/`):
+**ตรวจ compliance กับกฎเดิมใน md/rules/DESIGN.md แล้วพบว่าต่ำกว่าที่คิด** (จาก 196 ไฟล์ component/page ใน `web/`):
 - hardcode hex color: 26 ไฟล์ (~13%)
 - ใช้ `text-xs` ทั้งที่ห้าม: 77 ไฟล์ (~39%)
 - ใช้ `rounded-xl` บนการ์ด/กล่องทั้งที่ห้าม: 72 ไฟล์ (~37%)
@@ -608,7 +608,7 @@ user ถามตอนกรอกฟอร์มแก้ไขข้อมู
 **แผนที่คุยกันไว้ — แยก 2 ก้อน ห้ามรื้อรวดเดียว:**
 1. **สร้าง token + component class layer** (`globals.css`/`tailwind.config.js`) — เสี่ยงต่ำ ไม่กระทบของเดิมเพราะยังไม่มีใครเรียกใช้ class ใหม่
 2. **ไล่ migrate 196 ไฟล์ทีละโซน** — โปรเจกต์นี้**ไม่มี visual regression test** ต้องเปิดเบราว์เซอร์เช็คจริงทุกโซนก่อนไปโซนถัดไป (ตรงกับหลัก "ทำไปเทสไป" ที่เคาะไว้กับ kanban [[feedback_test_as_you_go]]) — ห้ามรื้อทั้ง 196 ไฟล์รวดเดียวเพราะไม่มีทางรู้ว่าพังตรงไหนจนกว่าจะเจอเอง
-3. **อัปเดตกฎลง `md/WEB.md`** (ไม่ใช่ CLAUDE.md ตรงๆ — CLAUDE.md แค่ชี้มาที่ WEB.md อยู่แล้วเหมือน section CSS conventions เดิม) — เขียนกฎ "โค้ด CSS ใหม่ห้าม hardcode สี/ขนาด ต้องใช้ token/component class" แบบเดียวกับ section i18n **ทำได้ก็ต่อเมื่อก้อน 1 เสร็จแล้วเท่านั้น** เพราะกฎนี้อ้างถึง class ที่ต้องมีอยู่จริงในโค้ดก่อน — ถ้าเขียนกฎไว้ก่อนมี class จริง Claude session หน้าจะเรียก class ที่ไม่มีอยู่
+3. **อัปเดตกฎลง `md/rules/DESIGN.md`** (ไม่ใช่ CLAUDE.md ตรงๆ — CLAUDE.md แค่ชี้มาที่ WEB.md อยู่แล้วเหมือน section CSS conventions เดิม) — เขียนกฎ "โค้ด CSS ใหม่ห้าม hardcode สี/ขนาด ต้องใช้ token/component class" แบบเดียวกับ section i18n **ทำได้ก็ต่อเมื่อก้อน 1 เสร็จแล้วเท่านั้น** เพราะกฎนี้อ้างถึง class ที่ต้องมีอยู่จริงในโค้ดก่อน — ถ้าเขียนกฎไว้ก่อนมี class จริง Claude session หน้าจะเรียก class ที่ไม่มีอยู่
 
 **ยังไม่เคาะ:** ลำดับโซนไหนก่อน-หลัง, timeline
 
@@ -1102,7 +1102,7 @@ user เคาะ 2026-08-10 ว่า "ยังไม่เกิด ใช้
 5. [ ] **Insight summary ให้ผู้บริหาร** — AI สรุปรายสัปดาห์ "สมาชิกพูดเรื่องอะไร อารมณ์เป็นยังไง" แบบ Levellr · ทำทีหลังได้ ใช้ AI infra เดิม
 
 ## 🌍 i18n — เว็บ + bot รองรับหลายภาษา
-> รายละเอียด/ประวัติย้ายไป `md/WEB.md` แล้ว — ที่เหลือคืองานค้าง
+> รายละเอียด/ประวัติย้ายไป `md/rules/CODE.md` §i18n แล้ว — ที่เหลือคืองานค้าง
 - [ ] Migrate โซนที่เหลือ: **docs, bot pages (`web/app/bot/**`)** + shared components (finance: BankBadge/CategorySelect/AccountSelect; root: LoginPanel/NoGuildNotice ฯลฯ) + **bot จริง (`services/i18n.js`, discord.js embed/handler)** — ใช้ i18n-migrator agent ซอยทีละ 2-3 ไฟล์
 - [ ] เว็บ fallback เป็น locale ของ guild ก่อนถึง default (ตอนนี้ cookie → th)
 - [ ] คำสั่ง/หน้า config ตั้ง locale ต่อ guild
@@ -1585,7 +1585,7 @@ migration `1789000000000` · สเปกอยู่ md/modules/finance/FINANCE
 
 ### ปัญหาที่วัดแล้ว (ไม่ต้องวัดใหม่)
 
-1. **ไฟล์เดียวทำ 4 หน้าที่** — `md/WEB.md` 674 บรรทัด ≈ **13,500 token** แต่ CLAUDE.md สั่งให้อ่าน
+1. **ไฟล์เดียวทำ 4 หน้าที่** — `md/rules/DESIGN.md` 674 บรรทัด ≈ **13,500 token** แต่ CLAUDE.md สั่งให้อ่าน
    **ทุกครั้ง**ก่อนแก้ `web/` ทั้งที่เนื้อในแยกได้เป็น 4 กอง:
 
    | กอง | บรรทัด | ควรไปไหน |
@@ -1634,7 +1634,7 @@ md/
 |---|---|---|
 | `CLAUDE.md` | 32 (มีตาราง Quick Links ด้วย) | แก้มือ ต้องอ่านทีละอัน |
 | `md/` ด้วยกันเอง | 94 | sed ได้ แต่ต้องตรวจ anchor `#หัวข้อ` ที่ย้ายไฟล์ |
-| โค้ด `web/` + `scripts/` | **35 ไฟล์** (ไม่นับ `.next`) | ส่วนใหญ่เป็นคอมเมนต์อ้าง `md/WEB.md §Type scale` / `§Input` / `§Card` / `§Badge-Chip` / `§Primary button` / `§Textarea` — mechanical |
+| โค้ด `web/` + `scripts/` | **35 ไฟล์** (ไม่นับ `.next`) | ส่วนใหญ่เป็นคอมเมนต์อ้าง `md/rules/DESIGN.md §Type scale` / `§Input` / `§Card` / `§Badge-Chip` / `§Primary button` / `§Textarea` — mechanical |
 | `.claude/` | 6 | รวม `commands/designqc.md` |
 | `.wolf/` | 4,595 | ⛔ **ห้ามไล่แก้** — เป็นบันทึกประวัติ + `anatomy.md` ที่ hook สร้างเอง · รันใหม่ด้วย `openwolf scan` พอ |
 

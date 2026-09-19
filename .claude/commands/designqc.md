@@ -21,14 +21,14 @@ node scripts/dev/mobileAudit.mjs --routes /kanban --shot   # เก็บภา�
 
 - exit code 1 = เจอปัญหา · ต้องแก้ให้เหลือ 0 ก่อนบอกว่างานเสร็จ
 - หน้าที่มี dropdown/modal ให้เพิ่ม `steps` ใน `scripts/dev/mobileAudit.routes.mjs` ไม่งั้นตรวจไม่ถึง
-- **ไม่แทนการกดจริง** — ยังต้องเปิดดูเองตาม `md/WEB.md §จอมือถือ`
+- **ไม่แทนการกดจริง** — ยังต้องเปิดดูเองตาม `md/rules/DESIGN.md §จอมือถือ`
 
 ## 2. ตรวจงานออกแบบด้วยสายตา (เมื่อผ่านข้อ 1 แล้ว)
 
 1. `--shot` แล้วอ่านภาพใน `.wolf/mobile-audit/` ด้วย Read tool (ภาพละ ~2,500 token — เลือกเฉพาะหน้าที่ต้องดู)
 2. ตรวจกับกฎของโปรเจกต์ที่เขียนไว้แล้ว **ไม่ใช่มาตรฐานลอยๆ**:
-   - `md/WEB.md §Type scale` (5 ขนาด · ห้าม `text-xs` · การ์ด `rounded-lg` · ปุ่ม `px-4 py-2 text-base`)
-   - `md/WEB.md §Dark Mode Classes` (`dark:text-disc-text`, `dark:border-disc-border`, `bg-card-bg`)
-   - `md/WEB.md §จอมือถือ` · `§ความกว้างของหน้า` (`data-wide`)
+   - `md/rules/DESIGN.md §Type scale` (5 ขนาด · ห้าม `text-xs` · การ์ด `rounded-lg` · ปุ่ม `px-4 py-2 text-base`)
+   - `md/rules/DESIGN.md §Dark Mode Classes` (`dark:text-disc-text`, `dark:border-disc-border`, `bg-card-bg`)
+   - `md/rules/DESIGN.md §จอมือถือ` · `§ความกว้างของหน้า` (`data-wide`)
    - ลอกทรงจาก `web/components/calling/` เสมอ ห้ามคิดสเกลใหม่เอง
 3. เสนอจุดที่ต้องแก้พร้อมเหตุผล → user เคาะ → แก้ → รันข้อ 1 ซ้ำให้ผ่าน

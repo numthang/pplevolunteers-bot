@@ -1,6 +1,6 @@
 // web/db/kanban/cards.js — การบ้าน (kanban_cards) ก้อน 1 · ยังไม่มีกระดาน
 //
-// ดีไซน์: md/kanban/KANBAN.md
+// ดีไซน์: md/modules/kanban/KANBAN.md
 //
 // 3 กติกาที่ห้ามพลาด:
 //   1. ⚠️ due_at เป็น local Thai time string จากฟอร์ม ("2026-08-20T17:00")
@@ -556,7 +556,7 @@ export async function removeAssignee(orgId, cardId, userId) {
 }
 
 // งานย่อย (checklist) ย้ายไป db/kanban/fields.js แล้ว — ผูกกับ field_id ไม่ใช่ card_id เฉยๆ อีกต่อไป
-// (checklist กลายเป็น custom field ชนิดหนึ่ง 2026-08-18 รอบเย็น ดู md/kanban/CUSTOM-FIELDS.md §กลับคำ)
+// (checklist กลายเป็น custom field ชนิดหนึ่ง 2026-08-18 รอบเย็น ดู md/modules/kanban/CUSTOM-FIELDS.md §กลับคำ)
 
 /**
  * นับการ์ดสำหรับหน้าแรก — **นับอย่างเดียว ห้ามดึงการ์ดมา .length**

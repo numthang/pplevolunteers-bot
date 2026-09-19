@@ -413,14 +413,17 @@ const A4 = { w: 595.28, h: 841.89 }  // pt (portrait)
 
 // บล็อกสำเนาบัตร — วางมุมล่างซ้ายของหน้าสุดท้าย (ช่องลงชื่ออยู่ฝั่งขวา x≈290pt ขึ้นไป)
 const CARD_BLOCK = {
-  x:        40,   // ขอบซ้าย (pt)
-  bottom:   22,   // เว้นจากขอบล่าง — ต้องมากกว่าแถบ footer 14pt ที่หน้า export ปั๊มทับทุกหน้า
-  cardW:    180,  // บัตรจริง ISO ID-1 = 243pt → ย่อ ~74% ให้พอดีมุมล่างซ้าย
-  gap:      4,    // ระยะบัตร→ลายเซ็น
-  minFree:  204,  // ถ้าพื้นที่ว่างล่างซ้ายน้อยกว่านี้ (เอกสารยาวผิดปกติ) → ขึ้นหน้าใหม่แทน กันทับเนื้อหา
+  x:        40,     // ขอบซ้าย (pt)
+  bottom:   30,     // เว้นจากขอบล่าง — แถบ footer หน้า export สูง 14pt → เหลือช่องว่าง 16pt ไม่ชนกัน
+  cardW:    242.65, // เท่าบัตรจริง ISO ID-1 (85.6mm) — พิมพ์ A4 ที่ 100% แล้วได้ขนาดเท่าของจริง
+  minCardW: 172,    // ย่อได้ต่ำสุดเท่านี้ — เตี้ยกว่านี้ขึ้นหน้าใหม่แทน (เกณฑ์เท่าเดิม: free ≥ ~204pt)
+  maxRight: 283,    // บัตรล้ำขวาได้ถึงตรงนี้ — ช่องลงชื่อเริ่ม ~294pt จึงเหลือช่องว่าง ~11pt
+  gap:      4,      // ระยะบัตร→ลายเซ็น
+  topGap:   6,      // เว้นจากเนื้อหาที่อยู่เหนือบล็อก — 6pt ทำให้เกณฑ์ "พอวางหน้าเดิมไหม" เท่าเดิม (free ≥ ~204pt)
 }
 const CARD_RATIO = 54 / 85.6   // สัดส่วนบัตร ISO ID-1
-const CERT_OPTS  = { W: 560, H: 180, sigW: 330, sigMaxH: 120, sigTop: 6, fontSize: 54, textBottom: 10 }  // sigW/3 = 110 < sigMaxH → ลายเซ็นไม่ถูกบีบสัดส่วน
+// canvas ของบล็อก "สำเนาถูกต้อง" — สัดส่วนเดิมเป๊ะ (H/W = 0.3214) แต่ความละเอียด ×1.35 ตามบัตรที่โตขึ้น
+const CERT_OPTS  = { W: 756, H: 243, sigW: 446, sigMaxH: 162, sigTop: 8, fontSize: 73, textBottom: 14 }  // sigW/3 = 149 < sigMaxH → ลายเซ็นไม่ถูกบีบสัดส่วน
 
 /** ความสูงพื้นที่ว่าง (pt) นับจากขอบล่างของหน้า pageNo ในคอลัมน์ซ้าย — null ถ้าวัดไม่สำเร็จ */
 async function measureBottomLeftFree(pdfBuf, pageNo) {
@@ -474,14 +477,14 @@ async function measureBottomLeftFree(pdfBuf, pageNo) {
 }
 
 /** วาด บัตร(ลายน้ำ) + ลายเซ็น + "สำเนาถูกต้อง" ลงบน page โดยให้ขอบบนของบล็อกอยู่ที่ topY */
-async function drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, topY) {
-  const cardH = CARD_BLOCK.cardW * CARD_RATIO
-  const cScale = Math.min(CARD_BLOCK.cardW / cardImg.width, cardH / cardImg.height)
+async function drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, topY, cardW) {
+  const cardH = cardW * CARD_RATIO
+  const cScale = Math.min(cardW / cardImg.width, cardH / cardImg.height)
   const cW = cardImg.width  * cScale
   const cH = cardImg.height * cScale
   page.drawImage(cardImg, { x: CARD_BLOCK.x, y: topY - cardH, width: cW, height: cH })
 
-  const certW = CARD_BLOCK.cardW
+  const certW = cardW
   const certH = certW * certRatio
   page.drawImage(certImg, {
     x: CARD_BLOCK.x,
@@ -501,17 +504,24 @@ async function stampIdCardBlock(pdfBuf, idCardBuffer, sigBuffer = null, activity
   const certImg = await pdf.embedPng(certify.png)
 
   const certRatio = certify.height / certify.width
-  const blockH = CARD_BLOCK.cardW * CARD_RATIO + CARD_BLOCK.gap + CARD_BLOCK.cardW * certRatio
+  const blockH  = w => w * CARD_RATIO + CARD_BLOCK.gap + w * certRatio
+  // กว้างสุดที่วางได้: ขนาดบัตรจริง แต่ต้องไม่ล้ำเข้าคอลัมน์ช่องลงชื่อฝั่งขวา
+  const maxW    = Math.min(CARD_BLOCK.cardW, CARD_BLOCK.maxRight - CARD_BLOCK.x)
 
   const lastNo = pdf.getPageCount()
   const free   = await measureBottomLeftFree(pdfBuf, lastNo)
 
-  if (free != null && free >= CARD_BLOCK.minFree) {
+  // ที่ว่างล่างซ้ายมีเท่าไหร่ ก็วางบัตรใหญ่เท่านั้น (เพดาน = ขนาดจริง) — เตี้ยจนต้องย่อต่ำกว่า minCardW ค่อยขึ้นหน้าใหม่
+  const fitW = free == null
+    ? 0
+    : Math.min(maxW, (free - CARD_BLOCK.bottom - CARD_BLOCK.topGap - CARD_BLOCK.gap) / (CARD_RATIO + certRatio))
+
+  if (fitW >= CARD_BLOCK.minCardW) {
     const page = pdf.getPage(lastNo - 1)
-    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, CARD_BLOCK.bottom + blockH)
+    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, CARD_BLOCK.bottom + blockH(fitW), fitW)
   } else {
     const page = pdf.addPage([A4.w, A4.h])
-    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, A4.h - 48)
+    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, A4.h - 48, maxW)
   }
 
   return Buffer.from(await pdf.save())

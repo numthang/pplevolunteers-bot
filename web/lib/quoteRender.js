@@ -1,7 +1,7 @@
 /**
  * สะพานไปหา renderer ของบอท — `utils/quoteStyles.js` ที่ **repo root**
  *
- * ⛔ ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ (กติกาข้อ 16 ใน md/posts/POSTS.md)
+ * ⛔ ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ (กติกาข้อ 16 ใน md/modules/posts/POSTS.md)
  *    ไม่งั้นได้การ์ด 2 หน้าตาที่ค่อยๆ เพี้ยนจากกัน
  *
  * ⚠️ ใช้ createRequire แทน `import` ตรงๆ โดยตั้งใจ — 2 เหตุผล ห้ามเปลี่ยนเป็น import:
@@ -13,7 +13,7 @@
  * 2. **ต้อง resolve จาก repo root เท่านั้น** — `web/node_modules/@napi-rs/canvas` เป็น **1.0.0**
  *    ที่ `loadImage(<absolute path>)` โยน `ERR_INVALID_URL` ทั้งดุ้น ส่วนของราก 0.1.97 ใช้ได้
  *    createRequire ที่ปักหมุดไว้ที่รากทำให้ `require('@napi-rs/canvas')` ข้างใน quoteStyles
- *    วิ่งขึ้นไปเจอของรากเสมอ (ดู md/posts/POSTS.md §ผลตรวจ /scrutinize)
+ *    วิ่งขึ้นไปเจอของรากเสมอ (ดู md/modules/posts/POSTS.md §ผลตรวจ /scrutinize)
  */
 import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'

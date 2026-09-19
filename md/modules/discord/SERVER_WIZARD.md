@@ -188,7 +188,8 @@ _เพิ่ม requirement ตามลำดับเวลา — ไม่�
 
 ## 🔗 Related
 
-- [md/WEB.md](../../WEB.md) — web conventions
+- [md/reference/ARCHITECTURE.md](../../reference/ARCHITECTURE.md) — ภาพรวมเว็บ
+- [md/rules/DESIGN.md](../../rules/DESIGN.md) — กฎหน้าตา
 - [md/reference/DATABASE.md](../../reference/DATABASE.md) — schema reference
 - `dc_guild_config` — feature toggles per guild
 - `dc_guild_roles` — role catalog per guild

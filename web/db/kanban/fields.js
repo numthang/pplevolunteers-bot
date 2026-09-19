@@ -1,6 +1,6 @@
 // web/db/kanban/fields.js — custom field ของการบ้าน (text/number/url/date/checkbox/select/multi_select/checklist)
 //
-// ดีไซน์: md/kanban/CUSTOM-FIELDS.md §กลับคำ
+// ดีไซน์: md/modules/kanban/CUSTOM-FIELDS.md §กลับคำ
 //
 // ✅ **ป้ายถูกยุบเข้ามาแล้ว 2026-08-19** (3 กลุ่ม / 29 ป้าย / 86 เส้น → ตกหล่น 0)
 //    กลุ่มป้าย = field · ป้ายในกลุ่ม = options · `kanban_labels`/`kanban_card_labels` ไม่มีโค้ดอ่านแล้ว

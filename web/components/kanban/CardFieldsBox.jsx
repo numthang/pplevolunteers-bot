@@ -3,7 +3,7 @@
 /**
  * CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field)
  *
- * แยกกายภาพจากของระบบ (title/detail/due/status ฯลฯ) ตามดีไซน์ md/kanban/CUSTOM-FIELDS.md
+ * แยกกายภาพจากของระบบ (title/detail/due/status ฯลฯ) ตามดีไซน์ md/modules/kanban/CUSTOM-FIELDS.md
  * — Jira พังเพราะแทรกฟิลด์ custom ปนกับของระบบจนหาไม่เจอว่าอันไหนเป็นอันไหน
  *
  * ⛔ ไม่มีหน้าแอดมินแยกอีกต่อไป (เคาะ 2026-08-18 รอบเย็น) — สร้าง field ใหม่/ตัวเลือก/เช็คลิสต์

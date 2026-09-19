@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
 /**
- * กล่องข้อความยืดตามเนื้อหา — **บังคับใช้กับทุก <textarea> ที่ผู้ใช้พิมพ์ลงไป** (กฎ md/WEB.md)
+ * กล่องข้อความยืดตามเนื้อหา — **บังคับใช้กับทุก <textarea> ที่ผู้ใช้พิมพ์ลงไป** (กฎ md/rules/DESIGN.md)
  * user ทักเรื่องกล่องความสูงตายตัวซ้ำหลายรอบ · คู่กับคลาส `resize-none overflow-hidden min-h-[Npx]`
  *
  * ⚠️ ราคาแพงกว่าที่ตาเห็น: เขียน height:auto แล้วอ่าน scrollHeight ทันที = บังคับ browser คำนวณ

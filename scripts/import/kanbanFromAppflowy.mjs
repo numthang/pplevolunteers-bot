@@ -6,7 +6,7 @@
 //   ... --all        → เอาทั้ง 83 ใบ (ปกติเอาเฉพาะ 33 ใบที่ยังไม่จบ)
 //   ... --file <path> --org <id> --guild <guildId>   (--guild ช่วยตัดชื่อซ้ำ)
 //
-// ⚠️ **รอบแรกเอาเฉพาะงานที่ยังไม่จบ** (md/kanban/CUSTOM-FIELDS.md)
+// ⚠️ **รอบแรกเอาเฉพาะงานที่ยังไม่จบ** (md/modules/kanban/CUSTOM-FIELDS.md)
 //    งานที่จบแล้ว 50 ใบใช้ อำเภอ/งบประมาณ หนักกว่ามาก รอ custom field ก่อนค่อยเอาเข้า
 //
 // ⚠️ ที่ **ไม่** นำเข้า และเป็นการตั้งใจ:
@@ -44,7 +44,7 @@ const GUILD = val('--guild', null)   // เซิร์ฟของทีม —
 //    บนเครื่องใหม่ต้องรัน --map สร้างจาก users ของเครื่องนั้นเองเสมอ
 const MAP_FILE = path.join(path.dirname(FILE), 'people-map.json')
 
-// AppFlowy → ประเภทสถานะ 6 แบบของเรา (md/kanban/KANBAN.md §ประเภทสถานะ)
+// AppFlowy → ประเภทสถานะ 6 แบบของเรา (md/modules/kanban/KANBAN.md §ประเภทสถานะ)
 const STATUS_MAP = {
   'สิ่งที่ต้องทำ': 'backlog',
   'กำลังทำ':      'doing',

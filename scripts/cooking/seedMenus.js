@@ -1,5 +1,5 @@
 // Seed the 121 static menus into cooking_menus (owner = NULL = ระบบ). Idempotent.
-// Source of truth = md/cooking/menus.seed.json. Re-run to refresh seed rows only
+// Source of truth = md/modules/cooking/menus.seed.json. Re-run to refresh seed rows only
 // (ON CONFLICT updates rows WHERE owner IS NULL — never clobbers a user's imported menu).
 //
 // PRODUCTION: sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/cooking/seedMenus.js'
@@ -8,7 +8,7 @@ require('dotenv').config()
 const path = require('path')
 const pg = require('pg')
 
-const SEED = require(path.resolve(__dirname, '../../md/cooking/menus.seed.json'))
+const SEED = require(path.resolve(__dirname, '../../md/modules/cooking/menus.seed.json'))
 const menus = SEED.menus || SEED
 
 const pool = new pg.Pool({

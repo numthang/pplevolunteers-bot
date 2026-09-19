@@ -1,6 +1,6 @@
 // web/db/kanban/boards.js — กระดาน (kanban_boards) ก้อน 3
 //
-// ดีไซน์: md/kanban/KANBAN.md §Data model + §สิทธิ์
+// ดีไซน์: md/modules/kanban/KANBAN.md §Data model + §สิทธิ์
 //
 // ⭐ 3 กติกาของก้อนนี้:
 //   1. **guild_id เป็นป้าย ไม่ใช่ชั้นข้อมูล** (เคาะ 2026-08-24) — user มอง guild เป็น workspace

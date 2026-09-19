@@ -394,7 +394,7 @@ filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ สถานะ ▼ ]
 
 ### CSS Conventions
 
-→ ดู [md/WEB.md — Theming & CSS Conventions](../../WEB.md#theming--css-conventions) (ใช้ทั้งโปรเจกต์)
+→ ดู [md/rules/DESIGN.md — Theming & CSS Conventions](../../rules/DESIGN.md#ส่วนที่-2--คลาสและสเกล) (ใช้ทั้งโปรเจกต์)
 
 ---
 

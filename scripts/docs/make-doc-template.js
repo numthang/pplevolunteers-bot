@@ -8,7 +8,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const SRC  = path.join(__dirname, '../../md/docs/example/1.1-ใบสำคัญรับเงินค่าสถานที่.docx')
+const SRC  = path.join(__dirname, '../../md/modules/docs/example/docx/1.1-ใบสำคัญรับเงินค่าสถานที่.docx')
 const DEST = path.join(__dirname, '../../web/templates/1.1-venue.docx')
 
 const buf = fs.readFileSync(SRC)

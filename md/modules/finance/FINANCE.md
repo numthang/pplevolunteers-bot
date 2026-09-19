@@ -4,7 +4,25 @@
 
 ---
 
+## DB Tables
+
+👉 See [md/reference/DATABASE.md](reference/DATABASE.md) for full schema
+
+```
+finance_accounts              User & org accounts
+finance_transactions          Income/expense records
+finance_categories            Category lookup (global + per-guild)
+finance_account_rules         Pattern matching for auto-categorization
+finance_config                Per-guild config (dashboard thread)
+```
+
+---
+
 ## Access Control (RBAC)
+
+> ⚙️ **บังคับใช้จริงที่** [`web/lib/financeAccess.js`](../../../web/lib/financeAccess.js) (มีเทส 48 เคสที่
+> `web/lib/__tests__/financeAccess.test.js` — **แก้ไฟล์นี้ต้องรัน `cd web && npm test` ก่อน commit ทุกครั้ง**)
+> · อ่านยศจาก OAuth token ของ Discord
 
 ### การดู (View Access) — Different by Account Visibility
 
@@ -58,6 +76,12 @@
 ---
 
 ## UX Requirements
+
+### กติกาเบ็ดเตล็ด (ย้ายมาจาก md/rules/DESIGN.md 2026-09-19)
+
+- Dropdowns sorted by `usage_count DESC` (frequent first)
+- Categories: both global and per-guild
+- Notifications configured via web only (no Discord command)
 
 ## 1. Category Picker แบบ Icon Grid
 

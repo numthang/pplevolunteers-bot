@@ -1,5 +1,5 @@
 /**
- * Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill)
+ * Posts Access Control — เครื่องมืองานสื่อ (spec: md/modules/posts/POSTS.md §ผ่าน /grill)
  *
  * ⛔ 2026-07-29 (เย็น): **ไม่มี series แล้ว** — หน่วยเดียวที่ตัดสินสิทธิ์คือ "โพสต์" (post_episodes)
  *    แต่ละโพสต์ถือ visibility/created_by ของตัวเอง · `category` เป็นแค่ป้ายจัดกลุ่ม **ไม่มีผลต่อสิทธิ์เลย**

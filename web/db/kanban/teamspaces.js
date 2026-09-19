@@ -1,6 +1,6 @@
 // web/db/kanban/teamspaces.js — ชั้น teamspace (kanban_teamspaces) 2026-09-07
 //
-// ดีไซน์: md/kanban/KANBAN.md §Data model ·  org > teamspace > boards > cards
+// ดีไซน์: md/modules/kanban/KANBAN.md §Data model ·  org > teamspace > boards > cards
 //
 // ⚠️ **teamspace ≠ หน้า /team** — /team คือรายชื่อสมาชิกในเซิร์ฟดิสคอร์ด ไม่เกี่ยวกันเลย
 //    (คอมเมนต์คู่ฝั่งนั้นอยู่ที่ web/db/team/*.js — แก้ที่ไหนให้แก้คู่กัน)

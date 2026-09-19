@@ -10,7 +10,7 @@ import { startAuthentication } from '@simplewebauthn/browser'
 // เดิมเป็น email-first แต่ users แถวเก่าฝั่ง Discord มี email = NULL เกือบทั้งหมด (prod 6,679/6,685)
 // → คนเดิมที่เข้าทางอีเมล/Google ระบบหา email ไม่เจอ เลยสร้างบัญชีใหม่ = แตกเป็น 2 ใบ ยศหาย และไม่ merge เองย้อนหลัง
 // เข้าทาง Discord จะ stamp verified email ลงแถวเดิมให้ (resolveUserByDiscord step 6) = ปิดรูตั้งแต่ต้นทาง
-// ชั่วคราวจนกว่าจะ backfill อีเมลเข้าไปพอ — ดู md/org/AUTH.md
+// ชั่วคราวจนกว่าจะ backfill อีเมลเข้าไปพอ — ดู md/modules/org/AUTH.md
 // component นี้ไม่มี logo/หัวข้อ — ผู้เรียกจัด layout เอง · ต้องหุ้ม <Suspense> เพราะใช้ useSearchParams
 
 const ERROR_MESSAGES = {

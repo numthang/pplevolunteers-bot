@@ -1,7 +1,8 @@
 # Design Rules — กฎการออกแบบหน้าจอ (ทั้งโปรเจกต์)
 
-> **ไฟล์นี้ตอบว่า "วางตรงไหน ทำไม"** — ส่วน "ใช้คลาสอะไร" (สี · type scale · dark mode · งบความกว้างมือถือ)
-> อยู่ใน [md/WEB.md](../WEB.md) ที่เดียว **ห้ามลอกตารางคลาสมาไว้ที่นี่** จะกลายเป็นกฎสองชุดที่เพี้ยนกันเอง
+> **ไฟล์นี้คือที่เดียวของกฎหน้าตาทั้งหมด** — ทั้ง "วางตรงไหน ทำไม" (ส่วนที่ 1) และ "ใช้คลาสอะไร"
+> (ส่วนที่ 2 · สี · dark mode · type scale · ความกว้าง · มือถือ · component patterns)
+> **ห้ามลอกกฎพวกนี้ไปเขียนซ้ำที่อื่น** จะกลายเป็นกฎสองชุดที่เพี้ยนกันเอง
 >
 > เขียน 2026-09-19 เพราะ user ต้องมาทักเรื่องเดิมซ้ำทุกโซนใหม่ ("เอาถังขยะไว้บนขวา" · "อย่าให้มันเบียดเนื้อหา" ·
 > "เอาสถานะไปเบียดรายละเอียด") — ทุกข้อข้างล่างมาจากของจริงที่เคยผิดมาแล้ว ไม่ใช่ทฤษฎี
@@ -174,7 +175,7 @@
 | ปุ่มปิดโมดัล | `h-9 w-9` | `size={20}` |
 
 - **ทุกปุ่มไอคอนต้องมี `aria-label` + `title`** — ไม่มีข้อความกำกับ = คนใหม่เดาไม่ออก และ screen reader อ่านไม่ได้
-- ปุ่มไอคอนในแถว flex ต้อง `shrink-0` เสมอ (ไม่งั้นโดนบีบจนไม่เป็นสี่เหลี่ยม — ดู WEB.md §จอมือถือ)
+- ปุ่มไอคอนในแถว flex ต้อง `shrink-0` เสมอ (ไม่งั้นโดนบีบจนไม่เป็นสี่เหลี่ยม — ดู §จอมือถือ ในส่วนที่ 2)
 - อยู่ในการ์ดที่คลิกได้ทั้งใบ → `onClick={(e) => { e.stopPropagation(); … }}` **ทุกครั้ง**
 
 ---
@@ -200,7 +201,7 @@
 ## 7. ข้อความ
 
 - ทุก string ที่ผู้ใช้เห็นต้องผ่าน `t()` — ดู CLAUDE.md §i18n (เส้นแบ่ง "ไฟล์เก่า/โค้ดใหม่" อยู่ที่นั่น)
-- **ห้าม `text-xs`** — เล็กสุดของโปรเจกต์คือ `text-sm` (WEB.md §Type scale)
+- **ห้าม `text-xs`** — เล็กสุดของโปรเจกต์คือ `text-sm` (§Type scale)
 - หน้าว่างต้องมีข้อความบอกว่าทำอะไรต่อ ไม่ใช่ปล่อยขาว
 
 ---
@@ -208,7 +209,7 @@
 ## 8. แถวปุ่ม — บนมือถือต้อง fluid (เต็มความกว้าง เรียงลง)
 
 > user ทัก 2026-09-19: *"ปุ่ม 4 ปุ่มด้านล่างทำให้มัน fluid เวลา mobile ได้ไหม"*
-> WEB.md §จอมือถือ เขียนกฎ "มือถือให้เต็มความกว้าง" ไว้แล้ว — ตรงนี้คือ**ท่าที่ใช้จริง**
+> §จอมือถือ (ส่วนที่ 2) เขียนกฎ "มือถือให้เต็มความกว้าง" ไว้แล้ว — ตรงนี้คือ**ท่าที่ใช้จริง**
 
 ```jsx
 {/* ✅ มือถือ = grid 1 คอลัมน์ · จอกว้าง = แถวปกติ */}
@@ -264,7 +265,7 @@ node scripts/dev/mobileAudit.mjs --routes /หน้าที่แก้   # ex
 | hover-reveal ที่กันจอสัมผัสถูกต้อง | `web/components/posts/PostsHome.jsx:115` |
 | กลุ่มปุ่มมุมขวาบน + เมนู `⋯` | `web/components/kanban/KanbanHome.jsx:290` |
 | ป้ายสถานะคำนวณจากข้อมูลจริง | `web/lib/payoutStage.js` |
-| คลาส/สี/type scale/มือถือ | `md/WEB.md` |
+| คลาส/สี/type scale/มือถือ | ส่วนที่ 2 ของไฟล์นี้ |
 
 ## ⚠️ ที่ยังไม่ตรงกฎ (หนี้ค้าง — แก้เมื่อไปแตะไฟล์นั้น)
 
@@ -272,3 +273,202 @@ node scripts/dev/mobileAudit.mjs --routes /หน้าที่แก้   # ex
   → บนมือถือเป็นปุ่มโปร่งใสที่กดโดน **ต้องเติม `[@media(hover:hover)]:`**
 - `web/app/finance/payouts/[id]/page.js`, `web/components/finance/AccountCard.jsx`
   ถังขยะยังเป็นแดงถาวรในแถว (ยังไม่ย้ายขึ้นมุมขวาบน)
+
+---
+
+# ส่วนที่ 2 — คลาสและสเกล
+
+> ย้ายมาจาก `md/rules/DESIGN.md` เมื่อ 2026-09-19 · เนื้อหาเดิมทุกตัวอักษร ไม่ได้แก้กฎ
+> ส่วนที่ 1 ข้างบนตอบ "วางตรงไหน ทำไม" · ส่วนนี้ตอบ "ใช้คลาสอะไร"
+
+## Theming & CSS Conventions
+
+> 📐 **ไฟล์นี้ = "ใช้คลาสอะไร"** · ส่วน **"วางตรงไหน ทำไม"** (กายวิภาคการ์ด · ปุ่ม hover · ป้ายสถานะ · ปุ่มลบ)
+> อยู่ที่ [md/rules/DESIGN.md](rules/DESIGN.md) — อ่านคู่กันก่อนทำ UI ใหม่
+
+### CSS Variables (`web/app/globals.css`)
+
+```css
+:root {
+  --card-bg: #fafaf9;   /* light mode */
+}
+.dark {
+  --card-bg: #111827;   /* dark mode */
+}
+```
+
+→ **แก้สีที่เดียวใน `globals.css` เปลี่ยนทุกหน้า**
+
+---
+
+### Dark Mode Classes — ใช้ชุดนี้เท่านั้นทั้งโปรเจกต์
+
+| Element | ✅ ใช้ | ❌ ห้ามใช้ |
+|---|---|---|
+| Background (card/container/input) | `bg-card-bg` | `bg-white dark:bg-gray-800`, `dark:bg-warm-dark-*` |
+| Border | `border-warm-200 dark:border-disc-border` | `dark:border-gray-*`, `dark:border-warm-dark-*` |
+| Primary text | `text-warm-900 dark:text-disc-text` | `dark:text-white`, `dark:text-warm-50` |
+| Secondary/muted text | `text-warm-500 dark:text-disc-muted` | `dark:text-gray-400`, `dark:text-warm-dark-400` |
+| Hover background | `hover:bg-warm-50 dark:hover:bg-disc-hover` | `dark:hover:bg-gray-700`, `dark:hover:bg-warm-dark-200` |
+| Placeholder | `placeholder-warm-400 dark:placeholder-disc-muted` | `dark:placeholder-gray-*` |
+
+---
+
+### ความกว้างของหน้า — ค่าเริ่มต้น 1024px · โซนไหนอยากเต็มจอให้ประกาศ `data-wide`
+
+`app/layout.js` ครอบ `<main>` ไว้ที่ `max-w-5xl` (1024px) เป็นค่าเริ่มต้นของทั้งแอพ
+
+⛔ **`-mx-4` แหกกรอบไม่ได้** — negative margin หักล้างได้แค่ *padding* ของพ่อ ทะลุ `max-width` ไม่ได้
+(นี่คือเหตุผลที่ `max-w-7xl` ใน `app/calling|posts|docs/layout.js` เป็น dead code มาตลอด — เจอ 2026-08-17)
+
+**วิธีทำให้โซนเต็มจอ — เติมคำเดียวที่ layout ของโซน:**
+```jsx
+<div data-wide className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+```
+`app/globals.css` มี 2 กฎที่เกาะ attribute นี้อยู่แล้ว → เนื้อหา **และ** แถบ nav ยืดตามเอง
+ไม่ต้องแก้ `globals.css` ไม่ต้องแก้ `Nav.jsx`
+
+| ใช้กับ | ความกว้าง |
+|---|---|
+| canvas แนวนอน (กระดาน kanban · ผังทีม) | **เต็มจอ** — `data-wide` |
+| ตาราง/รายการหลายคอลัมน์ | 1280px — `data-wide` แล้วครอบ `max-w-7xl` ในหน้านั้นเอง |
+| ฟอร์ม · ข้อความยาว · หน้าตั้งค่า | **ปล่อยค่าเริ่มต้น 1024px** (กว้างกว่านี้ตาต้องกวาดไกล อ่านยากกว่าเดิม) |
+
+ตอนนี้ประกาศ `data-wide` แล้ว 2 โซน: `app/kanban/layout.js` · `app/team/layout.js`
+
+### จอมือถือ — ออกแบบที่ **375px** เสมอ · ตรวจด้วยเครื่องก่อนส่งงาน
+
+> เขียนกฎนี้ 2026-08-31 เพราะ user ต้องเป็นคนเปิดมือถือไปเจอเองทุกครั้งแล้วมาสั่งให้ไล่แก้
+> (`12230e0 fix(team)`, `8408571 fix(case)`, `a97661d fix(kanban/board)` — reactive ทั้งหมด)
+> เหตุผลเดียวกับ §Type scale: โซนใหม่เดาเอง แล้ว user รับบทเป็นคนตรวจ
+
+⛔ **`html { font-size: 18px }`** (`app/globals.css:22`) — **ทุกคลาสที่เป็น rem ใหญ่กว่าที่เอกสาร Tailwind บอก 12.5%**
+`w-64` = **288px ไม่ใช่ 256** · `w-52` = 234 · `p-4` = 18px · `max-w-5xl` = 1152px ไม่ใช่ 1024
+(`sm:` `md:` เป็น media query หน่วย px จึงไม่โดนผลนี้) → **คำนวณความกว้างด้วยเลขจากเอกสาร Tailwind = ผิดทุกครั้ง**
+
+**งบความกว้างจริง — ที่ 375px เหลือใช้ ~339px** (`main px-1` 9px + `px-3` ของ layout โซน 27px)
+ในโมดัลเหลือ ~285px · ตัวเลขนี้คือเพดานจริง ไม่ใช่ 375
+
+⛔ **กับดักที่ทำให้ "ดูแล้วไม่เห็นพัง" ทั้งที่พัง:** Chrome บนมือถือ **ถ่าง layout viewport เองเมื่อเนื้อหาล้น**
+(เช่น 375 → 409) แล้วย่อทั้งหน้าลงให้พอดีแทนที่จะตัด → เปิด DevTools แล้วดูเผินๆ "ไม่มีอะไรล้น"
+แต่ของจริงบนเครื่อง user คือ **ทั้งหน้าถูกย่อจนตัวหนังสือเล็ก + ปุ่มริมขวากดไม่ถึง**
+→ ต้องวัดเทียบ **ความกว้างจอที่ตั้งใจ** เสมอ ห้ามเทียบ `window.innerWidth`
+
+**ตรวจด้วยเครื่อง — บังคับก่อนบอกว่าเสร็จ:**
+```bash
+node scripts/dev/mobileAudit.mjs --routes /หน้าที่แก้     # exit 1 = ยังมีจุดล้น
+node scripts/dev/mobileAudit.mjs --all                    # กวาดทุกโซน
+```
+หน้าที่มี dropdown/modal ต้องเพิ่ม `steps` ใน `scripts/dev/mobileAudit.routes.mjs` ก่อน ไม่งั้นตรวจไม่ถึง
+สคริปต์ยังเตือน `slack · ไม่เต็มความกว้าง` ให้ด้วย (แถวที่มี select/input แล้วเหลือที่ว่างท้ายแถว > 32px)
+— เป็นคำแนะนำ ไม่ทำให้ exit 1 แต่**บนมือถือค่าเริ่มต้นคือเต็มความกว้าง** ถ้าจงใจไม่เต็มให้เขียนเหตุผลกำกับในโค้ด
+
+| ห้าม | ให้ทำแทน |
+|---|---|
+| แถวปุ่ม / segmented ยาวๆ ที่ไม่มีทางหนี | `flex-wrap` **หรือ** `<select>` ที่ `sm:hidden` คู่กับแถบปุ่ม `hidden sm:inline-flex` (ดู `Segmented` ใน `KanbanHome.jsx`) |
+| `absolute` panel กว้างตายตัว (`w-64`, `w-72`) | เติม `max-w-[calc(100vw_-_1.5rem)]` เสมอ (⚠️ **ต้องมี `_` รอบ `-`** ไม่งั้น Tailwind ปล่อย `calc(100vw-1.5rem)` ที่ CSS ทิ้งทั้งบรรทัดแบบเงียบๆ) · หรือ `w-full` ในกล่อง `relative` (`TagCombobox.jsx`) |
+| เมนูลอยเกาะปุ่มที่**ไม่ได้อยู่ริมขวาสุด**ของแถว | ให้กล่องครอบปุ่มเป็น `static sm:relative` แล้วให้แถวเป็น `relative` → มือถือเมนูเกาะขอบแถว จอกว้างเกาะปุ่มเหมือนเดิม (ดูเมนู "เรียงลำดับ" ใน `KanbanHome.jsx`) |
+| ตัวควบคุมบนมือถือกว้างครึ่งๆ กลางๆ | **มือถือให้เต็มความกว้าง** — กล่องครอบ `w-full sm:w-auto` · `<select>`/ช่องค้นหา `flex-1 min-w-0` · ป้ายที่ไม่จำเป็น `hidden sm:inline` (ย้ายไป `aria-label` แทน) |
+| กริดสองคอลัมน์ความกว้างตายตัวทุกจอ | `grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)]` (`FieldRow.jsx:25`) |
+| `p-6` / `px-6` ในโมดัล | `p-4 sm:p-6` — คืนพื้นที่ 16px ที่จอ 375 |
+| `opacity-0 group-hover:opacity-100` เป็นทางเดียวที่เข้าถึงปุ่ม | `opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100` — **จอสัมผัสไม่มี hover** (⛔ `sm:` ใช้ไม่ได้ วัดความกว้างจอ ไม่ได้วัด hover — iPad แนวนอนกว้างเกิน `sm` แต่ hover ไม่ได้) · ท่าเต็ม + เหตุผลอยู่ [md/rules/DESIGN.md §2](rules/DESIGN.md) |
+| ปัดแนวนอน (`overflow-x-auto` เป็นทางแก้) | user เกลียดการปัด — ให้ซ้อนลงมาแล้วพับได้แทน (กระดาน kanban `flex-col … xl:grid`) |
+| แถว flex ที่ลูกไม่มี `min-w-0` / ปุ่มไอคอนไม่มี `shrink-0` | ปุ่มไอคอน `h-9 w-9` ต้อง `shrink-0` เสมอ ไม่งั้นโดนบีบจนไม่เป็นสี่เหลี่ยม |
+
+**ข้อความไทยหลอกตา:** เบราว์เซอร์หาจุดตัดบรรทัดตรงพยางค์ได้ (`"ยังไม่มีคน"` ตัดจาก `"ช่วย"`)
+→ min-content แคบกว่าที่คิดมาก ข้อความสั้นๆ ก็ตกบรรทัดได้แม้จอกว้าง **ห้ามอนุมานจาก CSS เฉยๆ ต้องวัดจริง**
+
+---
+
+### Type scale — ใช้ 5 ขนาดนี้เท่านั้นทั้งโปรเจกต์
+
+> เขียนกฎนี้ 2026-08-17 เพราะโซนใหม่ (kanban) เดาสเกลเองแล้วหลุดทั้งโซน — user ต้องมาไล่แก้ซ้ำทุกครั้งที่ทำแอพใหม่
+> **ตัวเลขอ้างอิงของจริง:** `components/calling/` ใช้ `text-base` 74 จุด · `text-sm` 28 · `text-lg` 6 · `text-2xl` 5
+
+| ใช้กับ | class |
+|---|---|
+| หัวหน้าเพจ (h1) | `text-2xl font-bold` |
+| หัวข้อกอง / หัว modal (h2) | `text-lg font-medium` (กองในหน้า list ใช้ `font-semibold` ได้) |
+| ชื่อการ์ด / หัวข้อย่อย (h3) | `text-base font-semibold` |
+| **เนื้อความ · meta · ปุ่ม · input · ข้อความ error — ค่าเริ่มต้นของทุกอย่าง** | `text-base` |
+| label ฟอร์ม · badge/chip · ตัวเลขกำกับ · hint | `text-sm` |
+
+❌ **ห้ามใช้ `text-xs` และห้ามใช้ขนาดกำหนดเอง** (`text-[11px]`, `text-[13px]`) — เล็กสุดของโปรเจกต์คือ `text-sm`
+❌ ห้ามใช้ `rounded-xl` กับการ์ด/กล่อง — การ์ดทั้งโปรเจกต์เป็น `rounded-lg`
+❌ ปุ่มห้ามเป็น `px-3 py-1.5 text-sm` — ปุ่มมีขนาดเดียวคือ `px-4 py-2 text-base` (ดู §Primary button)
+  **ข้อยกเว้นเดียว:** ปุ่มบนการ์ด `/kanban` (รับงาน/เอากลับจากกรุ/ลบถาวร) ใช้ `px-3 py-1.5 text-sm` (เคาะ 2026-09-02)
+  — การ์ดแคบและมีปุ่มได้หลายอันพร้อมกัน ปุ่มมาตรฐานดันการ์ดสูงเกินไป ห้ามลอกไปใช้นอกการ์ด kanban
+✅ ไอคอน `lucide-react` ใช้ `size={16}` เป็นค่าเริ่มต้น (18-20 เฉพาะปุ่มปิด/ไอคอนเดี่ยว)
+
+**ก่อนเขียน component ใหม่:** เปิดไฟล์ใน `components/calling/` (เช่น `CampaignCard.jsx`, `SmsModal.jsx`) มาวางข้างจอแล้ว **ลอกคลาสมาตรงๆ** — ห้ามเขียนสเกลขึ้นเอง
+
+#### Badge / Chip
+```
+px-3 py-1 text-sm font-medium rounded-full
+```
+
+---
+
+### Component Patterns
+
+#### Input / Select
+```
+h-11 px-3 text-base rounded-lg
+border border-warm-200 dark:border-disc-border
+bg-card-bg text-warm-900 dark:text-disc-text
+placeholder-warm-400 dark:placeholder-disc-muted
+focus:outline-none focus:ring-2 focus:ring-teal
+```
+
+#### Label
+```
+text-sm font-medium text-warm-700 dark:text-disc-muted mb-1
+```
+
+#### Textarea — **ต้องยืดตามข้อความเสมอ (fluid) ไม่มีข้อยกเว้น**
+user ทักซ้ำหลายรอบ: กล่องข้อความความสูงตายตัวที่ต้องเลื่อน scroll ข้างในหรือลากมุมเอง = ผิดทั้งโปรเจกต์
+
+```jsx
+import useAutoGrow from '@/lib/useAutoGrow.js'
+
+const ref = useAutoGrow(value)          // ← hook กลาง อย่าเขียนใหม่เอง
+<textarea ref={ref} value={value} onChange={...}
+  className="... resize-none overflow-hidden min-h-[140px]" />
+```
+
+- ❌ `rows={8}` + `style={{ resize: 'vertical' }}` เฉยๆ · ❌ `overflow-y-auto` ในกล่องพิมพ์
+- ⚠️ ห้ามเรียก `autoGrow()` ซ้ำใน `onChange` — hook ทำให้แล้ว 1 ครั้งต่อ render · ใส่ซ้ำ = forced reflow 2 รอบต่อ 1 ตัวอักษร = พิมพ์สะดุดบนข้อความยาว
+- ใช้แล้วที่: `components/case/CaseContentEditor.jsx`, `components/case/CaseManageActions.jsx` (`components/posts/PostEditor.jsx` มีสำเนาของตัวเองมาก่อน hook — ของใหม่ใช้ hook)
+
+#### Card / Row item
+```
+border border-warm-200 dark:border-disc-border bg-card-bg
+hover:bg-warm-50 dark:hover:bg-disc-hover
+```
+
+#### Primary button
+```
+bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2
+```
+> ⭐ **ของใหม่ให้ `import Button from '@/components/ui/Button'` แทนการลอกคลาส** (เพิ่ม 2026-09-19)
+> คลาสข้างบนคือสิ่งที่ primitive ตัวนั้นใส่ให้ — เขียนไว้ที่นี่เพื่อให้รู้ว่าได้อะไร ไม่ใช่ให้ลอกไปแปะ
+> ดูของจริงทุกชิ้นพร้อมกันที่ **`/styleguide`** · ทำไมต้องมี: วัด 2026-09-19 พบ `<button>` 714 ตัว
+> แต่คลาส "rounded + px" ไม่ซ้ำกันถึง 92 แบบ เพราะแต่ละไฟล์ประกาศ `const BTN` ของตัวเอง
+
+#### Secondary / Cancel button
+```
+border border-warm-200 dark:border-disc-border
+text-warm-900 dark:text-disc-text
+hover:bg-warm-50 dark:hover:bg-disc-hover
+rounded-lg text-base font-medium px-4 py-2
+```
+
+#### Phone number — ต้องเป็น link เสมอ
+```jsx
+<a href={`tel:${phone}`} className="text-teal font-medium">{phone}</a>
+```
+
+#### Note / remark text — italic + quote marks
+```jsx
+<p className="text-base text-warm-500 dark:text-disc-muted italic">"{note}"</p>
+```
