@@ -66,7 +66,10 @@ export async function createRound(orgId, data, userId) {
 
 /** autosave หน้าแก้รอบ — เขียนเฉพาะ field ที่ส่งมาจริง (ห้าม SET ทุกคอลัมน์รวด) */
 export async function updateRound(orgId, id, data) {
-  const allowed = ['account_id', 'title', 'source_type', 'event_id', 'period_ym', 'default_amount', 'note']
+  // ไม่มี account_id — ย้ายบัญชีต้นทางย้อนหลังไม่ได้: _guard เช็คสิทธิ์จากบัญชี "ปัจจุบัน" เท่านั้น
+  // (ย้ายไปบัญชีที่ตัวเองแก้ไม่ได้) และไฟล์ที่ export ไปแล้วเขียนบัญชีต้นทางลงไฟล์ (payoutExport/genericCsv.js)
+  // บัญชีผิดจริง = ลบรอบ draft แล้วสร้างใหม่ ลอกรายชื่อจากรอบเดิมได้
+  const allowed = ['title', 'source_type', 'event_id', 'period_ym', 'default_amount', 'note']
   const sets = []
   const vals = []
   for (const k of allowed) {
@@ -103,6 +106,8 @@ export async function deleteRound(orgId, id) {
 // พอ export แล้ว snapshot_at ถูกเขียน → ใช้ค่าที่ snapshot ไว้แทน (ประวัติรอบเก่าไม่เพี้ยนตามทะเบียน)
 const ITEM_SELECT = `
   SELECT i.id, i.round_id, i.member_user_id, i.external_payee_id, i.amount, i.note, i.snapshot_at, i.paid_at,
+         i.notified_at, i.notify_count,
+         u.discord_id,
          COALESCE(i.payee_name, om.display_name,
                   NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username,
                   NULLIF(TRIM(CONCAT_WS(' ', p.first_name, p.last_name)), ''), p.entity_name) AS payee_name,
@@ -130,6 +135,26 @@ export async function listItems(orgId, roundId) {
       WHERE i.round_id = (SELECT id FROM finance_payout_rounds WHERE id = $1 AND org_id = $2)
       ORDER BY i.id`,
     [roundId, orgId]
+  )
+  return rows
+}
+
+/**
+ * รายการของหลายรอบในคำขอเดียว — ใช้สรุปสถานะ "แจ้งไปกี่คน / แจ้งได้กี่คน" ในหน้า list
+ *
+ * ⚠️ ห้ามไปเขียนกติกา "ใครแจ้งได้" เป็น SQL ใน listRounds แทนฟังก์ชันนี้:
+ *    ข้อมูลรับเงินของแต่ละแถวมาจาก COALESCE 3 ชั้น + LATERAL ข้างบน (ITEM_SELECT)
+ *    ลอกไปไว้อีกที่ = กติกาแตกเป็นสองชุด แล้ววันที่แก้ unreachableReason() ฝั่งเดียว ป้ายจะโกหกเงียบๆ
+ *    → ดึงแถวจริงมาแล้วให้ payoutNotify.js ตัดสินฝั่ง JS ที่เดียว
+ */
+export async function listItemsForRounds(orgId, roundIds) {
+  if (!roundIds?.length) return []
+  const { rows } = await pool.query(
+    `${ITEM_SELECT}
+      WHERE i.round_id = ANY($1::int[])
+        AND EXISTS (SELECT 1 FROM finance_payout_rounds r WHERE r.id = i.round_id AND r.org_id = $2)
+      ORDER BY i.round_id, i.id`,
+    [roundIds, orgId]
   )
   return rows
 }
@@ -162,6 +187,22 @@ export async function updateItem(orgId, roundId, itemId, { amount, note, paid })
       WHERE id = $${vals.length - 1} AND round_id = $${vals.length}`,
     vals
   )
+}
+
+/**
+ * บันทึกว่าแจ้ง DM ผู้รับแล้ว — **เรียกหลังส่งสำเร็จเท่านั้น** (ส่งไม่ผ่านแล้วเขียน = log โกหก)
+ * ⛔ ค่าพวกนี้เป็นร่องรอยเฉยๆ ห้ามเอาไปเป็นเงื่อนไขบล็อกการส่งซ้ำ (user เคาะ 2026-09-19)
+ */
+export async function markNotified(orgId, roundId, itemId, userId) {
+  const { rows } = await pool.query(
+    `UPDATE finance_payout_items i
+        SET notified_at = NOW(), notify_count = i.notify_count + 1, notified_by = $3
+       FROM finance_payout_rounds r
+      WHERE i.id = $1 AND i.round_id = r.id AND r.id = $2 AND r.org_id = $4
+      RETURNING i.notified_at, i.notify_count`,
+    [itemId, roundId, userId || null, orgId]
+  )
+  return rows[0] || null
 }
 
 export async function deleteItem(orgId, roundId, itemId) {

@@ -18,8 +18,16 @@ export async function requireSession() {
   return { session, userId, access, orgId }
 }
 
-/** โหลดรอบ + บัญชีต้นทาง แล้วเช็คสิทธิ์ในจังหวะเดียว */
-export async function requireRound(id, { write = true } = {}) {
+/**
+ * โหลดรอบ + บัญชีต้นทาง แล้วเช็คสิทธิ์ในจังหวะเดียว
+ *
+ * @param {object} opt
+ * @param {boolean} opt.write      true = ต้องมีสิทธิ์แก้บัญชี (canEditAccount)
+ * @param {boolean} opt.allowPaid  ข้าม 409 ของรอบที่ปิดแล้ว **เฉพาะคำสั่งที่ไม่แตะตัวเงิน**
+ *   ใช้ที่เดียวตอนนี้: ปุ่มแจ้ง DM ผู้รับ — รอบที่ปิดแล้วคือจังหวะที่โอนครบและต้องแจ้งพอดี
+ *   ถ้าไม่มี flag นี้ ปุ่มจะตายในเคสหลัก · ⛔ ห้ามเอาไปใส่ route ที่แก้ยอด/รายชื่อ/สถานะ
+ */
+export async function requireRound(id, { write = true, allowPaid = false } = {}) {
   const ctx = await requireSession()
   if (ctx.error) return ctx
 
@@ -32,7 +40,7 @@ export async function requireRound(id, { write = true } = {}) {
   if (!ok) return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
 
   // รอบที่จ่ายแล้ว = ปิดบัญชีไปแล้ว ห้ามแก้ย้อนหลัง (ยอดที่โอนจริงต้องตรงกับที่บันทึกไว้)
-  if (write && round.status === 'paid') {
+  if (write && !allowPaid && round.status === 'paid') {
     return { error: Response.json({ error: 'Round already paid' }, { status: 409 }) }
   }
 

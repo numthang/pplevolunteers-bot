@@ -2,12 +2,15 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, UserPlus, Pencil, X } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, AlertTriangle, Copy, UserPlus, Pencil, X, Bell } from 'lucide-react'
 import { resolveBank, digitsOnly } from '@/config/banks.js'
+import { canNotify } from '@/lib/payoutNotify.js'
+import { formatThaiDateTime } from '@/lib/dateFormat.js'
 import { chunkIntoGroups } from '@/lib/payoutExport/shared.js'
 import { buildPlainText } from '@/lib/payoutExport/plainText.js'
 import ExternalPayeeModal from '@/components/docs/ExternalPayeeModal'
 import PayeeBankFields from '@/components/finance/PayeeBankFields'
+import EventCombobox from '@/components/finance/EventCombobox'
 
 const INPUT = 'h-11 px-3 text-base rounded-lg w-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal'
 // ห้ามสร้างจาก `${INPUT} w-20` — INPUT มี w-full ซึ่งชนะ w-20 เสมอไม่ว่าจะเรียงคลาสยังไง (ลำดับ utility ของ Tailwind เอง ไม่ใช่ลำดับใน className)
@@ -32,9 +35,14 @@ export default function PayoutRoundPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [newPayeeName, setNewPayeeName] = useState(null)   // null = ปิด · string = เปิดพร้อมชื่อที่พิมพ์ค้าง
   const [bankEdit, setBankEdit] = useState(null)           // บรรทัดคนนอกที่กำลังใส่บัญชี
+  const [editingRound, setEditingRound] = useState(false)
+  const [notifying, setNotifying] = useState(null)          // item id ที่กำลังส่ง DM
+  const [notifyMsg, setNotifyMsg] = useState({})            // item id → { ok, text }
+  const [bulkRun, setBulkRun] = useState(null)              // ปุ่มส่งทุกคน: { total, done, ok, fail, finished }
 
   const saveTimer = useRef(null)
   const locked = round?.status === 'paid'
+  const bulkBusy = !!bulkRun && !bulkRun.finished
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/finance/payouts/${id}`)
@@ -103,6 +111,77 @@ export default function PayoutRoundPage({ params }) {
     return () => clearTimeout(timer)
   }, [query])
 
+  // ── แจ้ง DM ผู้รับ ─────────────────────────────────────────────────────────
+  // กดซ้ำได้ไม่จำกัด (user เคาะ 2026-09-19 — ไว้ยิงทดสอบข้อความหาตัวเอง)
+  // notified_at เป็นร่องรอยเฉยๆ ⛔ ห้ามเอามาบล็อกปุ่ม
+  const NOTIFY_GATE_REASONS = ['external', 'no_discord', 'no_account', 'not_paid']
+  const NOTIFY_SEND_REASONS = ['dm_blocked', 'discord_error', 'network', 'no_token']
+
+  function notifyErrorText(d) {
+    if (d?.error === 'cannot_notify' && NOTIFY_GATE_REASONS.includes(d.reason)) return t(`payouts.notify.cant_${d.reason}`)
+    if (NOTIFY_SEND_REASONS.includes(d?.reason)) return t(`payouts.notify.err_${d.reason}`)
+    return t('payouts.notify.err_discord_error')
+  }
+
+  /** ยิง DM คนเดียว — คืนผลให้คนเรียกตัดสินใจต่อ (ปุ่มรายคนกับปุ่มส่งทุกคนใช้ตัวเดียวกัน) */
+  async function sendNotify(it) {
+    setNotifying(it.id)
+    setNotifyMsg(m => ({ ...m, [it.id]: null }))
+    try {
+      const res = await fetch(`/api/finance/payouts/${id}/items/${it.id}/notify`, { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setNotifyMsg(m => ({ ...m, [it.id]: { ok: false, text: notifyErrorText(d) } }))
+        return { ok: false }
+      }
+      setItems(list => list.map(x => x.id === it.id
+        ? { ...x, notified_at: d.notified_at, notify_count: d.notify_count } : x))
+      // ส่งซ้ำคนเดิมหน้าจอแทบไม่เปลี่ยน → ต้องมีป้ายชั่วคราวบอกว่ายิงออกไปแล้วจริง
+      setNotifyMsg(m => ({ ...m, [it.id]: { ok: true, text: t('payouts.notify.sent') } }))
+      setTimeout(() => setNotifyMsg(m => ({ ...m, [it.id]: null })), 3000)
+      return { ok: true }
+    } finally {
+      setNotifying(null)
+    }
+  }
+
+  async function notify(it) {
+    if (notifying || bulkBusy) return           // กันดับเบิลคลิกยิง DM ซ้ำโดยไม่ได้ตั้งใจ
+    await sendNotify(it)
+  }
+
+  /**
+   * ปุ่มส่งทุกคน = เบราว์เซอร์ไล่กดกระดิ่งให้ทีละคน **ไม่ใช่** route ก้อนเดียวที่เซิร์ฟเวอร์วนเอง
+   * (เคาะ 2026-09-19 หลัง /scrutinize) — เหตุผล: ส่ง 50 คนในคำขอเดียวใช้ ~20-40 วิ
+   * เสี่ยงโดน nginx ตัดสายกลางทางทั้งที่ DM ออกไปแล้วครึ่งนึง แล้ว client ไม่รู้ว่าใครได้ไปแล้ว
+   * แบบนี้แต่ละคนเป็นคำขออิสระ เห็นกระดิ่งไล่เป็น teal ทีละแถว คนนึงพังคนที่เหลือไปต่อ
+   *
+   * ⛔ ห้ามใส่ตัวกรอง "ข้ามคนที่แจ้งแล้ว" — user เคาะว่าติ๊กจ่าย = ส่ง · ส่งซ้ำเป็นเรื่องของ user
+   *    (ป๊อปยืนยันบอกจำนวนคนที่จะได้ซ้ำก่อนยิง ให้ตัดสินใจเองจากตัวเลขจริง)
+   */
+  async function notifyAll() {
+    const targets = items.filter(it => canNotify(it).ok)
+    if (!targets.length || bulkBusy) return
+
+    const repeat = targets.filter(it => it.notified_at).length
+    const cant = items.filter(it => it.paid_at && !canNotify(it).ok).length
+    const lines = [t('payouts.notify.confirmAll', { count: targets.length })]
+    if (repeat) lines.push(t('payouts.notify.confirmAllRepeat', { count: repeat }))
+    if (cant)   lines.push(t('payouts.notify.confirmAllCant', { count: cant }))
+    if (!confirm(lines.join('\n\n'))) return
+
+    let ok = 0, fail = 0
+    setBulkRun({ total: targets.length, done: 0, ok, fail, finished: false })
+    for (const [i, it] of targets.entries()) {
+      const res = await sendNotify(it)
+      res.ok ? ok++ : fail++
+      setBulkRun({ total: targets.length, done: i + 1, ok, fail, finished: false })
+      // เว้นจังหวะกัน Discord rate limit — เปิดห้อง DM + ส่งข้อความ = 2 call ต่อคน
+      if (i < targets.length - 1) await new Promise(r => setTimeout(r, 300))
+    }
+    setBulkRun({ total: targets.length, done: targets.length, ok, fail, finished: true, cant })
+  }
+
   async function addPayee(p) {
     const body = p.kind === 'member' ? { member_user_id: p.id } : { external_payee_id: p.id }
     const res = await fetch(`/api/finance/payouts/${id}/items`, {
@@ -165,6 +244,7 @@ export default function PayoutRoundPage({ params }) {
   const groups = chunkIntoGroups(items)
   const problemIds = new Set(problems.map(p => p.id))
   const allPaid = items.length > 0 && paidCount === items.length
+  const notifyTargets = items.filter(it => canNotify(it).ok).length   // ติ๊กจ่ายแล้ว + DM ถึง
 
   return (
     <div>
@@ -174,6 +254,12 @@ export default function PayoutRoundPage({ params }) {
           <ArrowLeft size={18} />
         </Link>
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text min-w-0 flex-1 truncate">{round.title}</h1>
+        {!locked && (
+          <button onClick={() => setEditingRound(true)} aria-label={t('payouts.editRound')}
+            className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
+            <Pencil size={18} />
+          </button>
+        )}
         <SaveIndicator status={saveStatus} t={t} />
       </div>
 
@@ -304,7 +390,32 @@ export default function PayoutRoundPage({ params }) {
                         <AlertTriangle size={16} /> {t(`payouts.problem_${problems.find(p => p.id === it.id)?.reason}`)}
                       </p>
                     )}
+                    {notifyMsg[it.id] && (
+                      <p className={`text-sm ${notifyMsg[it.id].ok ? 'text-teal' : 'text-red-500'}`}>
+                        {notifyMsg[it.id].text}
+                      </p>
+                    )}
                   </div>
+
+                  {/* แจ้ง DM — ต้องโชว์ตอน locked ด้วย: รอบที่ปิดแล้วคือจังหวะที่โอนครบและต้องแจ้งพอดี */}
+                  {paid && (() => {
+                    const gate = canNotify(it)
+                    return (
+                      <button type="button" onClick={() => notify(it)}
+                        disabled={!gate.ok || notifying === it.id || bulkBusy}
+                        aria-label={gate.ok
+                          ? (it.notified_at
+                              ? t('payouts.notify.ariaAgain', { count: it.notify_count || 1, when: formatThaiDateTime(it.notified_at) })
+                              : t('payouts.notify.aria'))
+                          : t(`payouts.notify.cant_${gate.reason}`)}
+                        title={gate.ok ? undefined : t(`payouts.notify.cant_${gate.reason}`)}
+                        className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-lg disabled:opacity-40
+                          ${it.notified_at ? 'text-teal' : 'text-warm-500 dark:text-disc-muted'}
+                          opacity-100 hover:bg-warm-50 dark:hover:bg-disc-hover`}>
+                        <Bell size={16} className={notifying === it.id ? 'animate-pulse' : ''} />
+                      </button>
+                    )
+                  })()}
 
                   {!locked && it.external_payee_id && !it.snapshot_at && (
                     <button onClick={() => setBankEdit(it)} aria-label={t('payouts.editBankAria')}
@@ -344,6 +455,15 @@ export default function PayoutRoundPage({ params }) {
           <button onClick={download} className={BTN2}>
             <span className="inline-flex items-center gap-2"><Download size={16} /> {t('payouts.download')}</span>
           </button>
+          {/* ต้องใช้ได้ตอน locked ด้วย — รอบที่ปิดแล้วคือจังหวะที่โอนครบและต้องแจ้งพอดี */}
+          <button onClick={notifyAll} className={BTN2}
+            disabled={!notifyTargets || bulkBusy}
+            title={notifyTargets ? '' : t('payouts.notify.allNone')}>
+            <span className="inline-flex items-center gap-2">
+              <Bell size={16} className={bulkBusy ? 'animate-pulse' : ''} />
+              {t('payouts.notify.notifyAll', { count: notifyTargets })}
+            </span>
+          </button>
           {!locked && (
             <button onClick={closeRound} className={BTN} disabled={!allPaid} title={allPaid ? '' : t('payouts.closeHint')}>
               {t('payouts.closeRound')}
@@ -353,6 +473,16 @@ export default function PayoutRoundPage({ params }) {
       )}
       {!locked && !!items.length && !allPaid && (
         <p className="text-sm text-warm-500 dark:text-disc-muted mt-2">{t('payouts.closeHint')}</p>
+      )}
+
+      {/* ความคืบหน้า/สรุปของปุ่มส่งทุกคน — ระหว่างยิงกระดิ่งรายแถวเปลี่ยนเป็น teal ไปด้วย */}
+      {bulkRun && (
+        <p className={`text-sm mt-2 ${bulkRun.finished && bulkRun.fail ? 'text-red-500' : 'text-warm-500 dark:text-disc-muted'}`}>
+          {bulkRun.finished
+            ? [t('payouts.notify.bulkDone', { ok: bulkRun.ok, fail: bulkRun.fail }),
+               bulkRun.cant ? t('payouts.notify.bulkDoneCant', { count: bulkRun.cant }) : ''].filter(Boolean).join(' · ')
+            : t('payouts.notify.bulkProgress', { done: bulkRun.done, total: bulkRun.total })}
+        </p>
       )}
 
       {newPayeeName !== null && (
@@ -382,6 +512,120 @@ export default function PayoutRoundPage({ params }) {
           }}
         />
       )}
+
+      {editingRound && (
+        <RoundEditModal
+          round={round} roundId={id} t={t}
+          onClose={() => setEditingRound(false)}
+          onSaved={() => { setEditingRound(false); load() }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * แก้หัวรอบย้อนหลัง — ชื่อ/ที่มา/กิจกรรม/ยอดตั้งต้น
+ * ไม่มีช่องเปลี่ยนบัญชีต้นทางโดยตั้งใจ (ดู updateRound ใน db/finance/payouts.js)
+ */
+function RoundEditModal({ round, roundId, t, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    title: round.title || '',
+    source_type: round.source_type || 'event',
+    event_id: round.event_id ? String(round.event_id) : '',
+    period_ym: round.period_ym || '',
+    default_amount: round.default_amount ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onClose])
+
+  async function save() {
+    setError('')
+    if (!form.title.trim()) return setError(t('payouts.errTitle'))
+    if (form.source_type === 'event'  && !form.event_id)  return setError(t('payouts.errEvent'))
+    if (form.source_type === 'period' && !form.period_ym) return setError(t('payouts.errPeriod'))
+
+    setSaving(true)
+    const res = await fetch(`/api/finance/payouts/${roundId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: form.title.trim(),
+        source_type: form.source_type,
+        // CHECK source_ref_chk: ที่มาไหนต้องมีค่าของที่มานั้น อีกฝั่งต้องเคลียร์ทิ้ง
+        event_id:  form.source_type === 'event'  ? Number(form.event_id) : null,
+        period_ym: form.source_type === 'period' ? form.period_ym : null,
+        default_amount: form.default_amount === '' ? null : Number(form.default_amount),
+      }),
+    })
+    setSaving(false)
+    if (!res.ok) return setError(t('payouts.saveFailed'))
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-warm-200 dark:border-disc-border">
+          <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text min-w-0 truncate">{t('payouts.editRound')}</h2>
+          <button type="button" onClick={onClose} aria-label={t('payouts.close')}
+            className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className={LABEL}>{t('payouts.fieldTitle')}</label>
+            <input className={INPUT} value={form.title} autoFocus
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+          </div>
+
+          <div>
+            <label className={LABEL}>{t('payouts.fieldSource')}</label>
+            <select className={INPUT} value={form.source_type}
+              onChange={e => setForm(f => ({ ...f, source_type: e.target.value }))}>
+              <option value="event">{t('payouts.sourceEvent')}</option>
+              <option value="period">{t('payouts.sourcePeriod')}</option>
+            </select>
+          </div>
+
+          {form.source_type === 'event' ? (
+            <div>
+              <label className={LABEL}>{t('payouts.fieldEvent')}</label>
+              <EventCombobox value={form.event_id} initialLabel={round.event_name || ''} inputCls={INPUT}
+                onChange={id => setForm(f => ({ ...f, event_id: id }))} />
+            </div>
+          ) : (
+            <div>
+              <label className={LABEL}>{t('payouts.fieldPeriod')}</label>
+              <input type="month" className={INPUT} value={form.period_ym}
+                onChange={e => setForm(f => ({ ...f, period_ym: e.target.value }))} />
+            </div>
+          )}
+
+          <div>
+            <label className={LABEL}>{t('payouts.fieldDefaultAmount')}</label>
+            <input type="number" inputMode="decimal" className={INPUT} value={form.default_amount ?? ''}
+              onChange={e => setForm(f => ({ ...f, default_amount: e.target.value }))} />
+          </div>
+
+          {error && <p className="text-base text-red-500">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border">
+          <button onClick={onClose} className={BTN2}>{t('common.cancel')}</button>
+          <button onClick={save} disabled={saving} className={BTN}>
+            {saving ? t('payouts.saving') : t('common.save')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

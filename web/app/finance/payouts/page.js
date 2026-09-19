@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Trash2, X } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
+import EventCombobox from '@/components/finance/EventCombobox'
+import { roundStage } from '@/lib/payoutStage.js'
 
 const INPUT = 'h-11 px-3 text-base rounded-lg w-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal'
 const LABEL = 'block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1'
@@ -13,18 +15,17 @@ const BTN2  = 'border border-warm-200 dark:border-disc-border text-warm-900 dark
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 const EMPTY = { title: '', account_id: '', source_type: 'event', event_id: '', period_ym: thisMonth(), default_amount: '', note: '' }
 
-const STATUS_KEY = { draft: 'statusDraft', exported: 'statusExported', paid: 'statusPaid' }
-const STATUS_CLS = {
-  draft:    'bg-warm-100 text-warm-700 dark:bg-disc-hover dark:text-disc-muted',
-  exported: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
-  paid:     'bg-teal/15 text-teal',
+// สีป้ายตาม tone ของขั้น (lib/payoutStage.js) — ไม่ผูกกับ status ใน DB แล้ว
+const TONE_CLS = {
+  idle: 'bg-warm-100 text-warm-700 dark:bg-disc-hover dark:text-disc-muted',
+  wait: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  done: 'bg-teal/15 text-teal',
 }
 
 export default function PayoutsPage() {
   const t = useTranslations('finance')
   const [rounds, setRounds] = useState([])
   const [accounts, setAccounts] = useState([])
-  const [events, setEvents] = useState([])
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -38,7 +39,6 @@ export default function PayoutsPage() {
   useEffect(() => {
     load()
     fetch('/api/finance/accounts').then(r => r.ok && r.json()).then(a => a && setAccounts(a))
-    fetch('/api/finance/payouts/events').then(r => r.ok && r.json()).then(e => e && setEvents(e))
     window.addEventListener('guild-switched', load)
     return () => window.removeEventListener('guild-switched', load)
   }, [])
@@ -101,7 +101,11 @@ export default function PayoutsPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {rounds.map(r => (
+        {rounds.map(r => {
+          // ป้ายอยู่ "ใต้" ข้อความ ไม่ใช่ท้ายแถว — ที่ 375px แถวเดียวเหลือให้ชื่อรอบแค่ ~100px
+          // แล้วชื่อโดน truncate แทบทุกอัน (user ทัก 2026-09-19 "เอาสถานะไปเบียดรายละเอียด")
+          const stage = roundStage(r)
+          return (
           <div key={r.id} className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-4 py-3 flex items-center gap-3">
             <BankBadge bank={r.account_bank} size={40} />
             <Link href={`/finance/payouts/${r.id}`} className="min-w-0 flex-1">
@@ -112,10 +116,10 @@ export default function PayoutsPage() {
               <p className="text-sm text-warm-500 dark:text-disc-muted mt-0.5">
                 {t('payouts.summary', { count: r.item_count, total: Number(r.total_amount).toLocaleString('th-TH') })}
               </p>
+              <span className={`inline-block mt-1.5 px-2.5 py-0.5 text-sm font-medium rounded-full ${TONE_CLS[stage.tone]}`}>
+                {t(`payouts.stage.${stage.key}`, { paid: stage.paid ?? 0, count: stage.count ?? 0 })}
+              </span>
             </Link>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full shrink-0 ${STATUS_CLS[r.status]}`}>
-              {t(`payouts.${STATUS_KEY[r.status]}`)}
-            </span>
             {r.status !== 'paid' && (
               <button onClick={() => remove(r)} aria-label={t('payouts.deleteAria')}
                 className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
@@ -123,7 +127,8 @@ export default function PayoutsPage() {
               </button>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {creating && (
@@ -159,7 +164,7 @@ export default function PayoutsPage() {
             {form.source_type === 'event' ? (
               <div>
                 <label className={LABEL}>{t('payouts.fieldEvent')}</label>
-                <EventCombobox events={events} value={form.event_id}
+                <EventCombobox value={form.event_id} inputCls={INPUT}
                   onChange={id => setForm(f => ({ ...f, event_id: id }))} />
               </div>
             ) : (
@@ -187,68 +192,6 @@ export default function PayoutsPage() {
             </button>
           </div>
         </Modal>
-      )}
-    </div>
-  )
-}
-
-function EventCombobox({ events, value, onChange }) {
-  const t = useTranslations('finance')
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef(null)
-
-  useEffect(() => {
-    setQuery(events.find(e => String(e.id) === String(value))?.name || '')
-  }, [value, events])
-
-  useEffect(() => {
-    const handler = e => { if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const filtered = query.trim()
-    ? events.filter(e => e.name.includes(query.trim()))
-    : events
-
-  function handleSelect(ev) {
-    onChange(String(ev.id))
-    setQuery(ev.name)
-    setOpen(false)
-  }
-
-  function handleInputChange(e) {
-    setQuery(e.target.value)
-    onChange('')
-    setOpen(true)
-  }
-
-  function handleBlur() {
-    const exact = events.find(e => e.name === query.trim())
-    if (exact) { onChange(String(exact.id)); setQuery(exact.name); return }
-    setQuery(events.find(e => String(e.id) === String(value))?.name || '')
-  }
-
-  return (
-    <div ref={containerRef} className="relative">
-      <input type="text" className={INPUT} value={query}
-        onChange={handleInputChange} onFocus={() => setOpen(true)} onBlur={handleBlur}
-        placeholder={t('payouts.eventSearchPlaceholder')} autoComplete="off" />
-
-      {open && (
-        <ul className="absolute z-50 top-full mt-1 w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <li className="px-3 py-2.5 text-base text-warm-400 dark:text-disc-muted">{t('payouts.eventNoResults')}</li>
-          ) : filtered.map(ev => (
-            <li key={ev.id}>
-              <button type="button" onMouseDown={() => handleSelect(ev)}
-                className={`w-full text-left px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-disc-hover ${String(ev.id) === String(value) ? 'font-semibold text-teal' : 'text-warm-900 dark:text-disc-text'}`}>
-                {ev.name}
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   )

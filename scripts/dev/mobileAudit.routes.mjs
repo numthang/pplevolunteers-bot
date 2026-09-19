@@ -38,6 +38,10 @@ export const ROUTES = [
     ],
   },
   { path: '/finance' },
+  // ⚠️ ทั้งสองหน้าดึงข้อมูลด้วย fetch หลัง mount — ไม่รอ = probe วัดตอน "ยังไม่มีรอบจ่าย"/"กำลังโหลด…"
+  //    แล้วรายงาน "ผ่าน" ทั้งที่ไม่เคยเห็นการ์ดหรือรายการสักแถว (เจอเอง 2026-09-19)
+  { path: '/finance/payouts',   steps: [{ wait: 2500 }] },
+  { path: '/finance/payouts/1', steps: [{ wait: 2500 }] },
   { path: '/posts' },
   {
     path: '/posts/42',
