@@ -68,7 +68,7 @@ const ICONS = {
 const FINANCE_LINKS = [
   { href: '/finance',               label: 'Overview',    icon: 'overview', exact: true },
   { href: '/finance/transactions',  label: 'Transactions', icon: 'transactions' },
-  { href: '/finance/payouts',       label: 'Payouts',     icon: 'accounts' },
+  { href: '/finance/payouts',       label: 'Payouts',     icon: 'accounts', capability: 'viewPayouts' },   // รายชื่อ+เลขบัญชีผู้รับ — ซ่อนจากสมาชิกทั่วไป
   { href: '/finance/categories',    label: 'Categories',  icon: 'categories' },
   { href: '/finance/report',        label: 'Report',      icon: 'report' },
 ]
@@ -179,7 +179,10 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const docIdMatch = pathname.match(/^\/docs\/(\d+)/)
   const activeDocId = docIdMatch ? parseInt(docIdMatch[1]) : null
 
-  const { access, superAdmin } = useEffectiveRoles(session)
+  // scope:'org' — API ที่เมนูพวกนี้กั้นอยู่ (finance/docs/cases) resolve สิทธิ์ด้วย
+  // getEffectiveOrgIdentity ทั้งหมด ซึ่งเติม admin ให้ owner ของ org ด้วย · ถ้าอ่านแบบ guild-based
+  // เจ้าของ org ที่ไม่ได้ถือยศใดๆ จะไม่เห็นเมนูทั้งที่เข้าหน้าได้จริง
+  const { access, superAdmin } = useEffectiveRoles(session, { scope: 'org' })
 
   useEffect(() => {
     if (!isCallingApp) return

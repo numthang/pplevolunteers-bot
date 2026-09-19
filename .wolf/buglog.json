@@ -9292,6 +9292,23 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-09-17T18:34:26.883Z"
+    },
+    {
+      "id": "bug-538",
+      "timestamp": "2026-09-19T18:56:04.881Z",
+      "error_message": "mobileAudit รายงาน 'ผ่าน' ทั้งที่หน้ายังโหลดไม่เสร็จ (วัดได้ 74 element จาก 167 ตอนโหลดจบ)",
+      "file": "scripts/dev/mobileAudit.mjs",
+      "root_cause": "step { wait: n } ในลูปเดินสเต็ปทำแค่ sleep() แล้ว continue ไม่ได้ probe ซ้ำ · route ที่ fetch หลัง mount จึงถูกวัดตอนยัง 'กำลังโหลด…' เสมอ — comment ใน routes config สั่งให้ใส่ wait แต่ wait ไม่เคยมีผลกับการวัดเลย",
+      "fix": "ย้าย step หัวแถว (wait/waitFor) ไปทำงานก่อน probe แรก + เพิ่ม { waitFor: '<selector>' } รอจนของโผล่จริง (เพดาน 15 วิ) เพราะเวลาตายตัวแพ้เวลา compile ของ dev server เป็นบางรอบ (ผลตรวจเปลี่ยนไปมาคนละรอบ)",
+      "tags": [
+        "mobileAudit",
+        "cdp",
+        "race-condition",
+        "dev-tooling"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-09-19T18:56:04.881Z"
     }
   ]
 }

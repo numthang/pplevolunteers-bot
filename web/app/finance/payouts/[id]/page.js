@@ -14,7 +14,18 @@ import EventCombobox from '@/components/finance/EventCombobox'
 
 const INPUT = 'h-11 px-3 text-base rounded-lg w-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal'
 // ห้ามสร้างจาก `${INPUT} w-20` — INPUT มี w-full ซึ่งชนะ w-20 เสมอไม่ว่าจะเรียงคลาสยังไง (ลำดับ utility ของ Tailwind เอง ไม่ใช่ลำดับใน className)
-const AMOUNT_INPUT = 'h-11 px-2 text-base text-right rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-20 shrink-0 sm:w-24'
+// กล่องยอดเงินรายแถว — สูงเท่าปุ่มไอคอนข้างๆ (h-9) และแคบพอดี 6 หลัก
+// ⛔ ห้ามเอาไปใช้กับ input ทั่วไป มาตรฐานของโปรเจกต์คือ h-11 (md/rules/DESIGN.md §Input)
+const AMOUNT_INPUT = 'h-9 px-2 text-base text-right rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-16 shrink-0 sm:w-20'
+
+// ยอดเงินในโมดูลนี้เป็นจำนวนเต็มเสมอ (ช่องกรอกตัดอักขระที่ไม่ใช่ตัวเลขทิ้งอยู่แล้ว)
+// แต่ pg คืน numeric มาเป็นสตริง '800.00' → ถ้าโยนเข้า value ตรงๆ จะเห็น .00 ทุกช่อง
+const intAmount = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  const n = Number(v)
+  return Number.isFinite(n) ? String(Math.trunc(n)) : ''
+}
+const fmtBaht = (v) => Math.round(Number(v) || 0).toLocaleString('th-TH')
 const LABEL = 'block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1'
 const BTN   = 'bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50'
 const BTN2  = 'border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50'
@@ -272,7 +283,7 @@ export default function PayoutRoundPage({ params }) {
       {/* สรุปรอบ — ยอดรวมคือสิ่งที่ user ต้องการเห็นก่อนอย่างอื่น */}
       <div className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-4 py-3 mb-4">
         <p className="text-2xl font-bold text-warm-900 dark:text-disc-text">
-          {total.toLocaleString('th-TH')} <span className="text-base font-normal text-warm-500 dark:text-disc-muted">{t('payouts.baht')}</span>
+          {fmtBaht(total)} <span className="text-base font-normal text-warm-500 dark:text-disc-muted">{t('payouts.baht')}</span>
         </p>
         <p className="text-base text-warm-500 dark:text-disc-muted">
           {t('payouts.progress', { paid: paidCount, count: items.length, groups: groups.length })}
@@ -291,8 +302,8 @@ export default function PayoutRoundPage({ params }) {
           </div>
           <div>
             <label className={LABEL}>{t('payouts.fieldDefaultAmount')}</label>
-            <input type="number" inputMode="decimal" className={INPUT}
-              value={round.default_amount ?? ''}
+            <input type="number" inputMode="numeric" step="1" min="0" className={INPUT}
+              value={intAmount(round.default_amount)}
               onChange={e => patchRound({ default_amount: e.target.value === '' ? null : Number(e.target.value) })} />
           </div>
         </div>
@@ -346,7 +357,7 @@ export default function PayoutRoundPage({ params }) {
               {t('payouts.groupHeading', { label: g.label })}
             </h2>
             <span className="text-sm text-warm-500 dark:text-disc-muted">
-              {t('payouts.groupMeta', { count: g.rows.length, total: g.total.toLocaleString('th-TH') })}
+              {t('payouts.groupMeta', { count: g.rows.length, total: fmtBaht(g.total) })}
             </span>
             <button onClick={() => copyText(buildPlainText({ ...round, title: `${round.title} — ${t('payouts.groupHeading', { label: g.label })}` }, g.rows, account), `g-${g.label}`)}
               className="text-sm text-teal font-medium">
@@ -363,7 +374,7 @@ export default function PayoutRoundPage({ params }) {
               const paid = !!it.paid_at
               return (
                 <div key={it.id}
-                  className={`rounded-lg border bg-card-bg px-3 py-2 flex flex-wrap items-center gap-2 ${missing ? 'border-red-400' : 'border-warm-200 dark:border-disc-border'} ${paid ? 'opacity-60' : ''}`}>
+                  className={`group rounded-lg border bg-card-bg px-3 py-2 flex flex-wrap items-center gap-2 ${missing ? 'border-red-400' : 'border-warm-200 dark:border-disc-border'} ${paid ? 'opacity-60' : ''}`}>
                   <input type="checkbox" checked={paid} disabled={locked}
                     onChange={() => togglePaid(it)}
                     aria-label={t('payouts.paidAria')}
@@ -397,7 +408,37 @@ export default function PayoutRoundPage({ params }) {
                     )}
                   </div>
 
-                  {/* แจ้ง DM — ต้องโชว์ตอน locked ด้วย: รอบที่ปิดแล้วคือจังหวะที่โอนครบและต้องแจ้งพอดี */}
+                  {!locked && it.external_payee_id && !it.snapshot_at && (
+                    <button onClick={() => setBankEdit(it)} aria-label={t('payouts.editBankAria')}
+                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
+                      <Pencil size={16} />
+                    </button>
+                  )}
+
+                  {/* กล่องขวาสุดของแถว — เป็น relative เพื่อให้ถังขยะเกาะ "ขอบซ้ายของกล่องนี้" ได้
+                      โดยไม่ต้องรู้ว่ามีกระดิ่งอยู่ด้วยหรือเปล่า */}
+                  <div className="relative shrink-0 flex items-center gap-2">
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" disabled={locked}
+                    className={AMOUNT_INPUT} value={intAmount(it.amount)}
+                    aria-label={t('payouts.amountAria')}
+                    onChange={e => patchItem(it.id, { amount: e.target.value.replace(/\D/g, '') })} />
+
+                  {/* ถังขยะ — จอที่ hover ได้: หลุดออกจาก flow ไปลอยทับที่ว่างกลางแถว จึงไม่กินความกว้างเลย
+                      (user ทัก 2026-09-19 "hover แต่ต้องไม่กินพื้นที่ใน card")
+                      มือถือ: กลับเป็น static อยู่ในแถวตามปกติ เพราะไม่มี hover + ที่ตรงนั้นมีข้อความอยู่จริง */}
+                  {!locked && (
+                    <button onClick={() => removeItem(it.id)} aria-label={t('payouts.removeItemAria')}
+                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg transition z-10
+                        text-warm-400 dark:text-disc-muted bg-card-bg hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover
+                        opacity-100 [@media(hover:hover)]:absolute [@media(hover:hover)]:right-full [@media(hover:hover)]:mr-2
+                        [@media(hover:hover)]:top-1/2 [@media(hover:hover)]:-translate-y-1/2
+                        [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+
+                  {/* กระดิ่งไว้ท้ายสุด — โผล่เฉพาะแถวที่ติ๊กจ่ายแล้ว ถ้าอยู่กลางแถวจะดันของที่เหลือเลื่อนทุกครั้งที่ติ๊ก
+                      ต้องโชว์ตอน locked ด้วย: รอบที่ปิดแล้วคือจังหวะที่โอนครบและต้องแจ้งพอดี */}
                   {paid && (() => {
                     const gate = canNotify(it)
                     return (
@@ -411,30 +452,12 @@ export default function PayoutRoundPage({ params }) {
                         title={gate.ok ? undefined : t(`payouts.notify.cant_${gate.reason}`)}
                         className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-lg disabled:opacity-40
                           ${it.notified_at ? 'text-teal' : 'text-warm-500 dark:text-disc-muted'}
-                          opacity-100 hover:bg-warm-50 dark:hover:bg-disc-hover`}>
+                          hover:bg-warm-50 dark:hover:bg-disc-hover`}>
                         <Bell size={16} className={notifying === it.id ? 'animate-pulse' : ''} />
                       </button>
                     )
                   })()}
-
-                  {!locked && it.external_payee_id && !it.snapshot_at && (
-                    <button onClick={() => setBankEdit(it)} aria-label={t('payouts.editBankAria')}
-                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover">
-                      <Pencil size={16} />
-                    </button>
-                  )}
-
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" disabled={locked}
-                    className={AMOUNT_INPUT} value={it.amount ?? ''}
-                    aria-label={t('payouts.amountAria')}
-                    onChange={e => patchItem(it.id, { amount: e.target.value.replace(/\D/g, '') })} />
-
-                  {!locked && (
-                    <button onClick={() => removeItem(it.id)} aria-label={t('payouts.removeItemAria')}
-                      className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  </div>
                 </div>
               )
             })}
@@ -444,9 +467,11 @@ export default function PayoutRoundPage({ params }) {
 
       {!items.length && <p className="text-base text-warm-500 dark:text-disc-muted">{t('payouts.noItems')}</p>}
 
-      {/* ส่งต่อ / ปิดรอบ */}
+      {/* ส่งต่อ / ปิดรอบ — มือถือ: grid 1 คอลัมน์ = ปุ่มยืดเต็มความกว้างเองทุกปุ่ม
+          (ไม่ต้องแตะคลาสปุ่มที่ใช้ร่วมกับโมดัล) · จอกว้าง: กลับเป็นแถวปกติ
+          ⛔ ห้ามใช้ flex-wrap เฉยๆ บนมือถือ — ได้ปุ่มกว้างไม่เท่ากันและค้างครึ่งแถว */}
       {!!items.length && (
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-6 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           <button onClick={() => copyText(buildPlainText(round, items, account), 'all')} className={BTN2}>
             <span className="inline-flex items-center gap-2">
               <Copy size={16} /> {copied === 'all' ? t('common.copied') : t('payouts.copyAll')}
@@ -534,7 +559,7 @@ function RoundEditModal({ round, roundId, t, onClose, onSaved }) {
     source_type: round.source_type || 'event',
     event_id: round.event_id ? String(round.event_id) : '',
     period_ym: round.period_ym || '',
-    default_amount: round.default_amount ?? '',
+    default_amount: intAmount(round.default_amount),
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -612,7 +637,7 @@ function RoundEditModal({ round, roundId, t, onClose, onSaved }) {
 
           <div>
             <label className={LABEL}>{t('payouts.fieldDefaultAmount')}</label>
-            <input type="number" inputMode="decimal" className={INPUT} value={form.default_amount ?? ''}
+            <input type="number" inputMode="numeric" step="1" min="0" className={INPUT} value={form.default_amount ?? ''}
               onChange={e => setForm(f => ({ ...f, default_amount: e.target.value }))} />
           </div>
 

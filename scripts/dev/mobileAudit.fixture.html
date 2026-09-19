@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>mobileAudit self-test fixture</title>
+<!--
+  เคสทดสอบที่ "รู้คำตอบอยู่แล้ว" สำหรับกฎ unreadable / squeezed / ragged  —  รันด้วย
+      node scripts/dev/mobileAudit.mjs --selftest
+  ─────────────────────────────────────────────────────────────────────────────
+  ⭐ ทำไมต้องมีไฟล์นี้ แทนที่จะอ้างอิงหน้าจริงในเว็บ:
+     ตอนตั้งโจทย์ (md/PENDING.md) ใช้ /finance/payouts + /finance/payouts/1 เป็นเคสที่รู้คำตอบ
+     พอเขียนกฎเสร็จจริง หน้าทั้งสองถูกแก้ layout ไปแล้ว (commit d08408a8 ย้ายป้ายสถานะออกจากบรรทัดชื่อ)
+     อาการที่ต้องใช้ทดสอบเลยหายไป = พิสูจน์ไม่ได้ว่ากฎจับได้จริงหรือกฎตายสนิท
+     ➜ เคสทดสอบต้องอยู่ในไฟล์ที่ไม่มีใครไปแก้ตาม UI จริง และต้องมีทั้งเคส "ต้องยิง" และ "ต้องเงียบ"
+
+  กติกาของไฟล์นี้
+  · ทุกบล็อกมี data-case="<ชื่อ>" และคำตอบอยู่ใน <script id="expect"> ข้างล่าง
+  · ความกว้างล็อกเป็น px ตายตัวทั้งหมด และใช้ฟอนต์ monospace เพื่อให้ scrollWidth คาดเดาได้
+    (monospace 16px ≈ 9.6px/ตัวอักษร → 40 ตัว ≈ 385px) ห้ามเปลี่ยนไปใช้ฟอนต์ของเว็บ
+  · ห้ามใส่ <input>/<select> — จะไปปลุกกฎ slack ทำให้คำตอบที่คาดไว้เพี้ยน
+  · ห้ามให้อะไรกว้างเกิน 375px — จะไปปลุกกฎ overflow/offscreen/zoomed
+-->
+<style>
+  body { margin: 0; padding: 16px; width: 343px; font: 16px monospace; }
+  section { margin-bottom: 12px; }
+  h2 { font-size: 12px; margin: 0 0 4px; color: #666; font-weight: normal; }
+  .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row { display: flex; align-items: center; gap: 8px; width: 343px; }
+  .box { height: 36px; background: #ddd; flex: none; }
+  .btn { height: 36px; background: #ccc; border: 0; font: 14px monospace; }
+</style>
+
+<!-- ── unreadable: ข้อความโดนตัดจนอ่านไม่รู้เรื่อง ───────────────────────────── -->
+<section data-case="n-hard">
+  <h2>unreadable ต้องยิง — ช่องกว้าง 100px แต่เนื้อหา ~385px (แคบกว่า 120px ด้วย)</h2>
+  <div class="trunc" style="width:100px">abcdefghijabcdefghijabcdefghijabcdefghij</div>
+</section>
+
+<section data-case="n-ratio">
+  <h2>unreadable ต้องยิง — ช่องกว้าง 200px (ไม่แคบ) แต่เนื้อหา ~578px = โชว์แค่ 35%</h2>
+  <div class="trunc" style="width:200px">abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij</div>
+</section>
+
+<section data-case="n-mild">
+  <h2>unreadable ต้องเงียบ — ช่องกว้าง 300px เนื้อหา ~385px = โชว์ 78% (ตัดพอหอมปากหอมคอ)</h2>
+  <div class="trunc" style="width:300px">abcdefghijabcdefghijabcdefghijabcdefghij</div>
+</section>
+
+<section data-case="n-exempt">
+  <h2>unreadable ต้องเงียบ — ตัดหนักเท่า n-hard แต่ประกาศยกเว้นไว้</h2>
+  <div class="trunc" style="width:100px" data-audit-ok="unreadable">abcdefghijabcdefghijabcdefghijabcdefghij</div>
+</section>
+
+<!-- ── squeezed: คอลัมน์ข้อความถูกบีบในแถวที่มีของหลายชิ้น ─────────────────── -->
+<section data-case="p-squeeze">
+  <h2>squeezed ต้องยิง — แถว 6 ชิ้น เหลือให้คอลัมน์ข้อความ ~111px จาก 343px (32%)</h2>
+  <!-- เลียนแบบแถวรายชื่อของ /finance/payouts/1: [☑][ชื่อ+ธนาคาร][✏️][ยอด][🔔][🗑]
+       ⚠️ 5 ชิ้น (ตัด ✏️ ออก) จะได้ 155px = 45.2% ซึ่ง "เฉียด" เกณฑ์ 45% พอดี — เคสทดสอบ
+          ห้ามคาบเส้น ไม่งั้นแพ้ชนะกันที่ทศนิยมของ gap แล้วอ่านผลไม่ออกว่ากฎพังหรือเคสพัง -->
+  <div class="row">
+    <div class="box" style="width:20px"></div>
+    <div style="flex:1 1 0%;min-width:0" class="trunc">ชื่อคน</div>
+    <div class="box" style="width:36px"></div>
+    <div class="box" style="width:64px"></div>
+    <div class="box" style="width:36px"></div>
+    <div class="box" style="width:36px"></div>
+  </div>
+</section>
+
+<section data-case="p-ok">
+  <h2>squeezed ต้องเงียบ — แถว 3 ชิ้น คอลัมน์ข้อความได้ ~243px (71%)</h2>
+  <div class="row">
+    <div class="box" style="width:20px"></div>
+    <div style="flex:1 1 0%;min-width:0" class="trunc">ชื่อคน</div>
+    <div class="box" style="width:64px"></div>
+  </div>
+</section>
+
+<!-- ── ragged: แถวปุ่มแหว่ง / กว้างไม่เท่ากัน ───────────────────────────── -->
+<section data-case="q-ragged">
+  <h2>ragged ต้องยิง — flex-wrap 3 ปุ่ม กว้าง 150px บรรทัดที่ 2 เหลือปุ่มเดียว (44%)</h2>
+  <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+    <button class="btn" style="width:150px">หนึ่ง</button>
+    <button class="btn" style="width:150px">สอง</button>
+    <button class="btn" style="width:150px">สาม</button>
+  </div>
+</section>
+
+<section data-case="q-uneven">
+  <h2>ragged ต้องยิง — 2 บรรทัดเต็มความกว้างทั้งคู่ แต่ปุ่มคอลัมน์ซ้ายกว้าง 100/160px</h2>
+  <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+    <button class="btn" style="width:100px">ก</button>
+    <button class="btn" style="width:235px">ข</button>
+    <button class="btn" style="width:160px">ค</button>
+    <button class="btn" style="width:175px">ง</button>
+  </div>
+</section>
+
+<section data-case="q-ok">
+  <h2>ragged ต้องเงียบ — grid 1 คอลัมน์ ปุ่มเต็มความกว้างเท่ากันทุกตัว</h2>
+  <div style="display:grid;grid-template-columns:1fr;gap:8px;width:343px">
+    <button class="btn">หนึ่ง</button>
+    <button class="btn">สอง</button>
+    <button class="btn">สาม</button>
+  </div>
+</section>
+
+<script type="application/json" id="expect">
+{
+  "n-hard":    ["unreadable"],
+  "n-ratio":   ["unreadable"],
+  "n-mild":    [],
+  "n-exempt":  [],
+  "p-squeeze": ["squeezed"],
+  "p-ok":      [],
+  "q-ragged":  ["ragged"],
+  "q-uneven":  ["ragged"],
+  "q-ok":      []
+}
+</script>

@@ -6,7 +6,7 @@
 
 ## DB Tables
 
-👉 See [md/reference/DATABASE.md](reference/DATABASE.md) for full schema
+👉 See [md/reference/DATABASE.md](../../reference/DATABASE.md) for full schema
 
 ```
 finance_accounts              User & org accounts

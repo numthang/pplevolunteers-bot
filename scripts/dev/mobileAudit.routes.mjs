@@ -8,6 +8,12 @@
  *   { click: '<css selector>', label: 'อธิบายสั้นๆ' }   กด แล้ว probe ซ้ำ
  *   { esc: true }                                       กด Escape ปิดของที่เปิดค้าง
  *   { wait: 600 }                                       รอเพิ่ม (ms)
+ *   { waitFor: '<css selector>' }                       รอจนของโผล่ (เพดาน 15 วิ)
+ *
+ * ⭐ step ที่อยู่ **หัวแถว** (wait/waitFor) ถูกใช้ก่อน probe แรก — หน้าที่ fetch หลัง mount ต้องมี
+ *    ไม่งั้นวัดตอนยัง "กำลังโหลด…" แล้วรายงาน "ผ่าน" ทั้งที่ไม่เคยเห็นการ์ดสักใบ
+ *    **ถ้ารู้ว่ารออะไรอยู่ ใช้ `waitFor` เสมอ** — `wait` เป็นเวลาตายตัว แข่งกับเวลา compile ของ
+ *    dev server แล้วผลตรวจเปลี่ยนไปมาคนละรอบ (เจอเอง 2026-09-19 ที่ /calling/assignments/70)
  *
  * ⚠️ selector ที่ผูกกับ `aria-label` ภาษาไทย = ผูกกับ `web/locales/th.json`
  *    แก้คำแปลเมื่อไหร่ต้องมาแก้ที่นี่ด้วย (สคริปต์จะเตือนว่า "หา selector ไม่เจอ" ไม่ใช่เงียบ)
@@ -28,20 +34,20 @@ export const ROUTES = [
   { path: '/cases' },   // ⚠️ '/case' เป็น 404 — audit เดินผ่านหน้า 404 แล้วรายงาน "ผ่าน" (แก้ 2026-09-03)
   { path: '/calling' },
   {
-    // ⚠️ ต้องรอนาน (4 วิ) — บน dev รอบแรกหลังแก้ไฟล์ Next ต้อง compile route ก่อน
-    //    `settleDom` นับ element นิ่ง แต่มันนิ่งอยู่ที่ "กำลังโหลด…" เลยเลิกรอตั้งแต่ ~1 วิ
+    // ⚠️ ต้องรอของโผล่ — `settleDom` นับ element นิ่ง แต่มันนิ่งอยู่ที่ "กำลังโหลด…" เลยเลิกรอตั้งแต่ ~1 วิ
     //    ⇒ probe เจอแค่หน้าโหลด + step กดจะได้ "หา selector ไม่เจอ" (เจอเอง 2026-09-10)
+    //    เคยใช้ `wait: 4000` แล้วยังแพ้เวลา compile เป็นบางรอบ (2026-09-19) — waitFor ไม่แพ้
     path: '/calling/assignments/70',
     steps: [
-      { wait: 4000 },
+      { waitFor: 'div.cursor-pointer.min-w-0' },
       { click: 'div.cursor-pointer.min-w-0', label: 'เปิด modal บันทึกการโทร' },
     ],
   },
   { path: '/finance' },
   // ⚠️ ทั้งสองหน้าดึงข้อมูลด้วย fetch หลัง mount — ไม่รอ = probe วัดตอน "ยังไม่มีรอบจ่าย"/"กำลังโหลด…"
-  //    แล้วรายงาน "ผ่าน" ทั้งที่ไม่เคยเห็นการ์ดหรือรายการสักแถว (เจอเอง 2026-09-19)
-  { path: '/finance/payouts',   steps: [{ wait: 2500 }] },
-  { path: '/finance/payouts/1', steps: [{ wait: 2500 }] },
+  //    แล้วรายงาน "ผ่าน" ทั้งที่ไม่เคยเห็นการ์ดหรือรายการสักแถว (เจอเอง 2026-09-19 · 74 element เทียบกับ 167)
+  { path: '/finance/payouts',   steps: [{ waitFor: 'a[href^="/finance/payouts/"]' }] },
+  { path: '/finance/payouts/1', steps: [{ waitFor: 'input[type="checkbox"]' }] },
   { path: '/posts' },
   {
     path: '/posts/42',
@@ -58,9 +64,9 @@ export const ROUTES = [
   {
     path: '/team',
     // ⚠️ ปุ่มสลับมุมมองยังไม่ถูก render จนกว่า /api/bot/orgchart จะตอบ — settleDom นับ element นิ่ง
-    //    แต่ fetch ตอบช้ากว่านั้น ถ้าไม่รอ 2 วิ จะได้ "หา selector ไม่เจอ" ทั้งชุด (เจอเอง 2026-09-06)
+    //    แต่ fetch ตอบช้ากว่านั้น ถ้าไม่รอให้ปุ่มโผล่ จะได้ "หา selector ไม่เจอ" ทั้งชุด (เจอเอง 2026-09-06)
     steps: [
-      { wait: 2000 },
+      { waitFor: 'button[data-view="chart"]' },
       { click: 'button[data-view="chart"]', label: 'สลับไปผังเครือข่าย' },
       { click: 'button[data-view="table"]', label: 'สลับไปตาราง' },
       { click: 'button[data-view="bubble"]', label: 'กลับมากระดานฟองสบู่' },

@@ -35,6 +35,14 @@ export const CAPABILITIES = {
   createNonPrivate:    ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator', 'treasurer'],
   editGlobalCategory:  ['admin', 'secretary_general', 'moderator'],   // เดิม GLOBAL_EDITORS
 
+  // รอบจ่ายเบี้ยเลี้ยง — โซน /finance/payouts ทั้งโซน (หน้า + ทุก API ใต้ /api/finance/payouts)
+  // รายการในรอบพ่วงเลขบัญชี/พร้อมเพย์ของผู้รับทุกคนมาด้วย (ITEM_SELECT ใน db/finance/payouts.js)
+  // → กันไม่ให้สมาชิกทั่วไปเห็น แม้บัญชีต้นทางจะเป็น visibility='public' ก็ตาม (user เคาะ 2026-09-19)
+  // ⚠️ กั้นแค่ "เข้าโซนได้ไหม" — เห็นรอบไหนบ้างยังกรองด้วย canViewAccount/canEditAccount ตามเดิม
+  // 📌 รายชื่อตอนนี้ตรงกับ viewInternal เป๊ะ (ผอ.ภาค เข้าได้ด้วย — user เคาะ) แต่แยก key ไว้ต่างหาก
+  //    ตั้งใจ: การเงินโซนอื่นกับโซนรอบจ่ายควรปรับแยกกันได้ ห้ามรวบไปใช้ can('viewInternal') แทน
+  viewPayouts:         ['admin', 'secretary_general', 'regional_coordinator', 'treasurer', 'province_coordinator', 'district_coordinator'],
+
   // ── Calling ──
   viewCalling:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'],
   createCampaign:      ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'],

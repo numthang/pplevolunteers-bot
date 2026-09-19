@@ -104,15 +104,15 @@ This web app hosts multiple integrated systems:
 
 ### 1. **PPLE Finance** (`/finance/*`)
 Transaction & account management with role-based access control.  
-📄 See [md/modules/finance/FINANCE.md](modules/finance/FINANCE.md)
+📄 See [md/modules/finance/FINANCE.md](../modules/finance/FINANCE.md)
 
 ### 2. **PPLE Calling** (`/calling/*`)
 Member calling system with tier tracking and assignment management.  
-📄 See [md/modules/calling/CALLING.md](modules/calling/CALLING.md)
+📄 See [md/modules/calling/CALLING.md](../modules/calling/CALLING.md)
 
 ### 3. **PPLE Docs** (`/docs/*`, planned)
 E-signature & document management for activity registration forms.  
-📄 See [md/modules/docs/DOCS.md](modules/docs/DOCS.md)
+📄 See [md/modules/docs/DOCS.md](../modules/docs/DOCS.md)
 
 ### 4. **Social Accounts** (`/bot/social/accounts`)
 Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหรับ basket posting
@@ -176,7 +176,7 @@ Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหร�
 - ปุ่ม Connect Meta OAuth + X (Guild form) + X (ส่วนตัว OAuth)
 - Banner แสดงผลหลัง OAuth callback (success/error from query params)
 
-📄 See [md/modules/discord/BOT.md](modules/discord/BOT.md) สำหรับ basket posting + X thread split + scheduling rules
+📄 See [md/modules/discord/BOT.md](../modules/discord/BOT.md) สำหรับ basket posting + X thread split + scheduling rules
 
 ---
 
@@ -196,7 +196,7 @@ All subsystems use the same role hierarchy from `config/roles.js`:
 - ตทอ. (ผู้ประสานงานอำเภอ)
 
 Each subsystem defines its own permission rules based on this hierarchy.  
-See: [FINANCE.md - RBAC](modules/finance/FINANCE.md#access-control-rbac) | [CALLING.md - Permission](modules/calling/CALLING.md#permission--access-control)
+See: [FINANCE.md - RBAC](../modules/finance/FINANCE.md#access-control-rbac) | [CALLING.md - Permission](../modules/calling/CALLING.md#permission--access-control)
 
 ---
 
@@ -297,7 +297,7 @@ GET    /api/auth/[...nextauth]     next-auth handlers
 
 ## Deployment
 
-👉 See [md/reference/DEPLOYMENT.md](reference/DEPLOYMENT.md)
+👉 See [md/reference/DEPLOYMENT.md](DEPLOYMENT.md)
 
 ```bash
 # Production build & restart

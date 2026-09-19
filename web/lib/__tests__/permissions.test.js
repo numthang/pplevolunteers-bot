@@ -48,6 +48,19 @@ describe('manageContacts (เดิม MANAGE_ROLES: + กรรมการจ�
   it('ไม่มียศ ไม่ได้',     () => expect(allows('manageContacts', [])).toBe(false))
 })
 
+describe('viewPayouts (โซนรอบจ่าย — กันสมาชิกทั่วไป ไม่ใช่กันคนมีตำแหน่ง)', () => {
+  it('Admin',               () => expect(allows('viewPayouts', ['Admin'])).toBe(true))
+  it('เลขาธิการ',           () => expect(allows('viewPayouts', ['เลขาธิการ'])).toBe(true))
+  it('เหรัญญิก',            () => expect(allows('viewPayouts', ['เหรัญญิก'])).toBe(true))
+  it('ผู้ประสานงานจังหวัด',  () => expect(allows('viewPayouts', ['ผู้ประสานงานจังหวัด'])).toBe(true))
+  it('กรรมการจังหวัด',       () => expect(allows('viewPayouts', ['กรรมการจังหวัด'])).toBe(true))
+  it('ผู้ประสานงานภาค',      () => expect(allows('viewPayouts', ['ผู้ประสานงานภาค'])).toBe(true))
+  it('รองเลขาธิการ',         () => expect(allows('viewPayouts', ['รองเลขาธิการ'])).toBe(true))
+  it('ทีมบรรณาธิการ ไม่ได้',  () => expect(allows('viewPayouts', ['ทีมบรรณาธิการ'])).toBe(false))
+  it('Moderator ไม่ได้',     () => expect(allows('viewPayouts', ['Moderator'])).toBe(false))
+  it('ไม่มียศ ไม่ได้',       () => expect(allows('viewPayouts', [])).toBe(false))
+})
+
 describe('manageBasket (ทีมสื่อ editor + admin)', () => {
   it('Admin',            () => expect(allows('manageBasket', ['Admin'])).toBe(true))
   it('เลขาธิการ',        () => expect(allows('manageBasket', ['เลขาธิการ'])).toBe(true))

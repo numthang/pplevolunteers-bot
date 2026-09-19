@@ -4,6 +4,7 @@ import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getAccountById } from '@/db/finance/accounts.js'
 import { canEditAccount, canViewAccount } from '@/lib/financeAccess.js'
+import { can } from '@/lib/permissions.js'
 import { getRoundById } from '@/db/finance/payouts.js'
 
 /**
@@ -14,6 +15,15 @@ export async function requireSession() {
   const session = await getServerSession(authOptions)
   if (!session) return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) }
   const { userId, access } = await getEffectiveOrgIdentity(session)
+
+  // ด่านสิทธิ์ของทั้งโซน — route ทุกตัวใต้ /api/finance/payouts วิ่งผ่านฟังก์ชันนี้
+  // (requireRound ก็เรียกต่อจากที่นี่) → เพิ่ม route ใหม่ไม่ต้องจำมาเช็คซ้ำ
+  // ⛔ สำคัญกับ /payees ที่สุด: มันค้นทะเบียนรับเงินทั้ง org (bank_code/account_no/promptpay_id)
+  //    โดยไม่ผูกกับรอบไหนเลย — ถ้าไม่มีด่านนี้ สมาชิกคนไหนก็ยิงคำค้น 2 ตัวอักษรแล้วกวาดได้หมด
+  if (!can('viewPayouts', access?.permissions || [])) {
+    return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
+  }
+
   const orgId = await getOrgId(session)
   return { session, userId, access, orgId }
 }

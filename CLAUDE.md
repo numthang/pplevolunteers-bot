@@ -11,23 +11,27 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 
 ## 🚀 Quick Links
 
-| Topic | File |
+📖 **สารบัญเต็ม + หลักว่าอะไรอยู่ไหน → [md/README.md](md/README.md)** (เปิดอันนี้ถ้าไม่แน่ใจ)
+
+| ถ้ากำลังจะ… | เปิด |
 |---|---|
-| **Discord Bot** | [md/modules/discord/BOT.md](md/modules/discord/BOT.md) |
-| **Web App — ภาพรวม** | [md/reference/ARCHITECTURE.md](md/reference/ARCHITECTURE.md) |
-| **Code Rules (แพตเทิร์น)** | [md/rules/CODE.md](md/rules/CODE.md) |
-| **Design Rules (UI)** | [md/rules/DESIGN.md](md/rules/DESIGN.md) |
-| **Finance System** | [md/modules/finance/FINANCE.md](md/modules/finance/FINANCE.md) |
-| **Calling System** | [md/modules/calling/CALLING.md](md/modules/calling/CALLING.md) |
-| **Contacts (CRM)** | [md/modules/calling/CONTACT.md](md/modules/calling/CONTACT.md) |
-| **Auth & Identity** | [md/modules/org/AUTH.md](md/modules/org/AUTH.md) |
-| **Database Schema** | [md/reference/DATABASE.md](md/reference/DATABASE.md) |
-| **Production Deployment** | [md/reference/DEPLOYMENT.md](md/reference/DEPLOYMENT.md) |
-| **Cutover org-core→master** | [md/archive/CUTOVER.md](md/archive/CUTOVER.md) |
-| **Case System** | [md/modules/case/CASE.md](md/modules/case/CASE.md) |
+| **แก้หน้าจอใน `web/`** | [md/rules/DESIGN.md](md/rules/DESIGN.md) |
+| **เขียนโค้ดใน `web/`** | [md/rules/CODE.md](md/rules/CODE.md) |
+| ดูภาพรวมระบบเว็บ | [md/reference/ARCHITECTURE.md](md/reference/ARCHITECTURE.md) |
+| หาชื่อคอลัมน์ / โครงตาราง | [md/reference/DATABASE.md](md/reference/DATABASE.md) |
+| deploy / รัน migration บน prod | [md/reference/DEPLOYMENT.md](md/reference/DEPLOYMENT.md) |
+| ดูว่าเหลืออะไรต้องทำ | [md/PENDING.md](md/PENDING.md) |
+
+| โมดูล | ไฟล์ |
+|---|---|
+| **Finance** | [md/modules/finance/FINANCE.md](md/modules/finance/FINANCE.md) |
+| **Calling / Contacts** | [CALLING.md](md/modules/calling/CALLING.md) · [CONTACT.md](md/modules/calling/CONTACT.md) |
 | **Kanban (การบ้าน)** | [md/modules/kanban/KANBAN.md](md/modules/kanban/KANBAN.md) |
-| **Server Wizard** | [md/modules/discord/SERVER_WIZARD.md](md/modules/discord/SERVER_WIZARD.md) |
-| **RAG AI** | [md/modules/discord/RAG.md](md/modules/discord/RAG.md) |
+| **Posts (งานสื่อ)** | [md/modules/posts/POSTS.md](md/modules/posts/POSTS.md) |
+| **Docs (e-signature)** | [md/modules/docs/DOCS.md](md/modules/docs/DOCS.md) |
+| **Case System** | [md/modules/case/CASE.md](md/modules/case/CASE.md) |
+| **Auth & Identity** | [md/modules/org/AUTH.md](md/modules/org/AUTH.md) |
+| **Discord Bot** | [BOT.md](md/modules/discord/BOT.md) · [SERVER_WIZARD.md](md/modules/discord/SERVER_WIZARD.md) · [RAG.md](md/modules/discord/RAG.md) |
 
 ---
 
